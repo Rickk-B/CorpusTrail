@@ -1,0 +1,42 @@
+{
+  "schema_version": "corpustrail-code-migration-origins/v1",
+  "source_commit": "a925562fa1d1be3985f2fc19108439a074b73944",
+  "historical_files_unchanged": true,
+  "python_compatibility_shims": [],
+  "sources": [
+    {
+      "path": "src/corpustrail/native_parsers.py",
+      "sha256": "sha256:45180a4e1fc91d90bf7d258c8dda4c2280eac29f2a703d05e92746f1dca7a05e",
+      "destination": "src/corpustrail/evidence/native_parsers.py",
+      "destination_sha256": "sha256:1b58ed5b3657cb78ac2d0808f50e7450b805ce80da2375a2c07597517e8c74ef",
+      "change": "Only ParserOutput/ParsingError import changed to .parsing; parser algorithms unchanged",
+      "status": "migrated"
+    },
+    {
+      "path": "src/corpustrail/discovery_methods.py",
+      "sha256": "sha256:27b4924695ac7f85b1fc3bd3cf60c7afc910d3764d24b5e2b15b82e48393a27d",
+      "destinations": ["src/corpustrail/providers/network.py", "src/corpustrail/providers/metadata.py"],
+      "components": ["bounded no-redirect metadata transport", "indexed abstract reconstruction", "provider record metadata mapping"],
+      "excluded": ["frozen comparison arms", "seed selection", "experiment policy"],
+      "status": "adapted"
+    },
+    {
+      "path": "scripts/search_databases.py",
+      "sha256": "sha256:2f65078075cd54878c90b9bb14bc528f222f4b84685067ded398020b29e494b3",
+      "destination": "src/corpustrail/providers/metadata.py",
+      "components": ["s_openalex", "s_crossref", "s_europepmc", "s_semanticscholar"],
+      "excluded": ["topic vocabulary", "classifier", "workspace paths", "contact/secret globals", "fixed pacing policy"],
+      "status": "adapted"
+    },
+    {
+      "path": "src/corpustrail/resolution_providers.py",
+      "sha256": "sha256:7cfd076178f4e73cd7bdddab8f1a3606670d5f7dd8a4db94f508a6beb24d4f34",
+      "destination": "src/corpustrail/evidence/service.py",
+      "components": ["EuropePmcFullTextProvider endpoint and exact PMCID prerequisite"],
+      "excluded": ["Zotero imports", "fixed provider registry", "workspace policies"],
+      "status": "adapted"
+    }
+  ],
+  "runtime_parent_imports": false,
+  "remaining_services": ["graph/recommendations", "other acquisition routes", "document identity adjudication", "GROBID/PDF/OCR execution", "full review UI", "prioritization", "knowledge", "ASReview export"]
+}

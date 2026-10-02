@@ -1,0 +1,17 @@
+{
+  "schema": "corpustrail-code-origins/v2",
+  "adaptation_base_commit": "4457d811c917e12bc04d872a3a0607a02c8ea9cf",
+  "xml_adaptation": {
+    "historical_source_sha256": "sha256:45180a4e1fc91d90bf7d258c8dda4c2280eac29f2a703d05e92746f1dca7a05e",
+    "previous_destination_sha256": "sha256:1b58ed5b3657cb78ac2d0808f50e7450b805ce80da2375a2c07597517e8c74ef",
+    "destination": "evidence/native_parsers.py",
+    "destination_sha256": "sha256:d3ff0dede08a1f6f23c19307e71c96b01b0f2a75342555e95680acdb6c295e6e",
+    "change": "Shared bounded encoding-aware XML policy; parser v2; incremental renderer cursor. Historical source and Phase 2B receipt preserved."
+  },
+  "immutable_origin_receipts": {
+    "docs/phase2b_migration_origins.json": "sha256:4bcaf752a8fdecc9d888473ae86dcc8fd8e8e2984623a00bac1e3b77acf94414",
+    "docs/phase2c_migration_origins.json": "sha256:ff45d7c33ce8366c78c5ad56db9a8b6c3a3c4f893fecc8ec1a77bbd3c5b6fdaf"
+  },
+  "scientific_data_included": false,
+  "license_decision": "pending_owner_approval"
+}

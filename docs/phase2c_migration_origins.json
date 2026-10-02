@@ -1,0 +1,18 @@
+{
+  "schema": "corpustrail-migration-origins/v1",
+  "historical_base_commit": "ba36e8fb1b80e364f95b55cf6c119f1213d9a511",
+  "sources": [
+    {
+      "origin_path": "src/corpustrail/prioritization.py",
+      "destination_path": "src/corpustrail/prioritization/_algorithm.py",
+      "status": "generic prefix copied unchanged; workspace CLI excluded",
+      "source_sha256": "sha256:4cca346f5526af872c5691aa12f3f55486dfc0873f85d8df12bbddc75fc5f843",
+      "source_prefix_sha256": "sha256:1b3974553297cf141339cba84e9d7c7e21ddc87b4152cca368d20dcac250af59",
+      "destination_sha256": "sha256:1b3974553297cf141339cba84e9d7c7e21ddc87b4152cca368d20dcac250af59",
+      "prefix_equal": true,
+      "source_prefix_lines": 265,
+      "prefix_boundary": "start of file through final code line of rank(), including its newline; inter-function blank separator before main excluded"
+    }
+  ],
+  "compatibility_shims": []
+}

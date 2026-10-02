@@ -1,0 +1,22 @@
+{
+  "openalex": {
+    "results": [
+      {
+        "id": "https://openalex.org/W123",
+        "doi": "https://doi.org/10.1234/materials.1",
+        "title": "Synthetic porous ceramic",
+        "publication_year": 2020,
+        "abstract_inverted_index": {"Porosity": [0], "was": [1], "measured.": [2]},
+        "ids": {"pmcid": "PMC123"}
+      },
+      {"id": "https://openalex.org/W124", "title": "Synthetic glass without an abstract"}
+    ],
+    "meta": {"count": 2, "next_cursor": null}
+  },
+  "crossref": {
+    "message": {
+      "items": [{"DOI": "10.1234/materials.1", "title": ["Conflicting provider ceramic title"], "published": {"date-parts": [[2021]]}}],
+      "total-results": 1
+    }
+  }
+}

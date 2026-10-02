@@ -1,0 +1,9 @@
+{
+  "project_id": "materials",
+  "name": "Materials sensors",
+  "description": "Broad scientific literature on materials sensors",
+  "search": [{"concept_id": "porosity", "label": "porous ceramic"}],
+  "providers": [],
+  "evidence": {"resolvers": [], "max_attempts": 1},
+  "review": {"authorized_reviewers": ["project_reviewer_01"]}
+}

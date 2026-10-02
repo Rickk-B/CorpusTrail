@@ -1,0 +1,217 @@
+{
+  "schema_family": "corpustrail-standalone/v2",
+  "origin_commit": "1911f29dc2de0430d2f3c28324a672b78c5f150e",
+  "historical_count": 31,
+  "migrations": [
+    {
+      "name": "001_core.sql",
+      "version": 1,
+      "sha256": "sha256:4693eba4a7294930da3e73bcf5c029371ba499aabecc78d8731beb9273177e86",
+      "origin_path": "src/corpustrail/operational/schema/001_core.sql"
+    },
+    {
+      "name": "002_discovery.sql",
+      "version": 2,
+      "sha256": "sha256:a19cfbcf261a17e3ae0a4f1d01b5e58384783d85719dfccc19e04f4cc6270204",
+      "origin_path": "src/corpustrail/operational/schema/002_discovery.sql"
+    },
+    {
+      "name": "003_identity_operations.sql",
+      "version": 3,
+      "sha256": "sha256:e36cfea9170a8983cce5460b78368c364744cf373c3322f68b1ba6723f67db4e",
+      "origin_path": "src/corpustrail/operational/schema/003_identity_operations.sql"
+    },
+    {
+      "name": "004_search_experiments.sql",
+      "version": 4,
+      "sha256": "sha256:4eb8ccbb0d8103ede862fb408af1c6e59f7b9dd085afad740ef630e545c7664e",
+      "origin_path": "src/corpustrail/operational/schema/004_search_experiments.sql"
+    },
+    {
+      "name": "005_native_observations.sql",
+      "version": 5,
+      "sha256": "sha256:0221e0d41e182c4da20a38c6a5023b4b7458305b72a441f4294cb69baaded0f6",
+      "origin_path": "src/corpustrail/operational/schema/005_native_observations.sql"
+    },
+    {
+      "name": "006_acquisition_and_evidence.sql",
+      "version": 6,
+      "sha256": "sha256:91cb617e0ad848f3e7e186d966957e5785bafd4d8799dca061c292832e38e7e8",
+      "origin_path": "src/corpustrail/operational/schema/006_acquisition_and_evidence.sql"
+    },
+    {
+      "name": "007_parsing_metadata.sql",
+      "version": 7,
+      "sha256": "sha256:5f7a2c73ed3ee15c4319b478ba3a344473cca57b311cc5e92bc212cc6320e112",
+      "origin_path": "src/corpustrail/operational/schema/007_parsing_metadata.sql"
+    },
+    {
+      "name": "008_document_selection_operations.sql",
+      "version": 8,
+      "sha256": "sha256:41d605c35fe8d5470e033b7bf9320e7d9b8345ae9a9c153d935b3aa75dac487e",
+      "origin_path": "src/corpustrail/operational/schema/008_document_selection_operations.sql"
+    },
+    {
+      "name": "009_parsing_operations.sql",
+      "version": 9,
+      "sha256": "sha256:2326fe8ede26214e49778504557318ba63943135eb65aae75eec8431cf04dbbe",
+      "origin_path": "src/corpustrail/operational/schema/009_parsing_operations.sql"
+    },
+    {
+      "name": "010_resolution_provider_results.sql",
+      "version": 10,
+      "sha256": "sha256:03491e1643aa68f62156935067ea0af82cc893f715ad2a34b2aff939d8d2dd56",
+      "origin_path": "src/corpustrail/operational/schema/010_resolution_provider_results.sql"
+    },
+    {
+      "name": "011_acquisition_operations.sql",
+      "version": 11,
+      "sha256": "sha256:f8c247381065e2d0f696731885627ede23798ed7a70e65f5cfae8e985d59d278",
+      "origin_path": "src/corpustrail/operational/schema/011_acquisition_operations.sql"
+    },
+    {
+      "name": "012_identity_and_rights_assessments.sql",
+      "version": 12,
+      "sha256": "sha256:02f870c2c1ec08e15e060964f1f3ff761c61c6637b112d758498b240d1ff9ae2",
+      "origin_path": "src/corpustrail/operational/schema/012_identity_and_rights_assessments.sql"
+    },
+    {
+      "name": "013_parse_execution.sql",
+      "version": 13,
+      "sha256": "sha256:8b047e82deea589d46f6497d6852533f745562805806aca2e23d5829cd23978f",
+      "origin_path": "src/corpustrail/operational/schema/013_parse_execution.sql"
+    },
+    {
+      "name": "014_parser_intermediates.sql",
+      "version": 14,
+      "sha256": "sha256:3664add151a3f42733775f82dc87d768d1e2d603a8954e3a5d254e4424a7282a",
+      "origin_path": "src/corpustrail/operational/schema/014_parser_intermediates.sql"
+    },
+    {
+      "name": "015_discovery_comparisons.sql",
+      "version": 15,
+      "sha256": "sha256:114702bf254582b6530561d95710c95a4aff3b0c6299188fb5d69a1aa25d1f94",
+      "origin_path": "src/corpustrail/operational/schema/015_discovery_comparisons.sql"
+    },
+    {
+      "name": "016_discovery_comparison_runs.sql",
+      "version": 16,
+      "sha256": "sha256:da14149e698a900f83b730bfdd077db79e6b836ad40aa4c10edf385375f92a9e",
+      "origin_path": "src/corpustrail/operational/schema/016_discovery_comparison_runs.sql"
+    },
+    {
+      "name": "017_discovery_evaluations.sql",
+      "version": 17,
+      "sha256": "sha256:92145c321cccb9f7a9957ab837854496221de9c54130bddc577915d1ee7a62da",
+      "origin_path": "src/corpustrail/operational/schema/017_discovery_evaluations.sql"
+    },
+    {
+      "name": "018_relevance_benchmarks.sql",
+      "version": 18,
+      "sha256": "sha256:fd4365c0d0868433a8b543db21870e918070df6e872bcac810c300a20731d10d",
+      "origin_path": "src/corpustrail/operational/schema/018_relevance_benchmarks.sql"
+    },
+    {
+      "name": "019_relevance_signals.sql",
+      "version": 19,
+      "sha256": "sha256:5fb28d851ecfbc5a66324e0729885cf1dc70ce6e6f99463039d839037035233f",
+      "origin_path": "src/corpustrail/operational/schema/019_relevance_signals.sql"
+    },
+    {
+      "name": "020_adaptive_search_campaigns.sql",
+      "version": 20,
+      "sha256": "sha256:75756dc14f232d21c3ede137bf087ec228620f573bca298161d710c41f70713c",
+      "origin_path": "src/corpustrail/operational/schema/020_adaptive_search_campaigns.sql"
+    },
+    {
+      "name": "021_benchmark_adjudication.sql",
+      "version": 21,
+      "sha256": "sha256:950b4e74c5ccf185641981431553b408f4918f9fa0bc39adb155fcd13628859e",
+      "origin_path": "src/corpustrail/operational/schema/021_benchmark_adjudication.sql"
+    },
+    {
+      "name": "022_screening_events.sql",
+      "version": 22,
+      "sha256": "sha256:3847be1ed591bad1269a4e77bde17a577a615d37a5f30ac340fb8ff16c9403d4",
+      "origin_path": "src/corpustrail/operational/schema/022_screening_events.sql"
+    },
+    {
+      "name": "023_screening_import_gaps.sql",
+      "version": 23,
+      "sha256": "sha256:47338a61426c0b88da88d4bab8c6c9865db0be2942733c2d4ea0542be7b5e688",
+      "origin_path": "src/corpustrail/operational/schema/023_screening_import_gaps.sql"
+    },
+    {
+      "name": "024_screening_approval_invalidations.sql",
+      "version": 24,
+      "sha256": "sha256:0024e1b23b7e2ebf41536987c74d281a2c5df1505c8cdbdaf0338ed92e0892be",
+      "origin_path": "src/corpustrail/operational/schema/024_screening_approval_invalidations.sql"
+    },
+    {
+      "name": "025_benchmark_review_evidence.sql",
+      "version": 25,
+      "sha256": "sha256:a01b341b15270ca37380772de765efb5db2d87d7a9f37ad50a3c1082b75e2ef5",
+      "origin_path": "src/corpustrail/operational/schema/025_benchmark_review_evidence.sql"
+    },
+    {
+      "name": "026_taxonomy.sql",
+      "version": 26,
+      "sha256": "sha256:5cd139bce6bdfcb979bc086cdda41a7b06cc963fd0796a92353b2faef9f128c6",
+      "origin_path": "src/corpustrail/operational/schema/026_taxonomy.sql"
+    },
+    {
+      "name": "027_screening_experiments.sql",
+      "version": 27,
+      "sha256": "sha256:cb043881633a52b1dc197ac852ad35aa3b9b74ed74a38496b0580ac937d9ec90",
+      "origin_path": "src/corpustrail/operational/schema/027_screening_experiments.sql"
+    },
+    {
+      "name": "028_asreview_interchange.sql",
+      "version": 28,
+      "sha256": "sha256:a6c674d569c38af4c02561636de09a5436a4e199c9a313cd7a721f5eb805755c",
+      "origin_path": "src/corpustrail/operational/schema/028_asreview_interchange.sql"
+    },
+    {
+      "name": "029_screening_evaluations.sql",
+      "version": 29,
+      "sha256": "sha256:d31b359d99b763a62de038b2a9aa112de4d9d7489deaa19cb3006eeb42bd8148",
+      "origin_path": "src/corpustrail/operational/schema/029_screening_evaluations.sql"
+    },
+    {
+      "name": "030_legacy_knowledge.sql",
+      "version": 30,
+      "sha256": "sha256:07ab8df3529e4632e532419454e0ff62c0a5ff90f7112da093eb199d59dc89c6",
+      "origin_path": "src/corpustrail/operational/schema/030_legacy_knowledge.sql"
+    },
+    {
+      "name": "031_knowledge_assertions.sql",
+      "version": 31,
+      "sha256": "sha256:fae9afd6f734a4ee34adc888a796770a7638f252e63291504fee3b9a8c7d1878",
+      "origin_path": "src/corpustrail/operational/schema/031_knowledge_assertions.sql"
+    },
+    {
+      "name": "032_standalone_foundation.sql",
+      "version": 32,
+      "sha256": "sha256:689a0cbbd16377847fff92c6c6651aee3cf4850c1e5058ad5f268584404a4ba9",
+      "origin_path": null
+    },
+    {
+      "name": "033_discovery_evidence.sql",
+      "version": 33,
+      "sha256": "sha256:b4dc458b108c4c0d959de7d2eab63fe047c9060ca828ccb5114f3046176fb4b7",
+      "origin_path": null
+    },
+    {
+      "name": "034_curation_prioritization.sql",
+      "version": 34,
+      "sha256": "sha256:fbcafefd09e32dcc71ab481d72b62476ea0c494afee64ca0d233ef88686a2b13",
+      "origin_path": null
+    },
+    {
+      "name": "035_knowledge_registry.sql",
+      "version": 35,
+      "sha256": "sha256:604b54dbdd09de69608410de60b365e1925c004aff012418493ea2bf4349f814",
+      "origin_path": null
+    }
+  ]
+}
