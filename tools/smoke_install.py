@@ -41,7 +41,8 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
         handle.extractall(extracted)
     source, = extracted.iterdir()
     for required in ('docs/phase2b_migration_origins.json', 'docs/phase2c_migration_origins.json',
-                     'docs/user/TUTORIAL.md', 'src/corpustrail/resources/origins.json'):
+                     'docs/user/TUTORIAL.md', 'docs/user/MODELS.md', 'docs/developer/MODEL_ADAPTERS.md',
+                     'src/corpustrail/resources/origins.json'):
         if not (source / required).is_file():
             raise RuntimeError('sdist omitted required provenance/tutorial: ' + required)
     wheels = root / 'sdist-wheels'
@@ -81,7 +82,7 @@ def run(*, dependency_wheels=None) -> dict:
         payload = root / "candidate"
         # No ancestor/workspace copy. No ignored runtime state enters the build.
         shutil.copytree(candidate, payload, ignore=shutil.ignore_patterns(
-            "__pycache__", "*.pyc", "*.egg-info", "build", "dist", ".venv", "*.sqlite3*"))
+            ".git", "__pycache__", "*.pyc", "*.egg-info", "build", "dist", ".venv", "*.sqlite3*"))
         wheels = root / "wheels"
         wheels.mkdir()
         outside = root / "unrelated-working-directory"
@@ -117,6 +118,17 @@ print(json.dumps({'version':corpustrail.__version__,'distribution':importlib.met
         status, _ = invoke([str(cli), "project", "status", str(cli_project)], outside, env)
         if json.loads(initialized) != json.loads(status):
             raise RuntimeError("CLI reopen changed status")
+        # Installed adapter configuration/status/help must be self-contained and
+        # network-free; HTTP invocation is exercised only by loopback test fixtures.
+        model_status, _ = invoke([str(cli), 'models', 'status', str(cli_project)], outside, env)
+        if json.loads(model_status)['model_providers']:
+            raise RuntimeError('fresh project unexpectedly configures a model')
+        model_configured, _ = invoke([str(cli), 'models', 'configure', str(cli_project),
+            '--workflow', 'local-reference', '--model', 'fixture-model', '--endpoint-id', 'fixture-endpoint',
+            '--base-url', 'http://127.0.0.1:8000/v1', '--execution', 'local', '--created-by', 'fixture'], outside, env)
+        if json.loads(model_configured)['model_providers'][0]['execution'] != 'local':
+            raise RuntimeError('installed model locality/status mismatch')
+        invoke([str(cli), 'models', 'test-connection', '--help'], outside, env)
         demonstration, _ = invoke([str(python), "-I", "-B", str(payload / "examples/synthetic-materials/run.py"),
                                     str(root / "demonstration")], outside, env)
         discovery, _ = invoke([str(python), "-I", "-B", str(payload / "examples/synthetic-discovery/run.py"),

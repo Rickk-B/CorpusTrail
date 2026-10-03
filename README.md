@@ -12,8 +12,7 @@ CorpusTrail asks **“Does this paper belong in my broad scientific topic corpus
 ASReview screens **“Does this paper satisfy the criteria for this particular review?”**
 Broad-corpus membership is not systematic-review eligibility.
 
-Version **0.1.0a1** is an early research-software alpha: APIs may change before 1.0.
-This tree is a locally verified release candidate; publication is a separate step.
+This is **0.1.0a2**, an early research alpha. APIs and schemas may change before 1.0.
 Linux/Python 3.11–3.13 is the tested target.
 
 ## Install
@@ -63,6 +62,13 @@ python -I -m corpustrail.tutorial /tmp/materials-demo-ml --prioritize
 - Knowledge assertions preserve producer, evidence, uncertainty, conflicts and lineage.
   Model-generated knowledge is **not automatically authoritative**.
 - Unattended LLM extraction is **not a production alpha feature**.
+- Experimental [model adapters](docs/developer/MODEL_ADAPTERS.md) require an
+  explicit task and user-owned configuration/credentials; remote evidence calls
+  require exact-plan consent. No model is required or selected by default.
+  [Connect your own model](docs/user/MODELS.md) through a compatible endpoint;
+  you supply the endpoint/account/credentials, never a shared CorpusTrail key.
+  The experimental reference adapter is offline/mock-tested only; real-server
+  interoperability has not yet been validated by the project.
 - Provider/model adapters are replaceable; no model or discovery provider is mandatory.
 - Pending/unverified documents are not trusted evidence.
 - External discovery/acquisition requires explicit transfer confirmation.

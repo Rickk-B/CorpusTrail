@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import os
 from dataclasses import asdict, dataclass, field
 
 from corpustrail._internal.values import ContractError, canonical, relative_path, text
@@ -112,6 +113,7 @@ class ProjectConfig:
     review: ReviewPolicy = field(default_factory=ReviewPolicy)
     concept_extensions: tuple[ConceptExtension, ...] = ()
     evidence: EvidencePolicy = field(default_factory=EvidencePolicy)
+    models: tuple = ()
 
     def validate(self) -> None:
         if self.schema_version != CONFIG_SCHEMA:
@@ -138,6 +140,15 @@ class ProjectConfig:
         if not isinstance(self.evidence, EvidencePolicy):
             raise ContractError("evidence must be an EvidencePolicy")
         self.evidence.validate()
+        from corpustrail.models.contracts import ModelConfig, safe_data
+        if not isinstance(self.models, tuple) or any(not isinstance(x, ModelConfig) for x in self.models):
+            raise ContractError('models must be an immutable tuple of ModelConfig')
+        for model in self.models:
+            model.validate()
+        safe_data([asdict(model) for model in self.models], secrets=tuple(
+            os.environ.get(c.credential_env, '') for c in (*self.providers, *self.models) if c.credential_env))
+        if len({x.workflow_id for x in self.models}) != len(self.models):
+            raise ContractError('model workflow IDs must not repeat')
         for values, key in ((self.search, "concept_id"), (self.providers, "provider_id"),
                             (self.concept_extensions, "namespace")):
             if len({getattr(x, key) for x in values}) != len(values):
@@ -156,6 +167,8 @@ class ProjectConfig:
             raw["search"] = tuple(SearchConcept(**{**x, "aliases": tuple(x.get("aliases", ()))})
                                   for x in raw.get("search", ()))
             raw["providers"] = tuple(ProviderConfig(**x) for x in raw.get("providers", ()))
+            from corpustrail.models.contracts import ModelConfig
+            raw['models'] = tuple(ModelConfig(**x) for x in raw.get('models', ()))
             evidence = raw.get("evidence", {})
             raw["evidence"] = EvidencePolicy(**{**evidence, "resolvers": tuple(evidence.get("resolvers", ()))})
             review = raw.get("review", {})

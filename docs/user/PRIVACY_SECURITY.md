@@ -12,9 +12,19 @@ request, attempts, safe rate-limit headers, response hash and failures.
 
 Opening an external link lets the browser contact that source. Import into a
 remote ASReview deployment is a user-controlled downstream transfer, not a core
-service call. Future external model integrations must require explicit scoped
-authorization/configuration and record exact evidence inputs; none is activated
-by installing this alpha.
+service call. Experimental [model adapters](../developer/MODEL_ADAPTERS.md) require
+an explicit task and user-owned configuration/credentials. Remote evidence
+transmission requires exact-plan approval and records input hashes, provider/model
+and response provenance. Locality is declared by trusted adapter code, not enforced
+by a network sandbox. Status does not invoke or load installed model plugins.
+No model workflow is activated merely by installation.
+
+The optional [compatible endpoint adapter](MODELS.md) requires explicit local/remote
+configuration; local declarations are restricted to literal loopback IPs. It
+disables redirects and environment proxies, and requires HTTPS for non-loopback
+addresses. A loopback server may still relay data externally: users must declare
+such a proxy remote. Explicit synthetic connection tests transmit no scientific
+evidence and never authorize later paper-content transfer.
 
 Use credential_env variable names in project config, set values privately in the
 process environment. Never commit API keys, personal correspondence or sensitive

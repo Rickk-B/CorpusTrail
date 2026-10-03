@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "corpus-trail"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "Provenance-rich discovery, evidence and human curation of broad scientific topic corpora"
 readme = "README.md"
 requires-python = ">=3.11"

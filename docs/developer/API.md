@@ -64,3 +64,9 @@ The constraints freeze validation/build libraries, not production requirements
 or permanent model choices. No complete dependency vulnerability certification
 is implied. The core remains standard-library-only. CI uses only this repository's
 root layout and does not access another project or private fixtures.
+# Experimental model adapter interface
+
+`corpustrail.models` exposes `ModelConfig`, `TaskSpec`, `AdapterInfo`, `ModelAdapter`,
+`ModelResponse`, `AdapterRegistry` and `ModelService`. These v0 APIs are experimental,
+not scientifically validated extractors. See [adapter contracts, consent and
+custom extensions](MODEL_ADAPTERS.md). No default model or required SDK is introduced.

@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 
 ROOT_FILES = {'README.md', 'LICENSE', 'NOTICE.md', 'CHANGELOG.md', 'CONTRIBUTING.md',
@@ -56,13 +57,14 @@ def build(root):
         '.github/workflows/standalone.yml', 'docs/user/TUTORIAL.md'}
     if required - paths:
         raise ValueError('missing required release files: ' + ', '.join(sorted(required - paths)))
-    return {'schema': 'corpustrail-code-only-staging/v3', 'version': '0.1.0a1',
+    version = tomllib.loads((root/'pyproject.toml').read_text(encoding='utf-8'))['project']['version']
+    return {'schema': 'corpustrail-code-only-staging/v3', 'version': version,
             'base_manifest_sha256': 'sha256:9edc813543439eb064cbe82d53a4d111cf6977eef904a7db69c8fce6b676b6c5',
             'previous_candidate_manifest_sha256': 'sha256:00e8a7680beaf85b5562ea8e3122394b17f416a107fc7c380207c2475f165ab8',
             'privacy_scrubbed': True,
             'neutral_git_identity': {'name': 'CorpusTrail', 'email': 'noreply@corpustrail.invalid', 'account_linked': False},
             'license': 'MIT', 'authors_and_maintainers': 'omitted', 'citation': 'deferred_optional',
-            'release_ready': False, 'pending': ['explicit remote creation/publication authorization'],
+            'release_ready': False, 'pending': ['explicit next-release authorization'],
             'files': records, 'exclusions': EXCLUDED,
             'privacy_note': 'Allowlist is technical staging, not proof of rights or secret-free free text.'}
 

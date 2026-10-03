@@ -212,6 +212,18 @@
       "version": 35,
       "sha256": "sha256:604b54dbdd09de69608410de60b365e1925c004aff012418493ea2bf4349f814",
       "origin_path": null
+    },
+    {
+      "name": "036_model_adapters.sql",
+      "version": 36,
+      "sha256": "sha256:10b9c7116a768ed2a5a5ddf0847c1c71832337d26618925569bd46863595792b",
+      "origin_path": null
+    },
+    {
+      "name": "037_model_connections.sql",
+      "version": 37,
+      "sha256": "sha256:68b375e38ae7870ab8efa7c0caefd6d55cddf1312d43a4236f63ae10139c9e9b",
+      "origin_path": null
     }
   ]
 }

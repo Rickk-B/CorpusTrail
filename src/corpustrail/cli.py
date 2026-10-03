@@ -31,6 +31,50 @@ def main(argv=None) -> int:
     configure.add_argument('--created-by', required=True, help='Stable configuration producer ID')
     status = project.add_parser("status")
     status.add_argument("path", type=Path)
+    models = sub.add_parser('models', help='Optional explicit model adapters; status is local-only').add_subparsers(dest='operation', required=True)
+    for operation in ('status', 'configure', 'test-connection', 'connection-history', 'plan', 'authorize', 'execute', 'inspect', 'resume'):
+        command = models.add_parser(operation)
+        command.add_argument('path', type=Path)
+        if operation == 'configure':
+            command.add_argument('--workflow', required=True)
+            command.add_argument('--model', required=True, help='User-selected model ID, not a default')
+            command.add_argument('--endpoint-id', required=True, help='Non-secret provider/endpoint identifier')
+            command.add_argument('--base-url', required=True, help='API base URL; /chat/completions is appended')
+            command.add_argument('--execution', choices=('local', 'remote'), required=True,
+                                 help='Local requires a literal loopback IP and no cloud relay')
+            command.add_argument('--credential-env', help='Environment VARIABLE NAME only; omit for uncredentialed endpoints')
+            command.add_argument('--timeout', type=float, default=60, help='HTTP timeout seconds (maximum 300)')
+            command.add_argument('--settings', default='{}', help='Non-secret JSON generation settings, e.g. temperature')
+            command.add_argument('--created-by', required=True, help='Stable configuration producer ID')
+        elif operation in ('test-connection', 'connection-history'):
+            command.add_argument('--run-id', required=True, help='Unique diagnostic run ID; exact replay is cached')
+            if operation == 'test-connection':
+                command.add_argument('--workflow', required=True)
+                command.add_argument('--confirm-external', action='store_true',
+                                     help='Approve a remote synthetic test only; NOT paper-evidence consent')
+                command.add_argument('--execute', action='store_true', required=True,
+                                     help='Explicit connection test; may incur provider charges')
+        elif operation == 'plan':
+            command.add_argument('--workflow', required=True)
+            command.add_argument('--spec', type=Path, required=True, help='Provider-independent TaskSpec JSON')
+            command.add_argument('--run-id', required=True)
+            command.add_argument('--paper-id', required=True)
+            command.add_argument('--mode', choices=('metadata', 'abstract', 'selected_passages', 'full_text'), default='abstract',
+                                 help='Exact evidence depth transmitted; no automatic fallback or full-text expansion')
+            command.add_argument('--representation-id', help='Explicit verified document-body representation event ID')
+            command.add_argument('--passage', action='append', default=[], help='Explicit character start:end, repeated for selected passages')
+            command.add_argument('--out', help='New project-relative plan file; never overwritten')
+        elif operation in ('authorize', 'execute'):
+            command.add_argument('--plan', required=True, help='Project-relative frozen plan file')
+            if operation == 'authorize':
+                command.add_argument('--actor', required=True, help='Stable consent actor, optionally pseudonymous')
+                command.add_argument('--expected-plan-sha256', required=True, help='Hash of the exact plan you inspected')
+                command.add_argument('--confirm-external', action='store_true', required=True)
+            else:
+                command.add_argument('--consent-event-id', help='Plan-bound explicit external-transfer authorization')
+                command.add_argument('--execute', action='store_true', required=True)
+        elif operation in ('inspect', 'resume'):
+            command.add_argument('--run-id', required=True)
     upgrade = project.add_parser("upgrade")
     upgrade.add_argument("path", type=Path)
     upgrade.add_argument("--backup", required=True)
@@ -273,6 +317,49 @@ def main(argv=None) -> int:
                 authorization=json.loads(args.human_authorization.read_text(encoding='utf-8')) if args.human_authorization else None
                 result=store.apply(plan,human_authorization=authorization)
                 result['verification']=store.verify()
+        elif args.command == 'models':
+            from corpustrail.models import TaskSpec
+            service = instance.models
+            if args.operation == 'status':
+                result = service.status()
+            elif args.operation == 'configure':
+                from dataclasses import replace
+                from corpustrail.models import ModelConfig
+                current = instance.config
+                configured = ModelConfig(args.workflow, 'compatible-endpoint', args.model,
+                    endpoint_id=args.endpoint_id, credential_env=args.credential_env,
+                    settings=json.loads(args.settings), adapter_configuration={
+                        'base_url': args.base_url, 'execution': args.execution, 'timeout_seconds': args.timeout})
+                configured.validate()
+                service.registry.resolve(configured.adapter, configuration=configured)  # No network.
+                updated = replace(current, config_version=current.config_version+1,
+                    models=tuple(c for c in current.models if c.workflow_id != args.workflow) + (configured,))
+                event = instance.configure(updated, expected_event_id=instance.configuration_history()[-1]['event_id'],
+                                           created_by=args.created_by)
+                result = {'configuration_event_id': event, **instance.models.status()}
+            elif args.operation == 'test-connection':
+                result = service.test_connection(args.workflow, run_id=args.run_id, confirm_external=args.confirm_external)
+            elif args.operation == 'connection-history':
+                result = service.connection_history(args.run_id)
+            elif args.operation == 'plan':
+                spec = TaskSpec.from_dict(json.loads(args.spec.read_text(encoding='utf-8')))
+                passages = [tuple(int(v) for v in p.split(':')) for p in args.passage]
+                plan = service.plan(args.workflow, spec, run_id=args.run_id, paper_id=args.paper_id,
+                                    mode=args.mode, representation_id=args.representation_id, passages=passages)
+                result = service.write_plan(plan, args.out) if args.out else plan
+            elif args.operation in ('authorize', 'execute'):
+                plan = service.read_plan(args.plan)
+                if args.operation == 'authorize':
+                    if args.expected_plan_sha256 != plan['plan_sha256']:
+                        raise ContractError('consent hash does not match the inspected plan')
+                    result = {'consent_event_id': service.authorize(plan, actor_id=args.actor,
+                                                                  confirm_external=args.confirm_external)}
+                else:
+                    result = service.execute(plan, consent_event_id=args.consent_event_id)
+            elif args.operation == 'resume':
+                result = service.resume(args.run_id)
+            else:
+                result = service.inspect(args.run_id)
         elif args.command=='prioritize':
             service=instance.prioritization
             if args.operation=='train':

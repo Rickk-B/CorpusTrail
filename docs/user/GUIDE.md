@@ -135,6 +135,16 @@ need distinct namespaces. Field-name similarity never establishes legacy semanti
 plans a batch. Inspect/save the returned plan, then `knowledge apply --plan FILE --apply`
 for an explicit additive write. No unattended model extraction is shipped.
 
+## Optional experimental models
+
+See [use your own LLM](MODELS.md) for the OpenAI-compatible reference adapter,
+local/remote configuration, environment-based user credentials, status, synthetic
+connection tests and explicit task/consent workflow. No LLM is required. Model
+configuration does not supply discovery-provider credentials. Outputs remain
+non-authoritative Knowledge Layer observations, not corpus decisions. Real-server
+interoperability is not yet project-validated; use a synthetic connection and
+structured-task check first. MCP is separate and is not required or implemented.
+
 ## ASReview handoff
 
 ```bash

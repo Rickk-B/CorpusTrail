@@ -298,7 +298,7 @@ class DiscoveryEvidenceTests(unittest.TestCase):
         self.assertEqual((target / self.config.database).read_bytes(), before)
         project = Project.upgrade(target, backup="data/backups/before-033.sqlite3", created_at=AT)
         self.assertEqual((target / "corpustrail.project.json").read_bytes(), body)
-        self.assertEqual(project.status()["checks"]["migrations"], 35)
+        self.assertEqual(project.status()["checks"]["migrations"], len(migrations()))
         with closing(sqlite3.connect(target / "data/backups/before-033.sqlite3")) as db, db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0], 32)
             self.assertEqual(db.execute("SELECT COUNT(*) FROM paper_entities").fetchone()[0], 0)
