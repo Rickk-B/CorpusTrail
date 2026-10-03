@@ -314,3 +314,80 @@ class CompatibleEndpointTests(unittest.TestCase):
             self.assertEqual(main(['models', 'connection-history', str(self.root), '--run-id', 'cli-test']), 0)
             self.assertNotIn(SECRET, stdout.getvalue()); self.assert_no_secret()
         self.assertEqual(len(self.requests), 1)
+
+    def test_fresh_user_cli_task_workflow_local_and_remote_without_database_editing(self):
+        # Fixture setup only. The user-facing workflow below uses CLI commands,
+        # a versioned JSON task and printed IDs, not a custom model adapter/API.
+        source = SourceReference('fixture://cli-acceptance', 'dummy-report', digest_bytes(b'TEST_ONLY'),
+                                 9, 'fixture', AT, identity_status='verified')
+        pid = self.project.identities.apply(self.project.identities.plan(
+            BibliographicRecord('Dummy software fixture',
+                                'TEST_ONLY. This record is a software fixture.'), source),
+            approve_new_identity=True, approve_aliases=True)
+        spec_path = self.root / 'task.json'
+        spec_path.write_text(json.dumps({'task_id': 'software-fixture', 'version': 'v1',
+            'instructions': 'Identify only the explicitly stated report role; return unknown otherwise.',
+            'predicates': ['ct.report_role'], 'evidence_modes': ['abstract'], 'max_claims': 1}), encoding='utf-8')
+
+        def cli(arguments, expected=0):
+            with patch('sys.stdout', new_callable=io.StringIO) as output, patch('sys.stderr', new_callable=io.StringIO) as error:
+                self.assertEqual(main(arguments), expected)
+                self.assertNotIn(SECRET, output.getvalue()+error.getvalue())
+                return json.loads(output.getvalue()) if expected == 0 else None
+
+        def synthetic_claims(payload):
+            inputs = json.loads(payload['messages'][1]['content'])['evidence']
+            abstract = next(e for e in inputs if e['representation'] == 'abstract')
+            return json.dumps({'claims': [{'predicate': 'ct.report_role', 'raw_value': 'software fixture',
+                'value_datatype': 'string', 'evidence_id': abstract['evidence_id'], 'quote': 'software fixture'}]})
+
+        before = self.protected()
+        with patch.dict(os.environ, {'FIXTURE_KEY': SECRET}):
+            for execution in ('local', 'remote'):
+                with self.subTest(execution=execution):
+                    configured = cli(['models', 'configure', str(self.root), '--workflow', execution,
+                        '--model', 'user-chosen-model', '--endpoint-id', 'fixture-endpoint', '--base-url', self.base,
+                        '--execution', execution, '--credential-env', 'FIXTURE_KEY', '--created-by', 'fixture'])
+                    row = next(r for r in configured['model_providers'] if r['workflow_id'] == execution)
+                    self.assertEqual(row['execution'], execution); self.assertEqual(row['credential_status'], 'present')
+                    self.assertEqual(self.project.config.providers, ())
+                    cli(['discover', str(self.root), '--provider', 'crossref', '--query', 'fixture',
+                         '--run-id', 'not-configured-'+execution], expected=2)
+                    cli(['models', 'status', str(self.root)])
+                    self.reply = 'OK'
+                    args = ['models', 'test-connection', str(self.root), '--workflow', execution,
+                            '--run-id', 'cli-connection-'+execution, '--execute']
+                    if execution == 'remote': args += ['--confirm-external']
+                    self.assertEqual(cli(args)['status'], 'succeeded')
+                    candidates = cli(['candidates', str(self.root)])
+                    self.assertIn(pid, [p['paper_id'] for p in candidates['canonical_papers']])
+                    path = 'plans/cli-'+execution+'.json'
+                    plan = cli(['models', 'plan', str(self.root), '--workflow', execution, '--spec', str(spec_path),
+                        '--run-id', 'cli-task-'+execution, '--paper-id', pid, '--mode', 'abstract', '--out', path])
+                    self.assertEqual(plan['data_leaves_machine'], execution == 'remote')
+                    frozen = json.loads((self.root/path).read_text(encoding='utf-8'))
+                    self.assertEqual({e['representation'] for e in frozen['request']['evidence']}, {'metadata', 'abstract'})
+                    self.assertEqual(set(frozen['request']), {'endpoint_id', 'evidence', 'model', 'output_contract',
+                        'predicate_definitions', 'request_id', 'run_id', 'settings', 'specification', 'specification_sha256'})
+                    self.assertEqual({e['text'] for e in frozen['request']['evidence']},
+                                     {'Dummy software fixture', 'TEST_ONLY. This record is a software fixture.'})
+                    self.reply = synthetic_claims
+                    args = ['models', 'execute', str(self.root), '--plan', path, '--execute']
+                    if execution == 'remote':
+                        count = len(self.requests)
+                        cli(args, expected=2)
+                        self.assertEqual(len(self.requests), count)
+                        consent = cli(['models', 'authorize', str(self.root), '--plan', path, '--actor', 'fixture-operator',
+                            '--expected-plan-sha256', plan['plan_sha256'], '--confirm-external'])['consent_event_id']
+                        args += ['--consent-event-id', consent]
+                    result = cli(args)
+                    self.assertEqual(result['status'], 'succeeded'); self.assertEqual(len(result['assertion_ids']), 1)
+                    history = cli(['models', 'inspect', str(self.root), '--run-id', 'cli-task-'+execution])
+                    self.assertIn('model_complete', [e['kind'] for e in history])
+                    cli(['knowledge', 'show', str(self.root), '--paper-id', pid])
+                    assertion = next(a for a in self.project.knowledge_store.assertions() if a['id'] == result['assertion_ids'][0])['payload']
+                    self.assertEqual(assertion['producer_type'], 'model')
+                    self.assertEqual(assertion['initial_authority'], 'non_authoritative')
+            self.assert_no_secret()
+        self.assertEqual(self.protected(), before)
+        self.assertEqual(len(self.requests), 4)  # One connection and one task per declared mode.

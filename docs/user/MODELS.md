@@ -1,6 +1,7 @@
 # Can I use my own LLM with CorpusTrail?
 
-Yes. Experimental model adapters let you choose a local server, institutional
+Yes, if your model is supported by an installed/configured adapter. Experimental
+model adapters let you choose a local server, institutional
 endpoint or hosted service. **You supply your own endpoint, account and credentials.**
 CorpusTrail does not provide, proxy or share API access. It does not endorse or
 require any particular model. All normal corpus workflows work without a model.
@@ -13,8 +14,25 @@ chat/completions**: an API base URL plus `/chat/completions`, JSON `model`/`mess
 and a text completion at `choices[0].message.content`. This is a protocol, not a
 requirement to use OpenAI. No SDK or optional model dependency is needed.
 Responses-only endpoints, tool calling, streaming and arbitrary extension fields
-are not supported by this first adapter. Compatibility varies; test your endpoint.
+are not supported by this first adapter. Compatibility varies between servers
+implementing “OpenAI-compatible” APIs; use the connection test before scientific runs.
+Passing that synthetic test does not itself prove structured-extraction compatibility
+or scientific accuracy. Real-server validation depends on your chosen endpoint.
 Wire shape was checked against the [official chat reference](https://developers.openai.com/api/reference/resources/chat).
+
+## Validation status
+
+Offline validation covers the generic adapter architecture, configuration → status
+→ connection test → explicit task workflow, local/remote distinction, external-transfer
+consent, credential non-persistence, Knowledge Layer integration and non-authoritative
+assertions. Mock-server compatibility tests and clean wheel/sdist installations passed.
+
+**No real compatible model server was tested.** Interoperability with a specific
+hosted provider, Ollama, LM Studio, vLLM or any other real server is not yet validated.
+The examples below are configuration examples, not claims of tested provider support.
+See the [bounded future interoperability checklist](../developer/MODEL_ADAPTER_V01_INTEROPERABILITY.md#bounded-future-interoperability-checklist)
+before using a real endpoint. It requires only a connection test and one structured
+task using synthetic/non-scientific content, not corpus extraction or new architecture.
 
 If opening an older project reports a schema mismatch, explicitly upgrade once
 with a new backup path:
@@ -76,7 +94,10 @@ you must configure that variable. No credential is required by the protocol itse
 Status shows adapter, configured model, endpoint, local/remote, credential
 present/missing/not configured, and **external evidence transfer disabled without
 exact-plan authorization**. It never prints the key, invokes a model or grants
-consent. Changing configuration appends a versioned project event and invalidates
+consent. `available` means the adapter is registered, not that a server/model is
+reachable. Credential `present` means the named environment variable is set,
+not that the server has accepted it; use an explicit connection test to check.
+Changing configuration appends a versioned project event and invalidates
 older unexecuted scientific plans. No background connection tests occur.
 
 ## Connection tests are not scientific extraction
@@ -117,6 +138,27 @@ Knowledge Layer observations. They never change identity, document trust, human
 review authority, corpus membership, prioritization or ASReview eligibility.
 Quote/schema checks are not scientific accuracy validation. No predicate is
 approved for unattended extraction; no bulk or automatic extraction is activated.
+
+No custom Python adapter or manual database editing is required for the built-in
+protocol. Supply a versioned task JSON file, obtain paper IDs with
+`corpustrail candidates /path/to/project`, and use `models plan`, `models authorize`
+(remote only), `models execute`, `models inspect` and
+`knowledge show /path/to/project --paper-id CANONICAL_ID`. Inspect the JSON plan
+file before authorizing its printed hash. If an operation reports a failed status
+in JSON, inspect its failure/provenance even when the CLI itself returned normally.
+
+## Discovery accounts and model accounts are separate
+
+`models status` describes **model** workflows/adapters, their configured model,
+locality, declared credential requirement, credential present/missing state and
+external-evidence-transfer policy. It does not authenticate discovery providers.
+Discovery adapters are independently configured under `ProjectConfig.providers`
+and invoked through `discover --provider ...`; see [discovery configuration](GUIDE.md#discovery-and-providers).
+Configuring a model gives no automatic access to Crossref, OpenAlex, Europe PMC
+or Semantic Scholar, and configuring a discovery provider supplies no model account.
+Each operation uses only its independently named user credential variable.
+There is not yet a unified discovery-and-model status dashboard; model status
+must not be interpreted as a discovery-provider availability check.
 
 Supported generation settings: `temperature`, `top_p`, `max_tokens` OR
 `max_completion_tokens`, `seed`, `frequency_penalty`, `presence_penalty`, `stop`.
