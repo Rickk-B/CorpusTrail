@@ -39,7 +39,8 @@ class ReleaseFinalizationTests(unittest.TestCase):
         self.assertTrue({'LICENSE', 'SECURITY.md', 'CONTRIBUTING.md', 'CHANGELOG.md'} <= paths)
         self.assertTrue(m['RECEIPTS'] <= paths)
         self.assertEqual(result['license'], 'MIT')
-        self.assertEqual(result['pending'], ['explicit remote creation/publication authorization'])
+        self.assertEqual(result['pending'], ['explicit next-release authorization'])
+        self.assertEqual(result['version'], corpustrail.__version__)
 
     def fake_tree(self, root, body=b'Safe synthetic text', name='README.md'):
         (root/name).write_bytes(body)

@@ -1,5 +1,14 @@
 # Release notes
 
+## 0.1.0a2.dev0 — unreleased development
+
+- Experimental provider-neutral model adapters, versioned extraction tasks,
+  exact-plan external-transfer consent, immutable request/response provenance
+  and validated non-authoritative Knowledge Layer writes.
+- Local-only model status, optional installed adapter plugins and offline fixtures.
+- No default model, shared credentials, automatic extraction or scientific
+  validation claim. The published `v0.1.0a1` tag/release remains unchanged.
+
 ## 0.1.0a1 — initial alpha candidate
 
 Locally prepared on 2026-10-02; not yet published or uploaded to a package index.

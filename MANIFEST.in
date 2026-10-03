@@ -4,6 +4,7 @@ recursive-include tests *.py
 recursive-include examples *.py *.json *.xml
 recursive-include docs/user *.md *.json
 include docs/developer/API.md docs/developer/XML_POLICY.md docs/developer/RELEASING.md
+include docs/developer/MODEL_ADAPTERS.md
 include docs/phase2b_migration_origins.json
 include docs/phase2c_migration_origins.json
 include tools/smoke_install.py tools/smoke_asreview.py tools/release_manifest.py

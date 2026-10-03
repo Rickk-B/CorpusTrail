@@ -31,6 +31,31 @@ def main(argv=None) -> int:
     configure.add_argument('--created-by', required=True, help='Stable configuration producer ID')
     status = project.add_parser("status")
     status.add_argument("path", type=Path)
+    models = sub.add_parser('models', help='Optional explicit model adapters; status is local-only').add_subparsers(dest='operation', required=True)
+    for operation in ('status', 'plan', 'authorize', 'execute', 'inspect', 'resume'):
+        command = models.add_parser(operation)
+        command.add_argument('path', type=Path)
+        if operation == 'plan':
+            command.add_argument('--workflow', required=True)
+            command.add_argument('--spec', type=Path, required=True, help='Provider-independent TaskSpec JSON')
+            command.add_argument('--run-id', required=True)
+            command.add_argument('--paper-id', required=True)
+            command.add_argument('--mode', choices=('metadata', 'abstract', 'selected_passages', 'full_text'), default='abstract',
+                                 help='Exact evidence depth transmitted; no automatic fallback or full-text expansion')
+            command.add_argument('--representation-id', help='Explicit verified document-body representation event ID')
+            command.add_argument('--passage', action='append', default=[], help='Explicit character start:end, repeated for selected passages')
+            command.add_argument('--out', help='New project-relative plan file; never overwritten')
+        elif operation in ('authorize', 'execute'):
+            command.add_argument('--plan', required=True, help='Project-relative frozen plan file')
+            if operation == 'authorize':
+                command.add_argument('--actor', required=True, help='Stable consent actor, optionally pseudonymous')
+                command.add_argument('--expected-plan-sha256', required=True, help='Hash of the exact plan you inspected')
+                command.add_argument('--confirm-external', action='store_true', required=True)
+            else:
+                command.add_argument('--consent-event-id', help='Plan-bound explicit external-transfer authorization')
+                command.add_argument('--execute', action='store_true', required=True)
+        elif operation in ('inspect', 'resume'):
+            command.add_argument('--run-id', required=True)
     upgrade = project.add_parser("upgrade")
     upgrade.add_argument("path", type=Path)
     upgrade.add_argument("--backup", required=True)
@@ -273,6 +298,30 @@ def main(argv=None) -> int:
                 authorization=json.loads(args.human_authorization.read_text(encoding='utf-8')) if args.human_authorization else None
                 result=store.apply(plan,human_authorization=authorization)
                 result['verification']=store.verify()
+        elif args.command == 'models':
+            from corpustrail.models import TaskSpec
+            service = instance.models
+            if args.operation == 'status':
+                result = service.status()
+            elif args.operation == 'plan':
+                spec = TaskSpec.from_dict(json.loads(args.spec.read_text(encoding='utf-8')))
+                passages = [tuple(int(v) for v in p.split(':')) for p in args.passage]
+                plan = service.plan(args.workflow, spec, run_id=args.run_id, paper_id=args.paper_id,
+                                    mode=args.mode, representation_id=args.representation_id, passages=passages)
+                result = service.write_plan(plan, args.out) if args.out else plan
+            elif args.operation in ('authorize', 'execute'):
+                plan = service.read_plan(args.plan)
+                if args.operation == 'authorize':
+                    if args.expected_plan_sha256 != plan['plan_sha256']:
+                        raise ContractError('consent hash does not match the inspected plan')
+                    result = {'consent_event_id': service.authorize(plan, actor_id=args.actor,
+                                                                  confirm_external=args.confirm_external)}
+                else:
+                    result = service.execute(plan, consent_event_id=args.consent_event_id)
+            elif args.operation == 'resume':
+                result = service.resume(args.run_id)
+            else:
+                result = service.inspect(args.run_id)
         elif args.command=='prioritize':
             service=instance.prioritization
             if args.operation=='train':

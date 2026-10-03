@@ -81,7 +81,7 @@ def run(*, dependency_wheels=None) -> dict:
         payload = root / "candidate"
         # No ancestor/workspace copy. No ignored runtime state enters the build.
         shutil.copytree(candidate, payload, ignore=shutil.ignore_patterns(
-            "__pycache__", "*.pyc", "*.egg-info", "build", "dist", ".venv", "*.sqlite3*"))
+            ".git", "__pycache__", "*.pyc", "*.egg-info", "build", "dist", ".venv", "*.sqlite3*"))
         wheels = root / "wheels"
         wheels.mkdir()
         outside = root / "unrelated-working-directory"

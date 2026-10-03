@@ -155,6 +155,11 @@ class Project:
         return KnowledgeStore(self)
 
     @property
+    def models(self):
+        from corpustrail.models import ModelService, AdapterRegistry
+        return ModelService(self, registry=AdapterRegistry(installed_plugins=True))
+
+    @property
     def asreview(self):
         from corpustrail.export.asreview import ExportService
         return ExportService(self)
