@@ -51,6 +51,7 @@ class ModelConfig:
     endpoint_id: str | None = None
     credential_env: str | None = None
     settings: dict = field(default_factory=dict)
+    adapter_configuration: dict = field(default_factory=dict)
 
     def validate(self):
         for value in (self.workflow_id, self.adapter, self.model):
@@ -62,6 +63,8 @@ class ModelConfig:
             raise ContractError('credential_env must name an environment variable')
         if not isinstance(self.settings, dict):
             raise ContractError('settings must be non-secret JSON configuration')
+        if not isinstance(self.adapter_configuration, dict):
+            raise ContractError('adapter_configuration must be non-secret JSON configuration')
         safe_data(asdict(self), secrets=(os.environ.get(self.credential_env, '')
                                         if self.credential_env else '',))
 
@@ -140,11 +143,12 @@ class ModelResponse:
     usage: dict = field(default_factory=dict)
     failure: str | None = None
     reported_model_version: str | None = None
+    diagnostics: dict = field(default_factory=dict)
 
     def to_dict(self):
         if self.failure not in (None, 'unavailable', 'rate_limited', 'rejected', 'provider_error'):
             raise ContractError('unknown provider failure code')
-        if not isinstance(self.output, dict) or not isinstance(self.usage, dict):
+        if not isinstance(self.output, dict) or not isinstance(self.usage, dict) or not isinstance(self.diagnostics, dict):
             raise ContractError('response must contain JSON output/usage objects')
         if not isinstance(self.observed_models, tuple) or type(self.model_usage_ambiguity) is not bool:
             raise ContractError('explicit observed model/ambiguity metadata required')

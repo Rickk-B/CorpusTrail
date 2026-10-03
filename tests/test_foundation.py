@@ -58,7 +58,7 @@ class FoundationTests(unittest.TestCase):
     def test_empty_initialization_and_no_scientific_seed_data(self):
         status = self.project.status()
         self.assertEqual(status["papers"], 0)
-        self.assertEqual(status["checks"], {"integrity": "ok", "foreign_key_errors": 0, "migrations": 36})
+        self.assertEqual(status["checks"], {"integrity": "ok", "foreign_key_errors": 0, "migrations": 37})
         with connection(self.project.database_path) as db:
             populated = {r[0]: db.execute(f'SELECT COUNT(*) FROM "{r[0]}"').fetchone()[0] for r in db.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'")}

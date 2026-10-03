@@ -42,6 +42,8 @@ class ModelService:
         rows = []
         for c in self.project.config.models:
             adapter = self.registry._adapters.get(c.adapter)
+            if c.adapter in self.registry._factories:
+                adapter = self.registry.resolve(c.adapter, configuration=c)
             info = asdict(adapter.info) if adapter else None
             rows.append({'workflow_id': c.workflow_id, 'adapter': c.adapter, 'model': c.model,
                 'status': 'available' if adapter else ('installed_not_loaded' if c.adapter in self.registry.available()
@@ -50,7 +52,10 @@ class ModelService:
                 'credential_status': ('present' if os.environ.get(c.credential_env) else 'missing')
                     if c.credential_env else ('required_but_not_configured' if adapter and adapter.info.credentials_required
                                             else 'not_configured'),
-                'data_leaves_machine': adapter.info.data_leaves_machine if adapter else None})
+                'data_leaves_machine': adapter.info.data_leaves_machine if adapter else None,
+                'execution': ('remote' if adapter.info.data_leaves_machine else 'local') if adapter else 'unknown',
+                'endpoint_id': c.endpoint_id, 'adapter_configuration': c.adapter_configuration,
+                'external_evidence_transfer': 'disabled_without_exact_plan_authorization'})
         result = {'model_providers': rows, 'available_adapters': self.registry.available(),
                   'local_model': 'not_configured' if not rows else 'see_configured_workflows',
                   'external_model': 'not_configured' if not rows else 'see_configured_workflows',
@@ -126,7 +131,7 @@ class ModelService:
         if not isinstance(spec, TaskSpec) or mode not in MODES or mode not in spec.evidence_modes:
             raise ContractError('task does not support selected evidence mode')
         c = self._config(workflow_id)
-        adapter = self.registry.resolve(c.adapter)
+        adapter = self.registry.resolve(c.adapter, configuration=c)
         if CAPABILITY not in adapter.info.capabilities:
             raise ContractError('adapter does not support structured assertions')
         vocabulary = self.project.knowledge_store.registry.describe()
@@ -235,7 +240,7 @@ class ModelService:
     def execute(self, plan, *, consent_event_id=None, clock=now):
         """One explicit invocation. Exact completed replay never calls the model again."""
         self._validate(plan)
-        adapter = self.registry.resolve(plan['configuration']['adapter'])
+        adapter = self.registry.resolve(plan['configuration']['adapter'], configuration=self._config(plan['workflow_id']))
         prior = [r for r in self.inspect(plan['run_id']) if r['kind'] == 'model_request_started']
         if prior:
             if prior[0]['payload']['plan'] != plan:
@@ -291,6 +296,15 @@ class ModelService:
                   'assertion_ids': [], 'production_effect': 'none'}
         self._record('model_complete', plan, result)
         return result
+
+    def test_connection(self, workflow_id, *, run_id, confirm_external=False, clock=now):
+        """Explicit synthetic-only diagnostic; never reads papers or writes assertions."""
+        from .connection import test_connection
+        return test_connection(self, workflow_id, run_id=run_id, confirm_external=confirm_external, clock=clock)
+
+    def connection_history(self, run_id):
+        from .connection import history
+        return history(self, run_id)
 
     def _drafts(self, plan, response):
         raw = response['response']

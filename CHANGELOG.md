@@ -6,6 +6,8 @@
   exact-plan external-transfer consent, immutable request/response provenance
   and validated non-authoritative Knowledge Layer writes.
 - Local-only model status, optional installed adapter plugins and offline fixtures.
+- Optional user-configured OpenAI-compatible chat endpoint (local or remote),
+  secret-free configuration/status and explicit synthetic connection diagnostics.
 - No default model, shared credentials, automatic extraction or scientific
   validation claim. The published `v0.1.0a1` tag/release remains unchanged.
 

@@ -32,10 +32,29 @@ def main(argv=None) -> int:
     status = project.add_parser("status")
     status.add_argument("path", type=Path)
     models = sub.add_parser('models', help='Optional explicit model adapters; status is local-only').add_subparsers(dest='operation', required=True)
-    for operation in ('status', 'plan', 'authorize', 'execute', 'inspect', 'resume'):
+    for operation in ('status', 'configure', 'test-connection', 'connection-history', 'plan', 'authorize', 'execute', 'inspect', 'resume'):
         command = models.add_parser(operation)
         command.add_argument('path', type=Path)
-        if operation == 'plan':
+        if operation == 'configure':
+            command.add_argument('--workflow', required=True)
+            command.add_argument('--model', required=True, help='User-selected model ID, not a default')
+            command.add_argument('--endpoint-id', required=True, help='Non-secret provider/endpoint identifier')
+            command.add_argument('--base-url', required=True, help='API base URL; /chat/completions is appended')
+            command.add_argument('--execution', choices=('local', 'remote'), required=True,
+                                 help='Local requires a literal loopback IP and no cloud relay')
+            command.add_argument('--credential-env', help='Environment VARIABLE NAME only; omit for uncredentialed endpoints')
+            command.add_argument('--timeout', type=float, default=60, help='HTTP timeout seconds (maximum 300)')
+            command.add_argument('--settings', default='{}', help='Non-secret JSON generation settings, e.g. temperature')
+            command.add_argument('--created-by', required=True, help='Stable configuration producer ID')
+        elif operation in ('test-connection', 'connection-history'):
+            command.add_argument('--run-id', required=True, help='Unique diagnostic run ID; exact replay is cached')
+            if operation == 'test-connection':
+                command.add_argument('--workflow', required=True)
+                command.add_argument('--confirm-external', action='store_true',
+                                     help='Approve a remote synthetic test only; NOT paper-evidence consent')
+                command.add_argument('--execute', action='store_true', required=True,
+                                     help='Explicit connection test; may incur provider charges')
+        elif operation == 'plan':
             command.add_argument('--workflow', required=True)
             command.add_argument('--spec', type=Path, required=True, help='Provider-independent TaskSpec JSON')
             command.add_argument('--run-id', required=True)
@@ -303,6 +322,25 @@ def main(argv=None) -> int:
             service = instance.models
             if args.operation == 'status':
                 result = service.status()
+            elif args.operation == 'configure':
+                from dataclasses import replace
+                from corpustrail.models import ModelConfig
+                current = instance.config
+                configured = ModelConfig(args.workflow, 'compatible-endpoint', args.model,
+                    endpoint_id=args.endpoint_id, credential_env=args.credential_env,
+                    settings=json.loads(args.settings), adapter_configuration={
+                        'base_url': args.base_url, 'execution': args.execution, 'timeout_seconds': args.timeout})
+                configured.validate()
+                service.registry.resolve(configured.adapter, configuration=configured)  # No network.
+                updated = replace(current, config_version=current.config_version+1,
+                    models=tuple(c for c in current.models if c.workflow_id != args.workflow) + (configured,))
+                event = instance.configure(updated, expected_event_id=instance.configuration_history()[-1]['event_id'],
+                                           created_by=args.created_by)
+                result = {'configuration_event_id': event, **instance.models.status()}
+            elif args.operation == 'test-connection':
+                result = service.test_connection(args.workflow, run_id=args.run_id, confirm_external=args.confirm_external)
+            elif args.operation == 'connection-history':
+                result = service.connection_history(args.run_id)
             elif args.operation == 'plan':
                 spec = TaskSpec.from_dict(json.loads(args.spec.read_text(encoding='utf-8')))
                 passages = [tuple(int(v) for v in p.split(':')) for p in args.passage]

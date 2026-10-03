@@ -41,7 +41,8 @@ class IsolationTests(unittest.TestCase):
                             continue
                         optional = {'sklearn','numpy','scipy'} if path.relative_to(root).as_posix()=='prioritization/_algorithm.py' else set()
                         self.assertIn(top, sys.stdlib_module_names | {"corpustrail"} | optional, (path, name))
-                        allowed_network = {"providers/network.py", "providers/metadata.py", "curation/http.py"}
+                        allowed_network = {"providers/network.py", "providers/metadata.py", "curation/http.py",
+                                           "models/integrations/compatible_endpoint.py"}
                         if path.relative_to(root).as_posix() not in allowed_network:
                             self.assertNotIn(top, denied, (path, name))
                 if isinstance(node, ast.Call):
@@ -68,7 +69,7 @@ class IsolationTests(unittest.TestCase):
         manifest = json.loads(root.joinpath("schema_manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["historical_count"], 31)
         self.assertEqual(manifest["origin_commit"], "1911f29dc2de0430d2f3c28324a672b78c5f150e")
-        self.assertEqual([x["version"] for x in manifest["migrations"]], list(range(1, 37)))
+        self.assertEqual([x["version"] for x in manifest["migrations"]], list(range(1, 38)))
         for entry in manifest["migrations"]:
             self.assertEqual("sha256:" + hashlib.sha256(root.joinpath("schema", entry["name"]).read_bytes()).hexdigest(), entry["sha256"])
             self.assertEqual(entry["origin_path"] is None, entry["version"] >= 32)

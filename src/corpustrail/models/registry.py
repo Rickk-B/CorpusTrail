@@ -10,6 +10,7 @@ class AdapterRegistry:
     def __init__(self, adapters=(), *, installed_plugins=False):
         self._adapters = {}
         self._plugins = {}
+        self._factories = {}
         if installed_plugins:
             for plugin in entry_points(group='corpustrail.model_adapters'):
                 if plugin.name in self._plugins:
@@ -27,9 +28,26 @@ class AdapterRegistry:
         self._adapters[adapter.info.adapter_id] = adapter
 
     def available(self):
-        return sorted(set(self._adapters) | set(self._plugins))
+        return sorted(set(self._adapters) | set(self._plugins) | set(self._factories))
 
-    def resolve(self, adapter_id):
+    def register_factory(self, adapter_id, factory):
+        """Bind optional integrations to a workflow config, never a shared endpoint."""
+        from .contracts import name
+        name(adapter_id)
+        if adapter_id in self.available() or not callable(factory):
+            raise ContractError('configured adapter factory unavailable or already registered')
+        self._factories[adapter_id] = factory
+
+    def resolve(self, adapter_id, *, configuration=None):
+        if adapter_id in self._factories:
+            if configuration is None or configuration.adapter != adapter_id:
+                raise ContractError('selected adapter requires an explicit workflow configuration')
+            configuration.validate()
+            adapter = self._factories[adapter_id](configuration)
+            if not isinstance(getattr(adapter, 'info', None), AdapterInfo) or adapter.info.adapter_id != adapter_id:
+                raise ContractError('configured adapter factory returned an invalid contract')
+            adapter.info.validate()
+            return adapter
         if adapter_id not in self._adapters and adapter_id in self._plugins:
             # Only the explicitly selected installed extension executes trusted code.
             try:

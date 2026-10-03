@@ -29,6 +29,12 @@ events may establish knowledge authority; the original producer remains model.
 
 ## Configuration and user credentials
 
+For a ready-to-configure reference protocol, see [use your own model](../user/MODELS.md).
+The optional `models.integrations.compatible_endpoint` module implements a small
+OpenAI-compatible chat/completions contract without a vendor SDK. It is selected
+only by explicit configuration, not a provider default. No commercial call is
+made by installation, configuration, status or project opening.
+
 Configure optional workflows through `ProjectConfig.models` or existing
 `project configure` (full configuration, next version, expected config event ID):
 
@@ -135,7 +141,17 @@ institution-model = "my_adapter:factory"
 The no-argument factory must return an adapter with the matching identifier.
 Status lists entry points without loading them; only explicitly selected adapters
 are loaded at planning/execution. Duplicate registrations fail closed. No SDK is
-installed automatically. The core does not offer an out-of-box commercial client.
+installed automatically. The built-in compatible endpoint is a protocol adapter,
+not a configured commercial account/client.
+
+`AdapterRegistry.register_factory(adapter_id, factory)` additionally supports
+config-bound integrations: `factory(ModelConfig)` returns a fresh adapter for
+the selected workflow. `resolve(adapter_id, configuration=config)` binds model,
+endpoint/locality/settings without sharing mutable endpoint state across workflows.
+`ModelConfig.adapter_configuration` is non-secret provider-neutral JSON; each
+integration validates its own options. The Knowledge Layer schema does not encode
+any endpoint protocol. Status may construct the trusted built-in config factory
+but never makes network calls or loads installed third-party entry points.
 
 ## CLI (explicit, no background extraction)
 
@@ -187,6 +203,10 @@ Additive migration 036 creates immutable `ct_model_events`: consent, reservation
 response, KnowledgeStore plan and completion. Existing migrations/tables are
 unchanged. New projects initialize it; existing alpha projects must explicitly
 run `corpustrail project upgrade PROJECT --backup data/backups/pre36.sqlite3`.
+Migration 037 adds an independent append-only `ct_model_connection_events` ledger
+for explicit synthetic-only diagnostics. It has no paper/evidence reference and
+does not create scientific assertions. Alpha/core-v0 projects require an explicit
+backup-backed upgrade to the current schema; migrations 001–036 are unchanged.
 The upgrade preserves bootstrap and existing observations and does not configure
 a model. Status/open never implicitly migrate.
 

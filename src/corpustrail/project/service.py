@@ -157,7 +157,10 @@ class Project:
     @property
     def models(self):
         from corpustrail.models import ModelService, AdapterRegistry
-        return ModelService(self, registry=AdapterRegistry(installed_plugins=True))
+        from corpustrail.models.integrations import register_reference_adapters
+        registry = AdapterRegistry(installed_plugins=True)
+        register_reference_adapters(registry)
+        return ModelService(self, registry=registry)
 
     @property
     def asreview(self):

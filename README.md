@@ -66,6 +66,8 @@ python -I -m corpustrail.tutorial /tmp/materials-demo-ml --prioritize
 - Experimental [model adapters](docs/developer/MODEL_ADAPTERS.md) require an
   explicit task and user-owned configuration/credentials; remote evidence calls
   require exact-plan consent. No model is required or selected by default.
+  [Connect your own model](docs/user/MODELS.md) through a compatible endpoint;
+  you supply the endpoint/account/credentials, never a shared CorpusTrail key.
 - Provider/model adapters are replaceable; no model or discovery provider is mandatory.
 - Pending/unverified documents are not trusted evidence.
 - External discovery/acquisition requires explicit transfer confirmation.
