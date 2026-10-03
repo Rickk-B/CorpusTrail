@@ -1,9 +1,11 @@
-# External Model Adapter v0 (experimental, unreleased)
+# External Model Adapter v0.1 (experimental)
 
-This infrastructure targets `0.1.0a2.dev0`; it does not modify or retag the
+This infrastructure is included in `0.1.0a2`; it does not modify or retag the
 published `v0.1.0a1` release. It has no model SDK or runtime dependency and no
 default provider/model. No live model was called to implement or test it.
 It is not scientific validation of extraction accuracy or a production extractor.
+Real OpenAI-compatible server/provider interoperability has not yet been validated;
+see the [offline validation report](MODEL_ADAPTER_V01_INTEROPERABILITY.md).
 
 ## Architecture and authority
 

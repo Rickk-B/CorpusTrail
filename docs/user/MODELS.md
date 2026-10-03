@@ -5,7 +5,12 @@ model adapters let you choose a local server, institutional
 endpoint or hosted service. **You supply your own endpoint, account and credentials.**
 CorpusTrail does not provide, proxy or share API access. It does not endorse or
 require any particular model. All normal corpus workflows work without a model.
-This guide applies to unreleased `0.1.0a2.dev0`, not the published `0.1.0a1`.
+This experimental feature is included in `0.1.0a2`, not `0.1.0a1`.
+
+You can configure your own model through CorpusTrail's model-adapter interface.
+The first built-in reference adapter targets OpenAI-compatible endpoints.
+Compatible endpoints can be local or remote. Real-server compatibility may vary
+and should be checked using the built-in connection test before scientific use.
 
 ## Compatible endpoint
 

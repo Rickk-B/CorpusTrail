@@ -25,5 +25,9 @@
   browser testing or 3.x certification. Preserve original custom IDs/full population.
 - Linux is the alpha target. Other OS behavior/hard links and later Python versions
   need verification before a support claim. No public service/index is provided.
-- Code/docs/invented fixtures use the MIT license. Version 0.1.0a1 identifies a
-  locally prepared candidate; remote creation/publication is a separate approval.
+- Experimental model adapters are offline/mock-tested, not yet tested against a
+  real OpenAI-compatible server, OpenAI hosted API, Ollama, LM Studio, vLLM or
+  another real provider/runtime. Connection tests and structured-task checks are
+  necessary for a chosen endpoint; neither establishes scientific accuracy.
+- Code/docs/invented fixtures use the MIT license. Version 0.1.0a2 is an alpha;
+  APIs and schema expectations may change. No PyPI distribution is provided.
