@@ -35,6 +35,8 @@ contact any external provider or test any configured account.
 Public `0.1.0a2` does not include this UI. Since this development checkpoint has not
 been pushed or released, `git pull` or reinstalling public main will not obtain it.
 Transfer the supplied pure-Python development wheel to your Mac first.
+After a separately approved push, the [GitHub development-artifact workflow](../developer/DEVELOPMENT_BUILDS.md)
+provides a downloadable wheel/commit receipt instead of a manual file transfer.
 
 1. Open Terminal and activate your existing CorpusTrail environment. Substitute
    your actual environment directory:
@@ -114,6 +116,9 @@ view and may contain prior judgments/methods; **it is not method-blind review**.
 Existing method-blind sessions continue to use their separate allowlisted API.
 
 ## Limits and troubleshooting
+
+For updating/uninstalling the software without deleting your projects, see
+[removal and storage ownership](REMOVAL_STORAGE.md).
 
 - No write actions, new review lifecycle, classifier, references or import UI.
 - Catalogue cursors refer to a live revision, not a persisted population. If

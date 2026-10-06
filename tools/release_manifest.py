@@ -9,6 +9,7 @@ ROOT_FILES = {'README.md', 'LICENSE', 'NOTICE.md', 'CHANGELOG.md', 'CONTRIBUTING
               'SECURITY.md', 'pyproject.toml', 'MANIFEST.in', '.gitignore'}
 RECEIPTS = {'docs/phase2b_migration_origins.json', 'docs/phase2c_migration_origins.json'}
 TOOLS = {'tools/smoke_install.py', 'tools/smoke_asreview.py', 'tools/release_manifest.py',
+         'tools/development_artifact.py',
          'tools/validation-constraints.txt', 'tools/audit_release.py', 'tools/verify_git_identity.py'}
 FIXTURE_DATA = {'examples/synthetic-materials/records.json', 'examples/synthetic-discovery/responses.json',
                 'examples/synthetic-discovery/article.xml'}

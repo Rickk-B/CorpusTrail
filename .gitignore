@@ -3,6 +3,8 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+*.whl
+corpus_trail-*.tar.gz
 .venv/
 *.sqlite3*
 .env

@@ -40,3 +40,56 @@ jobs:
         run: python tools/smoke_install.py --dependency-wheels /tmp/ct-dependency-wheels
       - name: Check code-only release population
         run: python tools/release_manifest.py
+  development-artifact:
+    name: Validated development wheel (not a release)
+    needs: acceptance
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      startsWith(github.ref, 'refs/heads/development/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CHECKPOINT_IMPLEMENTATION_SHA: '6e116118f05e53ec3694c60e9171cb873a437bf8'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: '${{ github.sha }}'
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build wheel from the exact run commit
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python tools/development_artifact.py check-source --expected-commit "$GITHUB_SHA" --implementation-commit "$CHECKPOINT_IMPLEMENTATION_SHA"
+          python -m pip install -c tools/validation-constraints.txt '.[dev]' setuptools
+          python -m build --wheel --no-isolation
+      - name: Validate the actual downloadable wheel in a clean core environment
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python -m venv "$RUNNER_TEMP/ct-development-core"
+          "$RUNNER_TEMP/ct-development-core/bin/python" -m pip install --no-index --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/ct-development-core/bin/python" -I -B -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p 'test_*.py' > "$RUNNER_TEMP/development-tests.txt" 2>&1
+          "$RUNNER_TEMP/ct-development-core/bin/python" -I -B -m corpustrail.tutorial "$RUNNER_TEMP/ct-development-tutorial" > "$RUNNER_TEMP/development-tutorial.json"
+          "$RUNNER_TEMP/ct-development-core/bin/corpustrail" --version > "$RUNNER_TEMP/development-version.txt"
+      - name: Assemble source identity, checksums and validation receipt
+        id: bundle
+        run: |
+          python tools/development_artifact.py bundle --expected-commit "$GITHUB_SHA" --implementation-commit "$CHECKPOINT_IMPLEMENTATION_SHA" --validation-dir "$RUNNER_TEMP" --output-dir "$RUNNER_TEMP/corpustrail-development-artifact"
+      - uses: actions/upload-artifact@v4
+        id: upload
+        with:
+          name: '${{ steps.bundle.outputs.artifact_name }}'
+          path: '${{ runner.temp }}/corpustrail-development-artifact/'
+          retention-days: 90
+          if-no-files-found: error
+          overwrite: false
+      - name: Show tester download link
+        env:
+          ARTIFACT_URL: '${{ steps.upload.outputs.artifact-url }}'
+        run: |
+          printf '\n[Download validated development wheel](%s)\n\nNot a public release. Artifact source/build commit: `%s`.\n\nCheckpoint 1 implementation commit: `%s`.\n' "$ARTIFACT_URL" "$GITHUB_SHA" "$CHECKPOINT_IMPLEMENTATION_SHA" >> "$GITHUB_STEP_SUMMARY"

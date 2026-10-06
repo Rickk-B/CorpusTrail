@@ -9,6 +9,9 @@ Use a dedicated venv with `python -m pip install -e .` from a supplied or cloned
 source tree, or install a supplied wheel/sdist. Core needs no ML, ASReview, model
 SDK or credentials. `.[dev]` adds build/Ruff; `.[prioritization]` adds sklearn.
 No public package index is assumed. Linux/Python 3.11–3.13 is the tested matrix.
+See [development checkpoint downloads](../developer/DEVELOPMENT_BUILDS.md) and
+[updating/removal/storage ownership](REMOVAL_STORAGE.md). Projects remain separate
+from installed software; pip uninstall does not delete research projects.
 
 ## Configuration and initialization
 

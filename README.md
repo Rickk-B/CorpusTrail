@@ -96,6 +96,8 @@ See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch step
 - [User guide](docs/user/GUIDE.md) — configuration, providers, evidence, review,
   prioritization, knowledge, ASReview and reproducibility.
 - [Offline tutorial](docs/user/TUTORIAL.md)
+- [Development checkpoint downloads](docs/developer/DEVELOPMENT_BUILDS.md)
+- [Updating, removal and storage ownership](docs/user/REMOVAL_STORAGE.md)
 - [Privacy and security](docs/user/PRIVACY_SECURITY.md)
 - [Limitations and troubleshooting](docs/user/LIMITATIONS.md)
 - [Alpha API](docs/developer/API.md)

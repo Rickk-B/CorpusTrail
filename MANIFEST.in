@@ -7,11 +7,13 @@ recursive-include examples *.py *.json *.xml
 recursive-include docs/user *.md *.json
 include docs/developer/API.md docs/developer/XML_POLICY.md docs/developer/RELEASING.md
 include docs/developer/MODEL_ADAPTERS.md
+include docs/developer/DEVELOPMENT_BUILDS.md
 include docs/phase2b_migration_origins.json
 include docs/phase2c_migration_origins.json
 include tools/smoke_install.py tools/smoke_asreview.py tools/release_manifest.py
 include tools/audit_release.py
 include tools/verify_git_identity.py
 include tools/validation-constraints.txt
+include tools/development_artifact.py
 recursive-include .github/workflows *.yml
 global-exclude __pycache__ *.pyc *.sqlite3 *~
