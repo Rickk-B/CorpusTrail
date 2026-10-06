@@ -42,6 +42,9 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
     source, = extracted.iterdir()
     for required in ('docs/phase2b_migration_origins.json', 'docs/phase2c_migration_origins.json',
                      'docs/user/TUTORIAL.md', 'docs/user/MODELS.md', 'docs/developer/MODEL_ADAPTERS.md',
+                     'docs/v0.1.0a3-implementation-plan.md', 'docs/user/LOCAL_UI.md',
+                     'src/corpustrail/local_app/assets/index.html',
+                     'src/corpustrail/local_app/assets/app.css', 'src/corpustrail/local_app/assets/app.js',
                      'src/corpustrail/resources/origins.json'):
         if not (source / required).is_file():
             raise RuntimeError('sdist omitted required provenance/tutorial: ' + required)
@@ -92,6 +95,10 @@ def run(*, dependency_wheels=None) -> dict:
         wheel, = wheels.glob("*.whl")
         with zipfile.ZipFile(wheel) as archive:
             wheel_entries = sorted(archive.namelist())
+        for required in ('corpustrail/local_app/assets/index.html',
+                         'corpustrail/local_app/assets/app.css', 'corpustrail/local_app/assets/app.js'):
+            if required not in wheel_entries:
+                raise RuntimeError('wheel omitted local frontend asset: ' + required)
         if any(not name.startswith(("corpustrail/", "corpus_trail-")) for name in wheel_entries):
             raise RuntimeError("wheel contains unexpected external assets")
         venv = root / "venv"

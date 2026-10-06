@@ -12,7 +12,8 @@ CorpusTrail asks **“Does this paper belong in my broad scientific topic corpus
 ASReview screens **“Does this paper satisfy the criteria for this particular review?”**
 Broad-corpus membership is not systematic-review eligibility.
 
-This is **0.1.0a2**, an early research alpha. APIs and schemas may change before 1.0.
+This development branch is **0.1.0a3.dev0**, not a published release. The public
+`0.1.0a1` and `0.1.0a2` releases remain frozen. APIs and schemas may change before 1.0.
 Linux/Python 3.11–3.13 is the tested target.
 
 ## Install
@@ -54,7 +55,21 @@ python -m pip install -e '.[prioritization]'
 python -I -m corpustrail.tutorial /tmp/materials-demo-ml --prioritize
 ```
 
-## Boundaries
+## Read-only local project browser (development checkpoint)
+
+After installing this development build into your existing environment:
+
+```bash
+corpustrail app /path/to/existing/project --open-browser
+```
+
+Browse the dashboard, paginated paper catalogue, evidence status and optional
+advanced provenance at the printed loopback URL. No project state is changed;
+there are no discovery, acquisition, model or review-write actions in this UI.
+The existing `corpustrail review serve` interface remains separate and unchanged.
+See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
+
+## Scientific boundaries
 
 - Prioritization changes review order, never inclusion authority; the low-ranked
   tail remains accessible. **No automatic stopping rule** is provided.

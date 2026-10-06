@@ -229,6 +229,12 @@ class EvidenceService:
     def status(self, paper_id):
         metadata = self.project.discovery.metadata(paper_id)
         reps = self.representations(paper_id)
+        return self._status(metadata, reps)
+
+    @staticmethod
+    def _status(metadata, reps):
+        """Shared pure status projection for existing services and snapshot reads."""
+        paper_id = metadata['paper_id']
         readable = [x for x in reps if x["payload"]["trusted"] and x["payload"]["representation"] == "structured_text"
                     and x["payload"].get("evidence_depth") == "document_body"]
         return {"paper_id": paper_id, "best_available": "structured_text" if readable else (

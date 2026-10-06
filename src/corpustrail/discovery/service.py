@@ -13,6 +13,21 @@ from corpustrail.identity import SourceReference
 from .contracts import SearchPlan, record_from_dict
 
 
+def _catalogue_field_sql(field):
+    """Internal bulk-read equivalent of the first-supported-nonempty selector.
+
+    Fixed alias ``p`` and allowlisted fields only; no HTTP/user SQL fragments.
+    Page DTOs still use _metadata so selected values and provenance stay shared.
+    """
+    if field not in {'title', 'authors', 'year', 'source'}:
+        raise ContractError('unsupported catalogue metadata field')
+    value = "json_extract(o.payload_json, '$.record." + field + "')"
+    nonempty = " NOT IN ('','[]') " if field == 'authors' else " != '' "
+    return "(SELECT " + value + " FROM ct_paper_observations o WHERE o.paper_id=p.paper_id " + \
+        "AND " + value + " IS NOT NULL AND " + value + nonempty + \
+        "ORDER BY json_extract(o.payload_json,'$.source.observed_at'),o.observation_id LIMIT 1)"
+
+
 class DiscoveryService:
     def __init__(self, project):
         self.project = project

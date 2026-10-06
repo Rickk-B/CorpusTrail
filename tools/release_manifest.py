@@ -29,6 +29,8 @@ def eligible(path):
     if path in ROOT_FILES | RECEIPTS | TOOLS | FIXTURE_DATA:
         return True
     if path.startswith('src/corpustrail/'):
+        if path.startswith('src/corpustrail/local_app/assets/'):
+            return path.endswith(('.html', '.css', '.js'))
         return path.endswith(('.py', '.sql', '.json'))
     if path.startswith(('tests/', 'examples/')):
         return path.endswith('.py')

@@ -1,5 +1,7 @@
 include README.md LICENSE NOTICE.md CHANGELOG.md CONTRIBUTING.md SECURITY.md pyproject.toml .gitignore
 recursive-include src *.py *.sql *.json
+recursive-include src/corpustrail/local_app/assets *.html *.css *.js
+include docs/v0.1.0a3-implementation-plan.md
 recursive-include tests *.py
 recursive-include examples *.py *.json *.xml
 recursive-include docs/user *.md *.json

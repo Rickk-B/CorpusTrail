@@ -16,6 +16,10 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="corpustrail", description="Broad scientific topic-corpus foundation")
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)
+    app = sub.add_parser('app', help='Read-only localhost dashboard and paper browser; no scientific writes')
+    app.add_argument('path', type=Path, help='Existing standalone project directory')
+    app.add_argument('--port', type=int, default=8766, help='Loopback port (0 chooses an available port)')
+    app.add_argument('--open-browser', action='store_true', help='Explicitly open the local URL in the default browser')
     project = sub.add_parser("project").add_subparsers(dest="operation", required=True)
     init = project.add_parser("init")
     init.add_argument("path", type=Path)
@@ -244,6 +248,10 @@ def main(argv=None) -> int:
             instance = Project.upgrade(args.path, backup=args.backup)
         else:
             instance = Project.open(args.path)
+        if args.command == 'app':
+            from corpustrail.local_app import serve
+            serve(instance, port=args.port, open_browser=args.open_browser)
+            return 0
         result = instance.status()
         if args.command == 'project' and args.operation == 'configure':
             config = ProjectConfig.from_dict(json.loads(args.config.read_text(encoding='utf-8')))

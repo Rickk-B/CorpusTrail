@@ -15,6 +15,17 @@ _STATE_SUFFICIENCY = {"included": "sufficient", "excluded": "sufficient",
 _PRODUCER_TYPES = {"human", "model", "deterministic", "parser", "imported"}
 _AUTHORITY_STATES = {"non_authoritative", "human_authorized"}
 
+
+def _catalogue_membership_sql():
+    """Internal bulk read of the same latest-authorized-event projection.
+
+    Consumers validate individual page histories through membership_in_connection.
+    Non-authoritative observations are deliberately absent from this query.
+    """
+    return "SELECT paper_id,MAX(sequence) AS sequence FROM ct_review_events " \
+        "WHERE authority_state='human_authorized' GROUP BY paper_id"
+
+
 @dataclass(frozen=True)
 class EvidenceBasis:
     representation: str

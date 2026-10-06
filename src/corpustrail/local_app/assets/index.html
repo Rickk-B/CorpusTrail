@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="corpustrail-session" content="SESSION_TOKEN">
+  <title>CorpusTrail — Project browser</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <header><a href="/dashboard" class="brand">CorpusTrail</a><span class="badge">Read-only project browser</span></header>
+  <nav aria-label="Project"><a href="/dashboard">Project dashboard</a><a href="/papers">Papers / Corpus</a></nav>
+  <main>
+    <p class="notice">Browse existing information. This interface does not save reviews, change corpus membership or contact external services.</p>
+    <p id="message" role="status" aria-live="polite"></p>
+    <section id="dashboard" hidden><h1 id="project-name"></h1><p id="description"></p>
+      <h2>Broad-corpus definition</h2><p id="definition"></p><p id="definition-note" class="muted"></p>
+      <div id="summaries" class="grid"></div>
+      <h2>Configured services</h2><p id="providers"></p><p id="resolvers"></p>
+      <p class="muted">Configured does not mean reachable or authenticated. Opening this page does not test providers.</p>
+      <a href="/papers" class="button">Browse papers</a>
+    </section>
+    <section id="catalogue" hidden><h1>Papers / Corpus</h1>
+      <p>Membership, human review and evidence availability are separate. Missing evidence never means exclusion.</p>
+      <form id="filters">
+        <label>Search title, authors or source<input id="search" type="search" maxlength="300"></label>
+        <label>Corpus membership<select id="membership"><option value="">All membership states</option><option value="included">Included</option><option value="excluded">Excluded</option><option value="insufficient_evidence">Insufficient evidence</option><option value="unresolved">Unresolved</option><option value="not_reviewed">Not reviewed for membership</option></select></label>
+        <label>Evidence<select id="evidence-filter"><option value="">All evidence</option><option value="metadata">Metadata best available</option><option value="abstract">Abstract best available</option><option value="structured_text">Verified document body</option><option value="pending">Has pending document</option><option value="mismatch_or_invalid">Has mismatch / invalid document</option></select></label>
+        <label>Human review<select id="review-filter"><option value="">All human-review states</option><option value="human_reviewed">Human observation recorded</option><option value="not_human_reviewed">No human observation recorded</option><option value="draft_history">Has draft history</option></select></label>
+        <label>Order<select id="sort"><option value="title">Title</option><option value="year_newest">Year: newest first</option><option value="year_oldest">Year: oldest first</option></select></label>
+        <label>Page size<select id="page-size"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
+        <button type="submit">Apply filters</button>
+      </form>
+      <p id="page-count" aria-live="polite"></p><div id="paper-list"></div>
+      <div class="pager"><button id="previous-page">Previous page</button><button id="next-page">Next page</button></div>
+    </section>
+    <section id="detail" hidden><a href="/papers">Back to Papers / Corpus</a><h1 id="paper-title"></h1>
+      <p id="bibliography"></p><p id="identifiers"></p><p id="paper-sources"></p><div id="paper-status"></div>
+      <h2>Available evidence</h2><p id="detail-evidence"></p><div id="representations"></div>
+      <h3>Abstract</h3><p id="abstract" class="scientific"></p>
+      <div id="document-controls"></div><pre id="document-text" class="scientific" hidden></pre>
+      <p id="document-position"></p><button id="document-next" hidden>Read next text segment</button>
+      <p class="notice">Viewing text is not a recorded review or an attestation that the full paper was read. Pending, mismatched and invalid documents are never displayed as trusted evidence.</p>
+      <details id="advanced"><summary>Advanced provenance and technical identifiers</summary>
+        <p>Operational provenance may contain prior judgments, retrieval methods and source locations. It is not a method-blind review view.</p>
+        <p id="technical-id"></p>
+        <label>Provenance section<select id="provenance-section"><option value="bibliography">Bibliographic observations and selection</option><option value="provider">Raw discovery/provider observations</option><option value="reviews">Review history</option><option value="representations">Evidence provenance</option><option value="identifiers">Identifier assertions</option></select></label>
+        <p id="provenance-count"></p><pre id="provenance-text"></pre>
+        <div class="pager"><button id="provenance-previous">Previous provenance page</button><button id="provenance-next">Next provenance page</button></div>
+      </details>
+    </section>
+  </main>
+  <footer>CorpusTrail builds broad scientific topic corpora. ASReview performs downstream question-specific screening. No automatic exclusion or stopping rule.</footer>
+</body>
+</html>
