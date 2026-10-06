@@ -349,6 +349,38 @@ class ReadModelTests(AppFixture):
         self.assertIn('Sort by', html); self.assertIn('Results per page', html)
         self.assertIn('summary', {tag for tag, _ in parser.entries})
 
+    def test_filter_grid_control_order_alignment_and_responsive_sizing(self):
+        assets = resources.files('corpustrail.local_app').joinpath('assets')
+        html = assets.joinpath('index.html').read_text(encoding='utf-8')
+        css = assets.joinpath('app.css').read_text(encoding='utf-8')
+        class FilterControls(HTMLParser):
+            def __init__(self):
+                super().__init__(); self.in_filters = False; self.controls = []; self.labels = 0
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == 'form' and attrs.get('id') == 'filters': self.in_filters = True
+                if not self.in_filters: return
+                if tag == 'label': self.labels += 1
+                if tag in {'input', 'select', 'button'}:
+                    self.controls.append(attrs.get('id', attrs.get('type')))
+            def handle_endtag(self, tag):
+                if tag == 'form': self.in_filters = False
+        controls = FilterControls(); controls.feed(html)
+        self.assertEqual(controls.controls, ['search', 'membership', 'evidence-filter', 'review-filter',
+                                             'sort', 'page-size', 'submit'])
+        self.assertEqual(controls.labels, 6)
+        grid = re.search(r'#filters\s*\{([^}]+)\}', css).group(1)
+        self.assertIn('repeat(4, minmax(0, 1fr))', grid)
+        self.assertIn('align-items: end', grid)
+        sizing = re.search(r'#filters input, #filters select, #filters button\s*\{([^}]+)\}', css).group(1)
+        for rule in ('box-sizing: border-box', 'width: 100%', 'min-width: 0', 'height:'):
+            self.assertIn(rule, sizing)
+        self.assertIn('#filters button { align-self: end;', css)
+        self.assertIn('@media (max-width:', css)
+        self.assertIn('repeat(2, minmax(0, 1fr))', css)
+        self.assertIn('grid-template-columns: minmax(0, 1fr)', css)
+        self.assertIn('input:focus-visible', css); self.assertIn('select:focus-visible', css)
+
 
 class HttpReadTests(AppFixture):
     def setUp(self):

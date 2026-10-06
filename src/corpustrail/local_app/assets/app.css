@@ -19,7 +19,14 @@ nav a[aria-current="page"] { font-weight: 700; text-decoration-thickness: 2px; }
 .notice { padding: .75rem; background: #eaf1f5; border-left: 3px solid #537b8d; }
 .muted, footer { color: #526570; font-size: .9rem; }
 footer { padding: 2rem 0; }
-.grid, #filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+/* Both filter rows share column tracks. Align boxes, not label tops. */
+#filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; align-items: end; }
+#filters label { min-width: 0; }
+#filters input, #filters select, #filters button { box-sizing: border-box; width: 100%; min-width: 0; height: 2.75rem; }
+#filters button { align-self: end; }
+@media (max-width: 960px) { #filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { #filters { grid-template-columns: minmax(0, 1fr); } }
 .card, article { background: white; border: 1px solid #d6dfe3; border-radius: .5rem; padding: 1rem; margin: 1rem 0; }
 article h2 { margin-top: 0; }
 label { display: grid; gap: .2rem; }
