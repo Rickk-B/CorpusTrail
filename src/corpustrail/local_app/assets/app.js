@@ -25,6 +25,30 @@ function identifierLine(items) {
   return items.filter(item => ['doi', 'pmid', 'pmcid'].includes(item.scheme))
     .map(item => item.scheme.toUpperCase() + ': ' + item.value).join(' · ');
 }
+function identifierUrl(item) {
+  // Fixed official origins only; identifiers are data, never arbitrary URLs.
+  if (item.scheme === 'doi' && /^10\.\d{4,9}\/\S+$/.test(item.value)) {
+    return 'https://doi.org/' + item.value.split('/').map(encodeURIComponent).join('/');
+  }
+  if (item.scheme === 'pmid' && /^[0-9]+$/.test(item.value)) return 'https://pubmed.ncbi.nlm.nih.gov/' + item.value + '/';
+  if (item.scheme === 'pmcid' && /^PMC[0-9]+$/.test(item.value)) return 'https://pmc.ncbi.nlm.nih.gov/articles/' + item.value + '/';
+  return null;
+}
+function identifierNodes(items) {
+  const box = node('span', '');
+  for (const item of items.filter(item => ['doi', 'pmid', 'pmcid'].includes(item.scheme))) {
+    if (box.children.length) box.append(node('span', ' · '));
+    box.append(node('span', item.scheme.toUpperCase() + ': '));
+    const url = identifierUrl(item);
+    const value = node(url ? 'a' : 'span', item.value);
+    if (url) {
+      value.href = url; value.target = '_blank'; value.rel = 'noopener noreferrer';
+      value.setAttribute('aria-label', item.scheme.toUpperCase() + ': ' + item.value + ' (opens in a new tab)');
+    }
+    box.append(value);
+  }
+  return box;
+}
 function discoveryLine(sources) {
   return sources.length ? 'Discovered via ' + sources.map(serviceName).join(', ') : '';
 }
@@ -98,7 +122,7 @@ async function catalogue(cursor = null) {
     const link = node('a', paper.bibliography.title || 'Title not available'); link.href = '/papers/' + paper.handle;
     heading.append(link); card.append(heading, node('p', bib(paper)), statusNodes(paper));
     const ids = identifierLine(paper.identifiers);
-    if (ids) { const line = node('p', ids); line.className = 'muted identifiers'; card.append(line); }
+    if (ids) { const line = node('p', ''); line.className = 'muted identifiers'; line.append(identifierNodes(paper.identifiers)); card.append(line); }
     const sources = discoveryLine(paper.sources);
     if (sources) { const line = node('p', sources); line.className = 'muted'; card.append(line); }
     box.append(card);
@@ -164,7 +188,7 @@ async function detail(handle) {
   paperHandle = handle;
   const data = await api('papers/' + handle); const paper = data.paper;
   byId('detail').hidden = false; text('paper-title', paper.bibliography.title || 'Title not available');
-  text('bibliography', bib(paper)); text('identifiers', identifierLine(paper.identifiers));
+  text('bibliography', bib(paper)); byId('identifiers').replaceChildren(identifierNodes(paper.identifiers));
   text('paper-sources', discoveryLine(paper.sources));
   byId('paper-status').replaceChildren(statusNodes(paper));
   text('abstract', paper.abstract || 'No abstract is currently available in CorpusTrail.');

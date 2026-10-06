@@ -320,8 +320,12 @@ class ReadModelTests(AppFixture):
         script = assets.joinpath('app.js').read_text(encoding='utf-8')
         html = assets.joinpath('index.html').read_text(encoding='utf-8')
         for name in ('index.html', 'app.js', 'app.css'): self.assertTrue(assets.joinpath(name).is_file())
-        for forbidden in ('innerHTML', 'localStorage', 'sessionStorage', 'eval(', 'http://', 'https://'):
+        for forbidden in ('innerHTML', 'localStorage', 'sessionStorage', 'eval(', 'http://'):
             self.assertNotIn(forbidden, script)
+        self.assertEqual(set(re.findall(r'https://[^\s\x27\x22]+', script)), {
+            'https://doi.org/', 'https://pubmed.ncbi.nlm.nih.gov/', 'https://pmc.ncbi.nlm.nih.gov/articles/'})
+        self.assertIn("fetch('/api/v1/' + path", script)
+        self.assertNotRegex(html, r'(?:src|href)="https?://')
         self.assertIn('textContent', script)
         self.assertNotIn('Record human decision', html)
         self.assertNotIn('Save & Next', html)
@@ -536,6 +540,26 @@ assert(!elements.bibliography.textContent.includes('Source unavailable'));
 assert(visibleText(elements['paper-status']).includes('Awaiting corpus decision'));
 assert.equal(vm.runInContext('reviewLabel({human_observations:0,sessions_with_draft_history:1})',context),'No human review recorded');
 assert.equal(vm.runInContext('identifierLine([{scheme:"openalex",value:"W12345"},{scheme:"pmcid",value:"PMC12345"}])',context),'PMCID: PMC12345');
+const requestsBeforeLinks=requests.length;
+const identifiers=[{scheme:'doi',value:'10.1234/example'},{scheme:'pmid',value:'12345'},
+  {scheme:'pmcid',value:'PMC12345'},{scheme:'openalex',value:'W12345'},{scheme:'ct-paper',value:'ct-paper:private'}];
+context.testIdentifiers=identifiers;
+const scholarly=vm.runInContext('identifierNodes(testIdentifiers)',context);
+const links=scholarly.children.filter(x=>x.tag==='a');
+assert.deepEqual(links.map(x=>x.href),['https://doi.org/10.1234/example','https://pubmed.ncbi.nlm.nih.gov/12345/','https://pmc.ncbi.nlm.nih.gov/articles/PMC12345/']);
+assert.deepEqual(links.map(x=>x.textContent),['10.1234/example','12345','PMC12345']);
+assert(links.every(x=>x.target==='_blank'&&x.rel==='noopener noreferrer'&&!x.onclick));
+assert(!visibleText(scholarly).includes('W12345'));assert(!visibleText(scholarly).includes('ct-paper:'));
+assert.equal(requests.length,requestsBeforeLinks);
+assert.equal(vm.runInContext('identifierUrl({scheme:"doi",value:"javascript:attack()"})',context),null);
+assert.equal(vm.runInContext('identifierUrl({scheme:"doi",value:"10.1234/a?x#y"})',context),'https://doi.org/10.1234/a%3Fx%23y');
+assert.equal(vm.runInContext('identifierUrl({scheme:"pmid",value:"123/../../attack"})',context),null);
+data.detail.paper.identifiers=identifiers;
+await vm.runInContext('detail('+JSON.stringify(data.detail.paper.handle)+')',context);
+assert.equal(elements.identifiers.children[0].children.filter(x=>x.tag==='a').length,3);
+data.papers.items[0].identifiers=identifiers;await vm.runInContext('catalogue()',context);
+assert(visibleText(elements['paper-list'].children[0]).includes('10.1234/example'));
+assert(!visibleText(elements['paper-list'].children[0]).includes('W12345'));
 data.papers.items[0].bibliography.title='<script>attack()</script>';await vm.runInContext('catalogue()',context);
 assert.equal(elements['paper-list'].children[0].children[0].children[0].textContent,'<script>attack()</script>');
 assert(requests.every(x=>x.startsWith('/api/v1/')));console.log('five-paper DOM walkthrough passed');})().catch(e=>{console.error(e);process.exitCode=1;});
