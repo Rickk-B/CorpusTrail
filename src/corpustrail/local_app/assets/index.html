@@ -10,26 +10,29 @@
 </head>
 <body>
   <header><a href="/dashboard" class="brand">CorpusTrail</a><span class="badge">Read-only project browser</span></header>
-  <nav aria-label="Project"><a href="/dashboard">Project dashboard</a><a href="/papers">Papers / Corpus</a></nav>
+  <nav aria-label="Project"><a id="nav-dashboard" href="/dashboard">Project dashboard</a><a id="nav-papers" href="/papers">Papers / Corpus</a></nav>
   <main>
-    <p class="notice">Browse existing information. This interface does not save reviews, change corpus membership or contact external services.</p>
+    <p class="muted app-note">Browsing does not change your project or contact external services.</p>
     <p id="message" role="status" aria-live="polite"></p>
     <section id="dashboard" hidden><h1 id="project-name"></h1><p id="description"></p>
-      <h2>Broad-corpus definition</h2><p id="definition"></p><p id="definition-note" class="muted"></p>
+      <div id="definition-group"><h2>Broad-corpus definition</h2><p id="definition"></p></div><p id="definition-note" class="muted"></p>
       <div id="summaries" class="grid"></div>
-      <h2>Configured services</h2><p id="providers"></p><p id="resolvers"></p>
-      <p class="muted">Configured does not mean reachable or authenticated. Opening this page does not test providers.</p>
+      <p class="muted">Recorded human review and published corpus decisions are separate. Drafts do not establish a decision. Missing evidence never implies exclusion.</p>
+      <details id="dashboard-details"><summary>Activity and identity details</summary></details>
+      <details><summary>Project setup</summary><p id="providers"></p><p id="resolvers"></p>
+        <p class="muted">Configured services are not tested when you open this page.</p></details>
       <a href="/papers" class="button">Browse papers</a>
+      <p class="muted">CorpusTrail builds broad-topic corpora. ASReview handles downstream question-specific screening. Prioritization never automatically excludes papers or stops review.</p>
     </section>
     <section id="catalogue" hidden><h1>Papers / Corpus</h1>
       <p>Membership, human review and evidence availability are separate. Missing evidence never means exclusion.</p>
       <form id="filters">
-        <label>Search title, authors or source<input id="search" type="search" maxlength="300"></label>
-        <label>Corpus membership<select id="membership"><option value="">All membership states</option><option value="included">Included</option><option value="excluded">Excluded</option><option value="insufficient_evidence">Insufficient evidence</option><option value="unresolved">Unresolved</option><option value="not_reviewed">Not reviewed for membership</option></select></label>
+        <label>Search papers<input id="search" type="search" maxlength="300" placeholder="Search title, author or journal"></label>
+        <label>Corpus decision<select id="membership"><option value="">All corpus states</option><option value="included">In corpus</option><option value="excluded">Out of corpus</option><option value="insufficient_evidence">Insufficient evidence</option><option value="unresolved">Awaiting corpus decision — unresolved</option><option value="not_reviewed">Awaiting corpus decision — no published decision</option></select></label>
         <label>Evidence<select id="evidence-filter"><option value="">All evidence</option><option value="metadata">Metadata best available</option><option value="abstract">Abstract best available</option><option value="structured_text">Verified document body</option><option value="pending">Has pending document</option><option value="mismatch_or_invalid">Has mismatch / invalid document</option></select></label>
-        <label>Human review<select id="review-filter"><option value="">All human-review states</option><option value="human_reviewed">Human observation recorded</option><option value="not_human_reviewed">No human observation recorded</option><option value="draft_history">Has draft history</option></select></label>
-        <label>Order<select id="sort"><option value="title">Title</option><option value="year_newest">Year: newest first</option><option value="year_oldest">Year: oldest first</option></select></label>
-        <label>Page size<select id="page-size"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
+        <label>Human review<select id="review-filter"><option value="">All human-review states</option><option value="human_reviewed">Human review recorded</option><option value="not_human_reviewed">No human review recorded</option><option value="draft_history">Draft activity (not a recorded review)</option></select></label>
+        <label>Sort by<select id="sort"><option value="title">Title</option><option value="year_newest">Year: newest first</option><option value="year_oldest">Year: oldest first</option></select></label>
+        <label>Results per page<select id="page-size"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
         <button type="submit">Apply filters</button>
       </form>
       <p id="page-count" aria-live="polite"></p><div id="paper-list"></div>
@@ -37,20 +40,24 @@
     </section>
     <section id="detail" hidden><a href="/papers">Back to Papers / Corpus</a><h1 id="paper-title"></h1>
       <p id="bibliography"></p><p id="identifiers"></p><p id="paper-sources"></p><div id="paper-status"></div>
-      <h2>Available evidence</h2><p id="detail-evidence"></p><div id="representations"></div>
+      <h2>Evidence</h2>
       <h3>Abstract</h3><p id="abstract" class="scientific"></p>
+      <h3>Full / structured text</h3><div id="representations"></div>
       <div id="document-controls"></div><pre id="document-text" class="scientific" hidden></pre>
       <p id="document-position"></p><button id="document-next" hidden>Read next text segment</button>
-      <p class="notice">Viewing text is not a recorded review or an attestation that the full paper was read. Pending, mismatched and invalid documents are never displayed as trusted evidence.</p>
+      <p class="muted">Missing evidence does not imply exclusion. Viewing evidence does not record a review or change corpus membership; it is not an attestation that the full paper was read. Unverified documents are not trusted evidence.</p>
       <details id="advanced"><summary>Advanced provenance and technical identifiers</summary>
         <p>Operational provenance may contain prior judgments, retrieval methods and source locations. It is not a method-blind review view.</p>
-        <p id="technical-id"></p>
+        <h3>Technical identifiers</h3><div id="technical-identifiers"></div><p id="copy-status" role="status" aria-live="polite"></p>
+        <h3>Discovery / canonicalization</h3><p id="provenance-sources"></p><p id="selection-summary"></p>
         <label>Provenance section<select id="provenance-section"><option value="bibliography">Bibliographic observations and selection</option><option value="provider">Raw discovery/provider observations</option><option value="reviews">Review history</option><option value="representations">Evidence provenance</option><option value="identifiers">Identifier assertions</option></select></label>
-        <p id="provenance-count"></p><pre id="provenance-text"></pre>
+        <p id="provenance-count"></p>
+        <details id="lineage-details"><summary>Show detailed lineage</summary><div id="lineage-records"></div></details>
+        <details id="raw-details"><summary>Show raw JSON</summary><p class="muted">Complete records for the selected category and page. Use pagination for further records.</p><pre id="provenance-text"></pre></details>
         <div class="pager"><button id="provenance-previous">Previous provenance page</button><button id="provenance-next">Next provenance page</button></div>
       </details>
     </section>
   </main>
-  <footer>CorpusTrail builds broad scientific topic corpora. ASReview performs downstream question-specific screening. No automatic exclusion or stopping rule.</footer>
+  <footer>CorpusTrail · Read-only project browser</footer>
 </body>
 </html>

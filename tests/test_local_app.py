@@ -4,6 +4,7 @@ from dataclasses import asdict
 import hashlib
 import http.client
 from importlib import resources
+from html.parser import HTMLParser
 import json
 from pathlib import Path
 import re
@@ -95,12 +96,42 @@ class ReadModelTests(AppFixture):
         self.assertEqual(data['project']['broad_corpus_definition'], 'Broad materials research')
         self.assertEqual(data['membership'], {'included': 1, 'excluded': 1, 'insufficient_evidence': 1, 'unresolved': 0, 'not_reviewed': 2})
         self.assertEqual(data['review']['human_reviewed_papers'], 4)
+        self.assertEqual(data['review']['published_corpus_decisions'], 3)
         self.assertEqual(data['review']['sessions'], 1)
         self.assertEqual(data['review']['papers_with_draft_history'], 1)
         self.assertEqual(data['evidence']['verified_structured_text_papers'], 1)
         self.assertEqual(data['evidence']['pending_document_papers'], 1)
         self.assertEqual(data['evidence']['mismatch_or_invalid_papers'], 1)
         self.assertEqual(data['providers'], ['crossref']); self.assertEqual(data['resolvers'], ['europepmc'])
+
+    def test_five_recorded_reviews_without_published_membership(self):
+        for index in range(5): self.label(index, 'included', authoritative=False)
+        before = fingerprints(self.root)
+        dashboard = self.reads.dashboard()
+        self.assertEqual(dashboard['review']['human_reviewed_papers'], 5)
+        self.assertEqual(dashboard['review']['published_corpus_decisions'], 0)
+        self.assertEqual(dashboard['membership']['not_reviewed'], 5)
+        for paper in self.reads.papers()['items']:
+            self.assertEqual(paper['membership'], {'state': 'not_reviewed', 'authority_state': 'none'})
+            self.assertEqual(paper['review']['human_observations'], 1)
+        self.assertEqual(before, fingerprints(self.root))
+
+    def test_scholarly_identifiers_normal_provider_identifiers_advanced_only(self):
+        record = BibliographicRecord('Exact identifier fixture', identifiers=(
+            Identifier('doi', '10.1234/app.0'), Identifier('pmid', '12345'),
+            Identifier('pmcid', 'PMC12345'), Identifier('openalex', 'W12345')))
+        source = SourceReference('fixture://identifiers', 'ids', 'sha256:'+'9'*64, 0, 'fixture', AT,
+                                 identity_status='verified')
+        self.project.identities.apply(self.project.identities.plan(record, source), approve_aliases=True)
+        before = fingerprints(self.root)
+        for paper in (self.reads.paper(self.handle(0))['paper'],
+                      next(x for x in self.reads.papers()['items'] if x['handle'] == self.handle(0))):
+            self.assertEqual({x['scheme'] for x in paper['identifiers']}, {'doi', 'pmid', 'pmcid'})
+            self.assertNotIn('W12345', json.dumps(paper))
+        advanced = self.reads.provenance(self.handle(0))
+        self.assertIn('openalex', {x['scheme'] for x in advanced['summary']['identifiers']})
+        self.assertIn('W12345', json.dumps(advanced))
+        self.assertEqual(before, fingerprints(self.root))
 
     def test_page_joins_match_shared_scientific_services(self):
         self.label(0, 'included'); self.label(1, 'excluded'); self.document(0)
@@ -296,6 +327,28 @@ class ReadModelTests(AppFixture):
         self.assertNotIn('Save & Next', html)
         self.assertIn('Read-only', html)
 
+    def test_progressive_disclosure_accessibility_and_single_evidence_summary(self):
+        html = resources.files('corpustrail.local_app').joinpath('assets/index.html').read_text(encoding='utf-8')
+        class Tags(HTMLParser):
+            def __init__(self):
+                super().__init__(); self.entries = []
+            def handle_starttag(self, tag, attrs):
+                self.entries.append((tag, dict(attrs)))
+        parser = Tags(); parser.feed(html)
+        by_id = {attrs['id']: (tag, attrs) for tag, attrs in parser.entries if 'id' in attrs}
+        for key in ('advanced', 'lineage-details', 'raw-details', 'dashboard-details'):
+            self.assertEqual(by_id[key][0], 'details')
+            self.assertNotIn('open', by_id[key][1])
+        self.assertLess(html.index('Technical identifiers'), html.index('Show detailed lineage'))
+        self.assertLess(html.index('Show detailed lineage'), html.index('Show raw JSON'))
+        self.assertIn('not a method-blind review view', html)
+        self.assertNotIn('detail-evidence', by_id)
+        self.assertEqual(sum(attrs.get('id') == 'paper-status' for _, attrs in parser.entries), 1)
+        self.assertEqual(by_id['search'][1]['placeholder'], 'Search title, author or journal')
+        self.assertIn('<label>Search papers', html)
+        self.assertIn('Sort by', html); self.assertIn('Results per page', html)
+        self.assertIn('summary', {tag for tag, _ in parser.entries})
+
 
 class HttpReadTests(AppFixture):
     def setUp(self):
@@ -381,30 +434,76 @@ class HttpReadTests(AppFixture):
 @unittest.skipUnless(shutil.which('node'), 'optional Node DOM test unavailable')
 class BrowserRenderingTests(AppFixture):
     def test_five_paper_frontend_navigation_and_escaping(self):
-        self.label(0, 'included'); self.label(1, 'excluded'); self.label(2, 'insufficient_evidence')
+        for index in range(5): self.label(index, 'included', authoritative=False)
         self.document(0); self.document(1, kind='pending')
+        self.document(2, kind='mismatch'); self.document(3, kind='invalid')
         data = {'dashboard': self.reads.dashboard(), 'papers': self.reads.papers(),
                 'detail': self.reads.paper(self.handle(0)), 'provenance': self.reads.provenance(self.handle(0))}
+        self.label(0, 'included'); self.label(1, 'excluded'); self.label(2, 'insufficient_evidence')
+        data['published'] = [self.reads.paper(self.handle(i))['paper'] for i in range(3)]
         script = resources.files('corpustrail.local_app').joinpath('assets/app.js').read_text(encoding='utf-8')
         harness = r'''
 const vm=require('node:vm'), assert=require('node:assert/strict');
 const data=DATA, elements={}, requests=[];
 function element(tag='div') {return {tag,value:'',content:'fixture-token',textContent:'',hidden:true,disabled:false,children:[],
   addEventListener(k,f){this['on'+k]=f;}, append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},
+  prepend(...items){this.children.unshift(...items);},setAttribute(k,v){this[k]=v;},focus(){this.focused=true;},select(){this.selected=true;},
   set innerHTML(v){throw Error('unsafe HTML');}};}
+function visibleText(item){return [item.textContent,...item.children.map(visibleText)].join(' ');}
 const document={getElementById(id){return elements[id]||(elements[id]=element());},querySelector(){return element();},createElement:element};
 for(const [id,value] of Object.entries({'page-size':'25',sort:'title','provenance-section':'bibliography'})) document.getElementById(id).value=value;
-const context={document,location:{pathname:'/dashboard'},URLSearchParams,console,fetch:async(path,options)=>{
+let copied;
+const context={document,location:{pathname:'/dashboard'},navigator:{clipboard:{writeText:async(value)=>{copied=value;}}},URLSearchParams,console,fetch:async(path,options)=>{
   requests.push(path); assert.equal(options.headers['X-CorpusTrail-Session'],'fixture-token');
   return {ok:true,json:async()=>structuredClone(path.includes('provenance')?data.provenance:path.endsWith('dashboard')?data.dashboard:path.includes('?')?data.papers:data.detail)};}};
 vm.createContext(context);vm.runInContext(SCRIPT,context);
 (async()=>{await new Promise(r=>setImmediate(r));assert.equal(elements['project-name'].textContent,'Materials catalogue');
+const summary=visibleText(elements.summaries);
+assert(summary.includes('Papers with recorded human review: 5'));
+assert(summary.includes('Papers with published corpus decisions: 0'));
+assert(summary.includes('Awaiting corpus decision: 5'));
+assert(!summary.includes('Session updates'));assert(!summary.includes('draft history'));
+assert(visibleText(elements['dashboard-details']).includes('Draft history is not a recorded decision'));
+assert(elements.resolvers.textContent.includes('Europe PMC'));
 await vm.runInContext('catalogue()',context);assert.equal(elements['paper-list'].children.length,5);
 const link=elements['paper-list'].children[0].children[0].children[0];assert(link.href.startsWith('/papers/'));assert(!link.textContent.includes('ct-paper:'));
 assert(!requests.some(x=>x.includes('provenance')));
+const card=visibleText(elements['paper-list'].children[0]);
+assert(card.includes('Human review recorded'));assert(card.includes('Awaiting corpus decision'));
+assert(!card.includes('Draft history'));assert(!card.includes('ct-paper:'));
 await vm.runInContext('detail('+JSON.stringify(data.detail.paper.handle)+')',context);
-assert(elements['detail-evidence'].textContent.includes('Verified'));assert.equal(elements['document-controls'].children.length,1);
-await vm.runInContext('provenance()',context);assert(elements['technical-id'].textContent.includes('ct-paper:'));
+assert(visibleText(elements['paper-status']).includes('Verified full/structured text'));assert.equal(elements['document-controls'].children.length,1);
+assert.equal(elements['advanced'].open,undefined);assert(!elements['detail-evidence']);
+await vm.runInContext('provenance()',context);
+assert(elements['technical-identifiers'].children[0].children[1].value.startsWith('ct-paper:'));
+await elements['technical-identifiers'].children[0].children[2].onclick();assert.equal(copied,data.provenance.paper_id);
+context.navigator.clipboard.writeText=async()=>{throw Error('clipboard unavailable');};
+await elements['technical-identifiers'].children[0].children[2].onclick();
+assert(elements['technical-identifiers'].children[0].children[1].selected);
+assert(elements['copy-status'].textContent.includes('manual copying'));
+assert(elements['selection-summary'].textContent.includes('Canonical metadata selection'));
+assert(elements['provenance-text'].textContent.includes(data.provenance.items[0].observation_id));
+assert.equal(elements['raw-details']?.open,undefined);
+for(const [index,label] of ['In corpus','Out of corpus','Insufficient evidence'].entries()) {
+  data.detail.paper=data.published[index];await vm.runInContext('detail('+JSON.stringify(data.detail.paper.handle)+')',context);
+  assert(visibleText(elements['paper-status']).includes(label));
+  if(index>0)assert.equal(elements['document-controls'].children.length,0);
+}
+data.dashboard.project.definition_origin='project_description';data.dashboard.project.broad_corpus_definition=data.dashboard.project.description;
+await vm.runInContext('dashboard()',context);assert.equal(elements['definition-group'].hidden,true);
+assert.equal(elements.definition.textContent,'');assert(elements['definition-note'].textContent.includes('No separate corpus definition'));
+data.dashboard.project.definition_origin='review_scope';
+await vm.runInContext('dashboard()',context);assert.equal(elements['definition-group'].hidden,true);
+assert(!elements['definition-note'].textContent.includes('No separate corpus definition'));
+data.detail.paper=data.papers.items[4];data.detail.paper.abstract=null;data.detail.paper.representations=[];
+data.detail.paper.bibliography.source=null;data.detail.paper.evidence.abstract_available=false;
+await vm.runInContext('detail('+JSON.stringify(data.detail.paper.handle)+')',context);
+assert(elements.abstract.textContent.includes('No abstract is currently available in CorpusTrail'));
+assert(visibleText(elements.representations).includes('No full-text document'));
+assert(!elements.bibliography.textContent.includes('Source unavailable'));
+assert(visibleText(elements['paper-status']).includes('Awaiting corpus decision'));
+assert.equal(vm.runInContext('reviewLabel({human_observations:0,sessions_with_draft_history:1})',context),'No human review recorded');
+assert.equal(vm.runInContext('identifierLine([{scheme:"openalex",value:"W12345"},{scheme:"pmcid",value:"PMC12345"}])',context),'PMCID: PMC12345');
 data.papers.items[0].bibliography.title='<script>attack()</script>';await vm.runInContext('catalogue()',context);
 assert.equal(elements['paper-list'].children[0].children[0].children[0].textContent,'<script>attack()</script>');
 assert(requests.every(x=>x.startsWith('/api/v1/')));console.log('five-paper DOM walkthrough passed');})().catch(e=>{console.error(e);process.exitCode=1;});

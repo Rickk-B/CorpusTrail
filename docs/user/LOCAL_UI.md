@@ -98,6 +98,15 @@ the server. Search matches title, authors or journal/source, including Unicode.
 Order by title or year, with canonical identity as a deterministic internal
 tie-breaker. Titles are navigation links; you do not copy canonical IDs.
 
+The dashboard separates **Review activity** from **Corpus**. A recorded human
+review can coexist with **Awaiting corpus decision**: only an explicit
+authority-bearing decision changes corpus membership. Cards use **In corpus**,
+**Out of corpus**, **Insufficient evidence** and **Awaiting corpus decision** as
+presentation labels; the precise underlying states remain unchanged. Draft and
+session-event counts are secondary activity details, never completed-review counts.
+Configured services and historical identity warnings are available in disclosures.
+The project description is not repeated as a fabricated corpus definition.
+
 Membership is separate from review status. A saved non-authoritative human
 observation can coexist with Not reviewed for membership. Draft history does not
 claim a form is complete, current or recorded. Other non-human observations do not
@@ -114,6 +123,15 @@ canonical field-selection lineage, bibliography, raw discovery observations,
 review history, evidence records and identifier assertions. It is an operational
 view and may contain prior judgments/methods; **it is not method-blind review**.
 Existing method-blind sessions continue to use their separate allowlisted API.
+
+DOI/PMID/PMCID are shown in normal bibliography where available. Operational
+provider identifiers, including OpenAlex IDs, remain in Advanced provenance.
+That view starts with technical identifiers (with Copy controls), source names
+and a canonical-selection summary. **Show detailed lineage** and **Show raw JSON**
+are separate, initially collapsed disclosures. Raw JSON preserves the complete
+selected category/page; use its pagination for further records. Copying an ID
+does not change project state. If clipboard access is unavailable, the read-only
+identifier field can be selected and copied manually.
 
 ## Limits and troubleshooting
 

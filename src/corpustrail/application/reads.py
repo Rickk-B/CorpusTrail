@@ -108,7 +108,8 @@ class ProjectReads:
         fields = metadata['fields']
         result = {'handle': _handle(pid),
             'bibliography': {key: fields[key] for key in ('title', 'authors', 'year', 'source')},
-            'identifiers': metadata['identifiers'],
+            # Provider keys remain preserved on the explicit advanced surface.
+            'identifiers': [x for x in metadata['identifiers'] if x['scheme'] in {'doi', 'pmid', 'pmcid'}],
             'membership': {key: membership[key] for key in ('state', 'authority_state')},
             'review': _review(db, pid),
             'evidence': {key: evidence[key] for key in (
@@ -152,6 +153,7 @@ class ProjectReads:
                     'definition_origin': 'review_scope' if config['review'].get('scope') else 'project_description'},
                 'papers': counts[0], 'membership': states,
                 'review': {'human_reviewed_papers': counts[5], 'papers_with_draft_history': counts[6],
+                    'published_corpus_decisions': counts[0] - states['not_reviewed'],
                     'sessions': sessions, 'session_updates': updates,
                     'notice': 'Draft history is not a recorded decision. Session completion is not inferred.'},
                 'evidence': {'abstract_available_papers': counts[1], 'verified_structured_text_papers': counts[2],
@@ -233,6 +235,9 @@ class ProjectReads:
             if section == 'bibliography':
                 metadata = self.project.discovery._metadata(db, pid)
                 result['canonical_selection'] = {'rule': metadata['selection_rule'], 'fields': metadata['field_provenance']}
+            metadata = self.project.discovery._metadata(db, pid)
+            result['summary'] = {'identifiers': metadata['identifiers'], 'sources': _sources(db, pid),
+                'canonical_selection_rule': metadata['selection_rule']}
             return result
 
     def document(self, handle, representation_handle, *, offset=0, limit=16000):

@@ -8,6 +8,14 @@ a { color: #165b78; }
 h1 { line-height: 1.2; }
 h2 { font-size: 1.2rem; }
 .badge { background: #e2ecee; border-radius: .3rem; padding: .25rem .5rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; margin: .3rem 0; }
+.chips .badge { font-size: .875rem; }
+.paper-status { margin: .75rem 0; }
+.identifiers { overflow-wrap: anywhere; }
+.technical-identifier { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr) auto; align-items: center; gap: .5rem; margin: .5rem 0; }
+.technical-identifier input { width: 100%; box-sizing: border-box; min-width: 0; }
+nav a[aria-current="page"] { font-weight: 700; text-decoration-thickness: 2px; }
+.app-note { margin-bottom: .5rem; }
 .notice { padding: .75rem; background: #eaf1f5; border-left: 3px solid #537b8d; }
 .muted, footer { color: #526570; font-size: .9rem; }
 footer { padding: 2rem 0; }
@@ -18,11 +26,12 @@ label { display: grid; gap: .2rem; }
 button, input, select, .button { font: inherit; padding: .5rem .65rem; border-radius: .3rem; border: 1px solid #a6b7bf; }
 button, .button { cursor: pointer; background: white; color: #165b78; }
 button:disabled { opacity: .5; cursor: default; }
-button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid #537b8d; outline-offset: 3px; }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid #537b8d; outline-offset: 3px; }
 .button { display: inline-block; text-decoration: none; }
 .scientific, pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 pre { background: white; border: 1px solid #d6dfe3; padding: 1rem; max-height: 34rem; overflow: auto; }
 details { margin: 1rem 0; }
-summary { cursor: pointer; }
+summary { cursor: pointer; font-weight: 600; }
+details > :not(summary) { margin-left: .5rem; }
 #message { color: #8b3b20; }
 [hidden] { display: none !important; }

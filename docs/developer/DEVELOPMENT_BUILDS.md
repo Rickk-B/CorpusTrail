@@ -146,3 +146,23 @@ authorized committing/pushing this CI-only follow-up on
 `development/v0.1.0a3-read-only-local-ui`; no main merge, tag or release is authorized.
 The first hosted run must still validate the matrix and uploaded receipt before
 the artifact is described as available for testing.
+
+## Checkpoint 1 UX correction lineage
+
+The first hosted follow-up succeeded at
+`7086456aabd4c4edd124bddc12d6fb93ecf5017e`. The approved UX correction is built
+from its own exact later source commit, not either preceding checkpoint. Receipts
+retain all three identities: `checkpoint.implementation_commit_sha` (`6e116118…`),
+`checkpoint.previous_distribution_commit_sha` (`7086456…`), and
+`source.commit_sha` (the actual UX-correction build commit).
+
+The original `application_source_unchanged` assertion is no longer applicable to
+a presentation correction: it is explicitly **false** when presentation source
+changed. `scientific_source_unchanged` is verified by a narrow reviewed path gate:
+only the three local frontend assets and `application/reads.py` may differ from
+the implementation checkpoint. The receipt lists those changed paths; all other
+production modules must remain byte-identical. This structural gate is supplemented
+by review/read-only/authority/trust regression tests, not a claim that arbitrary
+future changes in the allowed files are scientifically safe. The earlier
+CI/distribution commit must remain an ancestor with unchanged application source.
+An unrelated future checkpoint requires explicit review of this gate.

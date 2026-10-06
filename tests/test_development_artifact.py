@@ -146,6 +146,33 @@ class DevelopmentArtifactTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             TOOL['check_implementation'](self.root, self.implementation, TOOL['git'](self.root, 'rev-parse', 'HEAD'))
 
+    def test_ux_receipt_keeps_three_commits_and_only_allows_presentation_paths(self):
+        distribution = self.sha
+        path = self.root / 'src/corpustrail/local_app/assets/app.js'
+        path.parent.mkdir(parents=True)
+        path.write_text('const presentation = true;\n', encoding='utf-8')
+        self.commit()
+        source = TOOL['git'](self.root, 'rev-parse', 'HEAD')
+        receipt = TOOL['check_implementation'](self.root, self.implementation, source, distribution=distribution)
+        self.assertEqual(receipt['previous_distribution_commit_sha'], distribution)
+        self.assertEqual(receipt['implementation_commit_sha'], self.implementation)
+        self.assertFalse(receipt['application_source_unchanged'])
+        self.assertTrue(receipt['scientific_source_unchanged'])
+        self.assertEqual(receipt['presentation_paths_changed'], ['src/corpustrail/local_app/assets/app.js'])
+        TOOL['bundle'](self.root, source, self.validation, self.output,
+                       implementation=self.implementation, distribution=distribution, context=self.context)
+        bundled = json.loads((self.output / 'build-provenance.json').read_text(encoding='utf-8'))
+        self.assertEqual(bundled['source']['commit_sha'], source)
+        self.assertEqual(bundled['checkpoint']['implementation_commit_sha'], self.implementation)
+        self.assertEqual(bundled['checkpoint']['previous_distribution_commit_sha'], distribution)
+        self.assertFalse(bundled['checkpoint']['application_source_unchanged'])
+        scientific = self.root / 'src/corpustrail/curation/service.py'
+        scientific.parent.mkdir()
+        scientific.write_text('unexpected = True\n', encoding='utf-8')
+        self.commit()
+        with self.assertRaises(ValueError):
+            TOOL['check_implementation'](self.root, self.implementation, TOOL['git'](self.root, 'rev-parse', 'HEAD'), distribution=distribution)
+
 
 if __name__ == '__main__':
     unittest.main()
