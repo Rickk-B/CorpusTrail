@@ -1,7 +1,11 @@
 # CorpusTrail
 
-CorpusTrail is an open-source tool for building, curating, maintaining and
-organizing broad scientific literature corpora with strong provenance.
+**From literature discovery to a curated research corpus.**
+
+CorpusTrail helps researchers find, organize and evaluate scientific publications.
+Build a collection around your research topic, keep track of available evidence,
+and understand how publications became part of your corpus. A transparent research
+trail helps you revisit decisions and explain or reproduce your work.
 
 ```text
 discover → canonicalize → acquire evidence → curate → prioritize
@@ -65,11 +69,16 @@ corpustrail app --open-browser
 corpustrail app /path/to/existing/project --open-browser
 ```
 
-Browse the dashboard, paginated paper catalogue, evidence status and optional
-advanced provenance at the printed loopback URL. Browsing remains read-only.
-New Project and Project Settings provide explicit, provenance-preserving
-configuration saves without editing JSON. No discovery, acquisition, model or
-review-write actions are introduced; opening pages never contacts external services.
+Start at **Welcome to CorpusTrail**, with a compact workflow and New/Open Project
+actions. A direct project launch still opens its dashboard. Browse **Corpus**, paper
+details, evidence status and optional advanced provenance. Browsing remains read-only.
+New Project keeps a six-step wizard; Project Settings is a direct-edit page with
+Save Changes and Discard Changes. Configuration saves preserve their history.
+Discovery, acquisition and export already have command-line tools; the separate
+review UI also remains available. Their guided graphical workflows, assisted
+assessment and corpus import are planned, not included in this checkpoint.
+No discovery, acquisition, model or review-write actions are introduced; opening
+pages never contacts external services.
 The existing `corpustrail review serve` interface remains separate and unchanged.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
 

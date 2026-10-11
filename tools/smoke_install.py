@@ -44,6 +44,7 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
                      'docs/user/TUTORIAL.md', 'docs/user/MODELS.md', 'docs/developer/MODEL_ADAPTERS.md',
                      'docs/v0.1.0a3-implementation-plan.md', 'docs/user/LOCAL_UI.md',
                      'src/corpustrail/local_app/assets/index.html',
+                     'src/corpustrail/local_app/assets/home.html',
                      'src/corpustrail/local_app/assets/app.css', 'src/corpustrail/local_app/assets/app.js',
                      'src/corpustrail/local_app/assets/projects.html', 'src/corpustrail/local_app/assets/projects.js',
                      'src/corpustrail/resources/origins.json'):
@@ -97,6 +98,7 @@ def run(*, dependency_wheels=None) -> dict:
         with zipfile.ZipFile(wheel) as archive:
             wheel_entries = sorted(archive.namelist())
         for required in ('corpustrail/local_app/assets/index.html',
+                         'corpustrail/local_app/assets/home.html',
                          'corpustrail/local_app/assets/app.css', 'corpustrail/local_app/assets/app.js',
                          'corpustrail/local_app/assets/projects.html', 'corpustrail/local_app/assets/projects.js'):
             if required not in wheel_entries:

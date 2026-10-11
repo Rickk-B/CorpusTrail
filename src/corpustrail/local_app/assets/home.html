@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="corpustrail-session" content="SESSION_TOKEN">
+  <title>Welcome to CorpusTrail</title>
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <header><a href="/home" class="brand">CorpusTrail</a><span class="badge">Local research workspace</span></header>
+  <nav aria-label="Application"><a href="/home" aria-current="page">Home</a><a href="/projects">Projects</a><a PROJECT_NAV_HIDDEN href="/dashboard">Project dashboard</a><a PROJECT_NAV_HIDDEN href="/papers">Corpus</a><a PROJECT_NAV_HIDDEN href="/settings">Project Settings</a></nav>
+  <main>
+    <section class="welcome-intro" aria-labelledby="welcome-title">
+      <p class="eyebrow">From literature discovery to a curated research corpus.</p>
+      <h1 id="welcome-title">Welcome to CorpusTrail</h1>
+      <p>CorpusTrail helps researchers find, organize and evaluate scientific publications. Build a collection around your research topic, keep track of available evidence, and understand how publications became part of your corpus.</p>
+      <div class="pager"><a class="button primary" href="/projects/new">Create New Project</a><a class="button" href="/projects#open-existing">Open Existing Project</a></div>
+    </section>
+    <section aria-labelledby="workflow-title">
+      <h2 id="workflow-title">Your research workflow</h2>
+      <ol class="workflow" aria-label="Seven steps from defining your topic to continuing your research">
+        <li><span class="step-number">1</span><h3>Define your topic</h3><p>Choose a scientific subject and define the broad scope of your collection.</p><span class="capability">Project setup in this UI</span></li>
+        <li><span class="step-number">2</span><h3>Discover publications</h3><p>Search scientific literature databases.</p><span class="capability">Commands available · UI planned</span></li>
+        <li><span class="step-number">3</span><h3>Organize publications</h3><p>Bring together records for the same publication using exact identifiers.</p><span class="capability">Commands available · Browse here</span></li>
+        <li><span class="step-number">4</span><h3>Collect evidence</h3><p>Find available abstracts and legitimate scientific texts.</p><span class="capability">View here · Retrieval UI planned</span></li>
+        <li><span class="step-number">5</span><h3>Review and curate</h3><p>Assess which publications belong to your broad research topic.</p><span class="capability">Separate review UI · Guided flow planned</span></li>
+        <li><span class="step-number">6</span><h3>Build your corpus</h3><p>Maintain a curated collection with transparent decisions.</p><span class="capability">Dashboard and corpus browsing here</span></li>
+        <li><span class="step-number">7</span><h3>Export and continue</h3><p>Use your corpus for further research or downstream screening.</p><span class="capability">Commands available · Export UI planned</span></li>
+      </ol>
+      <p class="muted">Start with project setup and publication browsing here. Search, retrieval and export already have command-line tools; human review has a separate local interface. Their guided workflows, assisted assessment and importing existing collections are planned, not available on this page.</p>
+    </section>
+    <div class="grid">
+      <section class="card"><h2>Keep the research trail</h2><p>See where a publication came from, what evidence was available and how a decision was made. A clear trail helps you revisit decisions and explain or reproduce your work.</p><p class="muted">Missing evidence does not mean a publication is out of scope. Only explicitly authorized decisions change corpus membership.</p></section>
+      <section class="card"><h2>Continue with ASReview, if useful</h2><div class="handoff"><p><strong>CorpusTrail</strong><br>Build and curate a broad-topic literature collection.</p><span aria-hidden="true">↓</span><p><strong>ASReview — optional</strong><br>Screen that collection for a specific systematic or scoping review question.</p></div><p class="muted">Broad-topic membership and question-specific eligibility are different decisions. Prioritization only orders review; it never automatically excludes publications or stops review.</p></section>
+    </div>
+    <p class="muted">This application runs locally. Opening Home does not contact external services or change your research projects. Searches and retrieval require explicit actions; no model is required.</p>
+  </main>
+  <footer>CorpusTrail · Your projects stay yours when you update or remove the software.</footer>
+</body>
+</html>

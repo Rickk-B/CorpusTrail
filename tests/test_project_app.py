@@ -360,9 +360,84 @@ class GuidedHttpTests(ProjectFixture):
 
     def test_get_wizard_entry_assets_no_filesystem_mutation(self):
         with patch('urllib.request.urlopen', side_effect=AssertionError('no network')):
-            for route in ('/', '/projects', '/projects/new', '/assets/projects.js', '/api/v1/projects'):
+            for route in ('/', '/home', '/projects', '/projects/new', '/assets/projects.js', '/api/v1/projects'):
                 self.assertEqual(self.request('GET', route, authenticated=True)[0], 200)
         self.assertFalse(self.root.exists())
+
+    def test_home_workflow_capabilities_and_actions_are_packaged_and_explanatory(self):
+        status, html, headers = self.request('GET', '/home')
+        self.assertEqual(status, 200)
+        self.assertIn('Welcome to CorpusTrail', html)
+        self.assertIn('From literature discovery to a curated research corpus.', html)
+        self.assertIn('<ol class="workflow"', html)
+        self.assertEqual(html.count('class="step-number"'), 7)
+        self.assertIn('href="/projects/new">Create New Project', html)
+        self.assertIn('href="/projects#open-existing">Open Existing Project', html)
+        self.assertIn('Commands available · UI planned', html)
+        self.assertIn('Separate review UI · Guided flow planned', html)
+        self.assertIn('assisted assessment and importing existing collections are planned', html)
+        self.assertIn('ASReview — optional', html)
+        self.assertIn('exact identifiers', html)
+        self.assertIn('Missing evidence does not mean', html)
+        self.assertNotIn('<script', html)  # Static Home makes no API/provider requests.
+        self.assertNotRegex(html, r'(?:src|href)="https?://')
+        self.assertNotIn('Access-Control-Allow-Origin', headers)
+        self.assertIn("frame-ancestors 'none'", headers['Content-Security-Policy'])
+
+    def test_home_launch_and_active_project_navigation_direct_launch_compatibility(self):
+        _, html, _ = self.request('GET', '/')
+        self.assertIn('Welcome to CorpusTrail', html)
+        for path in ('/dashboard', '/papers', '/settings'):
+            self.assertRegex(html, r'<a hidden href="' + re.escape(path) + '"')
+        self.create()
+        _, html, _ = self.request('GET', '/')
+        self.assertIn('Read-only project browser', html)
+        self.assertNotIn('Welcome to CorpusTrail', html)
+        _, home, _ = self.request('GET', '/home')
+        self.assertIn('Welcome to CorpusTrail', home)
+        for path in ('/dashboard', '/papers', '/settings'):
+            self.assertRegex(home, r'<a\s+href="' + re.escape(path) + '"')
+        for path in ('/projects', '/projects/new', '/settings', '/dashboard', '/papers'):
+            _, page, _ = self.request('GET', path)
+            self.assertIn('href="/home">Home', page)
+            self.assertNotIn('Papers / Corpus', page)
+
+    def test_home_navigation_settings_and_existing_corpus_preserve_five_paper_files(self):
+        self.controller.open(self.existing())
+        before = fingerprint(self.root)
+        with patch('urllib.request.urlopen', side_effect=AssertionError('no external network')), patch.object(Project, 'upgrade', side_effect=AssertionError('no upgrade')):
+            for path in ('/home', '/projects', '/settings', '/dashboard', '/papers', '/api/v1/dashboard', '/api/v1/papers', '/api/v1/project-settings'):
+                self.assertEqual(self.request('GET', path, authenticated=True)[0], 200)
+        self.assertEqual(before, fingerprint(self.root))
+        self.assertEqual(len(self.project.reviews.history(self.ids[0])), 1)
+        self.assertEqual(ProjectReads(self.project).dashboard()['review']['published_corpus_decisions'], 0)
+
+    def test_home_keeps_host_origin_mutation_and_path_protections(self):
+        for headers in ({'Host': 'other.test'}, {'Origin': 'https://other.test'}, {'Sec-Fetch-Site': 'cross-site'}):
+            self.assertEqual(self.request('GET', '/home', headers=headers)[0], 403)
+        self.assertEqual(self.request('POST', '/home', body='{}', authenticated=True)[0], 405)
+        self.assertEqual(self.request('GET', '/home?path=/etc/passwd')[0], 400)
+        self.assertEqual(self.request('GET', '/assets/../home.html')[0], 404)
+        self.assertFalse(self.root.exists())
+
+    def test_settings_and_wizard_keep_accessible_panels_and_compact_summary(self):
+        assets = resources.files('corpustrail.local_app').joinpath('assets')
+        html = assets.joinpath('projects.html').read_text(encoding='utf-8')
+        css = assets.joinpath('app.css').read_text(encoding='utf-8')
+        js = assets.joinpath('projects.js').read_text(encoding='utf-8')
+        self.assertEqual(len(re.findall(r'<fieldset data-step="\d" aria-labelledby="section-\d"', html)), 6)
+        self.assertNotIn('<legend', html)
+        self.assertIn('Discard Changes', html)
+        self.assertIn('Configuration information and history', html)
+        self.assertIn("make('dl')", js)
+        self.assertIn("make('dt', label)", js)
+        self.assertIn("make('dd', value)", js)
+        self.assertIn('textarea:focus-visible', css)
+        self.assertIn('button:focus-visible', css)
+        self.assertIn('@media (max-width: 560px)', css)
+        self.assertIn('grid-template-columns: minmax(0, 1fr)', css)
+        self.assertIn('.section-heading:focus', css)
+        self.assertNotIn("legend').focus()", js)
 
     def test_csrf_origin_host_and_payload_guards(self):
         for headers, auth in [({}, False), ({'X-CorpusTrail-CSRF': 'wrong'}, True),
@@ -429,8 +504,10 @@ async function client(pathname) {
     constructor(tag,id='') { this.tag=tag;this.id=id;this.value='';this.textContent='';this.checked=false;
       this.hidden=false;this.disabled=false;this.required=false;this.children=[];this.dataset={};this.handlers={};nodes.push(this); }
     append(...children) { for(const c of children){c.parent=this;this.children.push(c);} }
-    replaceChildren(...children) {this.children=[];this.append(...children);}
+    prepend(...children) {for(const c of children)c.parent=this;this.children.unshift(...children);}
+    replaceChildren(...children) {for(const c of this.children)c.parent=null;this.children=[];this.append(...children);}
     addEventListener(name,fn) {(this.handlers[name] ||= []).push(fn);}
+    setAttribute(name,value) {this[name]=value;}
     reportValidity() {return !this.required || !!this.value.trim();}
     focus() {}
     async emit(name) { const event={preventDefault(){},stopPropagation(){this.stopped=true;}};
@@ -441,17 +518,17 @@ async function client(pathname) {
   const form=elements['project-form']; for(const e of Object.values(elements))if(e!==form)e.parent=form;
   for(const id of ['name','description','reviewer','folder'])elements[id].required=true;
   const steps=Array.from({length:6},(_,i)=>{const e=new Element('fieldset');e.dataset.step=String(i);return e;});
-  const legends=steps.map(()=>new Element('legend'));
   const groups=[['name','description','folder'],['scope'],[],[],['reviewer'],['confirm-authority','confirm-sessions']];
   const document={
-    getElementById(id){return nodes.find(e=>e.id===id);}, createElement(tag){return new Element(tag);},
+    getElementById(id){return elements[id]||nodes.find(e=>e.id===id&&connected(e));}, createElement(tag){return new Element(tag);},
     querySelector(s){if(s==='meta[name="corpustrail-session"]')return {content:input.token};
-      const m=s.match(/data-step="(\d)"/);if(m)return legends[Number(m[1])];throw Error(s);},
-    querySelectorAll(s){if(s==='[data-step]')return steps;if(s==='legend')return legends;
-      const kind=s.match(/data-kind="(\w+)"/);if(kind)return nodes.filter(e=>e.dataset.kind===kind[1]);
+      throw Error(s);},
+    querySelectorAll(s){if(s==='[data-step]')return steps;
+      const kind=s.match(/data-kind="(\w+)"/);if(kind)return nodes.filter(e=>e.dataset.kind===kind[1]&&connected(e));
       const group=s.match(/data-step="(\d)"/);if(group)return groups[Number(group[1])].map(id=>elements[id]);
       throw Error(s);}
   };
+  function connected(e){while(e){if(e===form)return true;e=e.parent;}return false;}
   const location={pathname, assign(target){location.target=target;}};
   const context={document,location,crypto:require('node:crypto').webcrypto,console,
     fetch:async(path,options)=>{requests.push({path,options});
@@ -459,12 +536,14 @@ async function client(pathname) {
       if(path.endsWith('/create')&&loseResponse){loseResponse=false;await response.text();throw Error('Simulated response loss');}
       return response;}};
   vm.createContext(context);vm.runInContext(input.script,context);
-  async function ready(){for(let i=0;i<200;i++){if(!elements.setup.hidden&&elements.progress.textContent) return;await new Promise(r=>setTimeout(r,10));}throw Error('setup not ready');}
+  async function ready(){for(let i=0;i<200;i++){
+    if(pathname==='/projects' ? !!elements['root-location'].textContent : !elements.setup.hidden&&elements.progress.textContent) return;
+    await new Promise(r=>setTimeout(r,10));}throw Error('page not ready');}
   // Hidden defaults from packaged HTML; initialize makes setup visible.
   elements.setup.hidden=true;
   await ready();
   const set=async(id,value)=>{elements[id].value=value;await elements[id].emit('input');};
-  return {elements,nodes,location,set,next:async()=>elements.next.onclick(),submit:async()=>form.emit('submit')};
+  return {elements,nodes,location,set,steps,context,next:async()=>elements.next.onclick(),submit:async()=>form.emit('submit')};
 }
 (async()=>{
   const c=await client('/projects/new');
@@ -475,6 +554,8 @@ async function client(pathname) {
   c.nodes.find(e=>e.dataset.kind==='resolver'&&e.value==='europepmc').checked=true;
   await c.next();await c.set('reviewer','researcher');await c.next();
   assert.equal(c.elements.progress.textContent,'Step 6 of 6');
+  assert.equal(c.elements.summary.children[0].tag,'dl');
+  assert.equal(c.elements.summary.children[0].children.length,18);
   assert.equal(requests.filter(r=>r.options.method==='POST').length,0);
   assert.equal(c.elements['authority-confirmation'].hidden,true);
   await c.submit(); assert.match(c.elements.message.textContent,/response loss/);
@@ -483,15 +564,63 @@ async function client(pathname) {
   assert.equal(creates.length,2);assert.equal(creates[0].options.body,creates[1].options.body);
   const s=await client('/settings');
   assert.equal(s.elements.name.value,'Five-paper researcher test');
-  await s.set('name','Updated researcher test');for(let i=0;i<5;i++)await s.next();
+  assert(s.steps.every(group=>!group.hidden));
+  assert(s.elements.back.hidden&&s.elements.next.hidden&&!s.elements.save.hidden);
+  assert.equal(s.elements['project-form'].children[0],s.elements['save-actions']);
+  assert.equal(s.elements['return-link'].href,'/dashboard');
+  const initial=JSON.parse(vm.runInContext('JSON.stringify(fields())',s.context));
+  await s.set('description','Discard this unsaved edit');
+  assert.match(s.elements['saved-status'].textContent,/Unsaved changes/);
+  s.elements.discard.onclick();assert.equal(s.elements.description.value,'Invented topic');
+  assert.match(s.elements['saved-status'].textContent,/No unsaved changes/);
+  await s.submit(); assert.equal(requests.filter(r=>r.path.endsWith('/save')).length,0);
+  await s.set('reviewer','different-pseudonym');await s.submit();
+  assert.match(s.elements.message.textContent,/pseudonym-only/);
+  assert.equal(requests.filter(r=>r.path.endsWith('/save')).length,0);s.elements.discard.onclick();
+  await s.set('description','Updated invented research topic');
+  assert.equal(s.elements['scope-confirmation'].hidden,true);
   assert.equal(s.elements['session-confirmation'].hidden,true);
   await s.submit();
   assert.match(s.elements.message.textContent,/version 2/);
   const saves=requests.filter(r=>r.path.endsWith('/save'));assert.equal(saves.length,1);
   const body=JSON.parse(saves[0].options.body);assert.equal(body.fields.providers[0].adapter,'crossref');
+  assert.deepEqual(body.fields,{...initial,description:'Updated invented research topic'});
   assert.deepEqual(body.fields.authorized_reviewers,[]);
+  const reopened=await client('/projects');
+  const open=reopened.elements['project-list'].children[0].children.find(e=>e.tag==='button');
+  await open.onclick();assert.equal(reopened.location.target,'/dashboard');
+  const persisted=await client('/settings');
+  assert.equal(persisted.elements.description.value,'Updated invented research topic');
+  assert(s.steps.every(group=>!group.hidden));
+  await s.set('scope','Different broad topic');await s.submit();
+  assert.match(s.elements.message.textContent,/Confirm the broad-corpus definition/);
+  assert.equal(requests.filter(r=>r.path.endsWith('/save')).length,1);s.elements.discard.onclick();
+  await s.set('authorized-reviewers','curator');await s.submit();
+  assert.match(s.elements.message.textContent,/Confirm the displayed authority/);
+  assert.equal(requests.filter(r=>r.path.endsWith('/save')).length,1);s.elements.discard.onclick();
+  vm.runInContext('settingsData.has_frozen_review_sessions = true',s.context);
+  await s.set('description','A further edit');await s.submit();
+  assert.match(s.elements.message.textContent,/Confirm the review-session safeguard/);
+  assert.equal(requests.filter(r=>r.path.endsWith('/save')).length,1);s.elements.discard.onclick();
+  // A second tab stays revision-pinned; no silent overwrite after another save.
+  vm.runInContext('settingsData.has_frozen_review_sessions = false',s.context);
+  const stale=await client('/settings');
+  await s.set('name','Updated researcher test');await s.submit();
+  await stale.set('description','A stale edit');await stale.submit();
+  assert.match(stale.elements.message.textContent,/changed in another window/);
+  // Existing adapter aliases, resolver order and uneditable/custom entries are
+  // read-model data, not a reason to reconstruct unrelated configuration.
+  vm.runInContext(`settingsData.fields.providers = [
+    {id:'custom-provider',adapter:'custom',credential_env:null},
+    {id:'alex-primary',adapter:'openalex',credential_env:'FIXTURE_PRIMARY'},
+    {id:'alex-secondary',adapter:'openalex',credential_env:'FIXTURE_SECONDARY'},
+    {id:'crossref',adapter:'crossref',credential_env:null}];
+    settingsData.fields.resolvers = ['custom-resolver','europepmc']; populateSettings();`,stale.context);
+  const restored=JSON.parse(vm.runInContext('JSON.stringify(fields())',stale.context));
+  const prior=JSON.parse(vm.runInContext('JSON.stringify(settingsData.fields)',stale.context));
+  assert.deepEqual(restored,prior);
   for(const r of requests) assert.ok(r.path.startsWith('/api/v1/'));
-  console.log('Synthetic guided UI/API creation, lost-response retry, settings and confirmations passed.');
+  console.log('Synthetic wizard, direct settings, discard/no-op, confirmations, stale-write and retry tests passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
         result = subprocess.run(['node', '-e', harness], input=json.dumps({'html': html, 'script': script,
@@ -500,7 +629,8 @@ async function client(pathname) {
         self.assertIn('passed', result.stdout)
         project = self.controller.project()
         self.assertEqual(project.config.name, 'Updated researcher test')
-        self.assertEqual(len(project.configuration_history()), 2)
+        self.assertEqual(project.config.description, 'Updated invented research topic')
+        self.assertEqual(len(project.configuration_history()), 3)
         self.assertEqual(project.config.review.authorized_reviewers, ())
 
 

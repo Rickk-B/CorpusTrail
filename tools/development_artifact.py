@@ -17,6 +17,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = {'corpustrail/local_app/assets/index.html',
+            'corpustrail/local_app/assets/home.html',
             'corpustrail/local_app/assets/app.css', 'corpustrail/local_app/assets/app.js'}
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
@@ -27,6 +28,7 @@ CHECKPOINT2_PATHS = {
     'src/corpustrail/local_app/assets/index.html', 'src/corpustrail/local_app/assets/app.js',
     'src/corpustrail/local_app/assets/app.css', 'src/corpustrail/local_app/assets/projects.html',
     'src/corpustrail/local_app/assets/projects.js'}
+CHECKPOINT2_PATHS.add('src/corpustrail/local_app/assets/home.html')
 
 
 def git(root, *args):

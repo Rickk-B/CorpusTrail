@@ -84,13 +84,16 @@ def make_server(project=None, *, port=8766, controller=None):
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/dashboard', '/papers', '/projects', '/projects/new', '/settings'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
-                    setup = controller is not None and (path in {'/projects', '/projects/new', '/settings'}
-                            or path == '/' and controller.active_handle is None)
-                    html = assets.joinpath('projects.html' if setup else 'index.html').read_text(encoding='utf-8')
-                    return self.send(200, html.replace('SESSION_TOKEN', token), 'text/html; charset=utf-8')
+                    active = controller.active_handle is not None if controller is not None else project is not None
+                    home = path == '/home' or path == '/' and not active
+                    setup = controller is not None and path in {'/projects', '/projects/new', '/settings'}
+                    page = 'home.html' if home else 'projects.html' if setup else 'index.html'
+                    html = assets.joinpath(page).read_text(encoding='utf-8')
+                    html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active else 'hidden')
+                    return self.send(200, html, 'text/html; charset=utf-8')
                 if path.startswith('/assets/'):
                     name = path[len('/assets/'):]
                     if name not in ASSETS or route.query:

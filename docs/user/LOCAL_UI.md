@@ -19,6 +19,13 @@ corpustrail app "/path/to/existing/project" --open-browser
 
 The expected version is `0.1.0a3.dev0`. The default URL is
 `http://127.0.0.1:8766`. Keep the terminal open while browsing. Stop with Ctrl+C.
+Without a project, the starting page is **Welcome to CorpusTrail**. It explains
+the research workflow and provides Create New Project / Open Existing Project.
+**Home** remains accessible in every navigation bar; when a project is active,
+Project dashboard, Corpus and Project Settings are also shown. Direct project
+launches still open their dashboard. No project-specific links are shown on Home
+before a project is selected.
+
 The terminal is the temporary launch bridge; paper navigation is entirely in the
 browser. A desktop installer is not included.
 
@@ -67,7 +74,7 @@ Keep its commit receipt: successive checkpoints share the development version.
    corpustrail app "/path/to/your/project" --open-browser
    ```
 
-4. Use Project dashboard → Papers / Corpus → a paper title → optional Advanced
+4. Use Project dashboard → Corpus → a paper title → optional Advanced
    provenance. These browsing actions remain read-only. Projects and Project
    Settings now support explicit configuration operations as described below.
 
@@ -87,7 +94,7 @@ packaged local assets.
 
 ## New Project / Open Existing Project
 
-Run `corpustrail app --open-browser` for the project entry screen. The default
+Run `corpustrail app --open-browser` for Home, then choose New/Open Project. The default
 allowed projects root is `~/CorpusTrailProjects`. To explicitly choose a different
 root at launch, use `corpustrail app --projects-root "/path/to/projects" --open-browser`.
 Opening pages does not even create a missing projects-root directory.
@@ -123,11 +130,23 @@ One launcher has one active project; opening another changes its browsing contex
 Avoid keeping unrelated project tabs open in the same launcher. Settings writes
 are pinned to their enrolled project handle and revision, not a guessed active ID.
 
-## Project Settings
+## Project Settings — direct editing
 
-Use **Project settings** from the dashboard. The same six readable sections show
-saved values. Edits remain in browser memory until **Save Changes** on the final
-summary. Navigation, Back and Cancel do not write configuration.
+Use **Project Settings** from the dashboard. All editable sections are directly
+accessible on one page: project information, corpus definition, discovery,
+evidence and reviewers. Change just the topic description and click **Save
+Changes**—no wizard navigation is required. Edits remain in browser memory until
+that explicit action; a change list and unsaved indicator show what will be saved.
+The save/discard actions appear above the editable sections and stay in view on
+wider screens; narrow screens use normal flow to avoid covering form controls.
+**Discard Changes** restores the loaded saved values without writing anything.
+Unchanged settings create no revision. A return link leads to the dashboard.
+
+New project creation still uses six guided steps with a compact final summary.
+Settings and creation are different interfaces over the same existing services.
+Configuration version, update authors/times, definition hash and location remain
+available under **Configuration information and history**. Technical details are
+collapsed by default.
 
 Saving uses the existing append-only configuration event/revision service. The
 bootstrap is never rewritten. A stale revision is rejected: reload and reapply
@@ -140,8 +159,9 @@ durable job/recovery system.
 
 The existing service freezes review sessions against **every** configuration
 revision. The form requires acknowledgment that saved changes make existing
-sessions stale; historical packets and saved work stay intact. It never restarts
-sessions automatically. Scope/topic changes after authoritative review remain
+sessions stale; historical packets and saved work stay intact. Definition changes
+also require an explicit confirmation, separate from authority/session warnings.
+It never restarts sessions automatically. Scope/topic changes after authoritative review remain
 prohibited. The error explains the restriction; no scope-migration policy is added.
 
 The form preserves model configuration, concept extensions, retry settings,
@@ -171,6 +191,14 @@ against a malicious process already running with your own filesystem permissions
 projects. Downloaded wheels are independently removable. See [storage ownership](REMOVAL_STORAGE.md).
 
 ## Dashboard and papers
+
+**Corpus** means the publication collection, not that every listed paper has been
+authoritatively included. In corpus, Out of corpus, Insufficient evidence and
+Awaiting corpus decision remain separate; likely or unreviewed records are not hidden.
+
+Home describes which workflow steps are available here, through existing commands
+or the separate review UI, and which guided interfaces are planned. Its diagram
+is explanatory, not an action that runs a search or retrieves evidence.
 
 The dashboard shows project description/scope, canonical count, authoritative
 membership states, human-review/draft-history summaries, evidence availability,

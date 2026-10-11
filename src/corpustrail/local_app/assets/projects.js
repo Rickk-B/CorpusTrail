@@ -26,11 +26,17 @@ function lines(id) { return get(id).value.split('\n').map(x => x.trim()).filter(
 function fields() {
   const before = settingsData ? settingsData.fields : {providers: [], search: [], resolvers: []};
   const chosenProviders = selected('provider');
-  const providerOrder = [...before.providers.filter(p => chosenProviders.includes(p.id)).map(p => p.id),
-    ...chosenProviders.filter(id => !before.providers.some(p => p.id === id))];
-  const providers = providerOrder.map(id => ({id, adapter: id, credential_env: get('credential-' + id)?.value.trim() || null}));
-  // Unknown/custom configuration stays unchanged, not falsely offered as built-in functionality.
-  providers.push(...before.providers.filter(p => !entryData.capabilities.providers.some(a => a.id === p.adapter)));
+  const installed = adapter => entryData.capabilities.providers.some(a => a.id === adapter);
+  const providers = before.providers.filter(p => !installed(p.adapter) || chosenProviders.includes(p.adapter)).map(p => {
+    if (!installed(p.adapter)) return p;
+    const control = get('credential-' + p.adapter);
+    if (!control) return p;
+    const shown = before.providers.find(old => old.adapter === p.adapter)?.credential_env || '';
+    return control.value.trim() === shown ? p : {...p, credential_env: control.value.trim() || null};
+  });
+  providers.push(...chosenProviders.filter(id => !before.providers.some(p => p.adapter === id)).map(id =>
+    ({id, adapter: id, credential_env: get('credential-' + id)?.value.trim() || null})));
+  // Unknown/custom configuration stays unchanged, including order and identity.
   const unused = [...before.search];
   const concepts = lines('concepts').map(label => {
     const position = unused.findIndex(c => c.label === label);
@@ -46,7 +52,8 @@ function fields() {
   }) : entryData.draftConcepts;
   entryData.draftConcepts = stableConcepts;
   return {name: get('name').value.trim(), description: get('description').value.trim(), scope: get('scope').value.trim(),
-    providers, resolvers: [...selected('resolver'), ...before.resolvers.filter(id => !entryData.capabilities.resolvers.some(r => r.id === id))],
+    providers, resolvers: [...before.resolvers.filter(id => selected('resolver').includes(id) || !entryData.capabilities.resolvers.some(r => r.id === id)),
+      ...selected('resolver').filter(id => !before.resolvers.includes(id))],
     search: stableConcepts, reviewer: get('reviewer').value.trim(),
     authorized_reviewers: editing ? lines('authorized-reviewers') : (get('grant-authority').checked ? [get('reviewer').value.trim()] : [])};
 }
@@ -64,74 +71,108 @@ function options(kind, capabilities, active) {
       const envLabel = make('label', 'Credential environment-variable name (not the key)');
       const env = make('input'); env.id = 'credential-' + item.id; env.maxLength = 100;
       env.placeholder = 'CORPUSTRAIL_PROVIDER_KEY'; env.autocomplete = 'off';
-      env.value = settingsData?.fields.providers.find(p => p.id === item.id)?.credential_env || '';
+      env.value = settingsData?.fields.providers.find(p => p.adapter === item.id)?.credential_env || '';
       envLabel.append(env); advanced.append(envLabel, make('p', 'Configuration is not a connectivity test. No credential value is shown or stored.'));
       card.append(advanced);
     }
     box.append(card);
   }
 }
+const fieldLabels = {name: 'Project name', description: 'Topic description', scope: 'Corpus definition',
+  providers: 'Discovery providers', resolvers: 'Evidence resolvers', search: 'Search concepts', authorized_reviewers: 'Authorized corpus reviewers'};
+function changedFields(current = fields()) {
+  return editing ? Object.keys(fieldLabels).filter(key => JSON.stringify(current[key]) !== JSON.stringify(settingsData.fields[key])) : [];
+}
 function summarize() {
-  const current = fields(); const box = get('summary'); box.replaceChildren();
-  for (const [label, value] of [
+  const current = fields(); const changed = changedFields(current);
+  const box = get('summary'); box.replaceChildren();
+  if (!editing) {
+    const list = make('dl'); list.className = 'configuration-summary';
+    for (const [label, value] of [
     ['Project', current.name], ['Topic description', current.description], ['Broad-corpus definition', current.scope || 'No separate definition configured'],
     ['Discovery providers', current.providers.map(p => entryData.capabilities.providers.find(a => a.id === p.adapter)?.label || p.id).join(', ') || 'None'],
     ['Evidence resolvers', current.resolvers.map(id => entryData.capabilities.resolvers.find(r => r.id === id)?.label || id).join(', ') || 'None'],
     ['Search concepts', current.search.map(c => c.label).join(', ') || 'None'], ['Configuration author / reviewer pseudonym', current.reviewer],
     ['Authorized corpus reviewers', current.authorized_reviewers.join(', ') || 'None — review observations do not grant authority'],
     ['Storage location', editing ? settingsData.location : entryData.projects_root + '/' + get('folder').value]]) {
-    box.append(make('h2', label), make('p', value));
+      list.append(make('dt', label), make('dd', value));
+    }
+    box.append(list);
   }
   const authorityChanged = editing ? JSON.stringify(current.authorized_reviewers) !== JSON.stringify(settingsData.fields.authorized_reviewers) : current.authorized_reviewers.length > 0;
   get('authority-confirmation').hidden = !authorityChanged;
-  get('session-confirmation').hidden = !editing || !settingsData.has_frozen_review_sessions;
+  get('session-confirmation').hidden = !editing || !changed.length || !settingsData.has_frozen_review_sessions;
+  get('scope-confirmation').hidden = !editing || !changed.includes('scope');
   if (editing) {
-    box.append(make('h2', 'Changes to saved configuration'));
     const changes = make('ul');
-    for (const [key, label] of Object.entries({name: 'Project name', description: 'Topic description', scope: 'Corpus definition',
-      providers: 'Discovery providers', resolvers: 'Evidence resolvers', search: 'Search concepts', authorized_reviewers: 'Authorized corpus reviewers'})) {
-      if (JSON.stringify(current[key]) !== JSON.stringify(settingsData.fields[key])) changes.append(make('li', label));
-    }
+    for (const key of changed) changes.append(make('li', fieldLabels[key]));
+    const actorChanged = current.reviewer !== settingsData.fields.reviewer;
+    if (actorChanged) changes.append(make('li', 'Configuration author pseudonym (recorded with a configuration change)'));
     box.append(changes.children.length ? changes : make('p', 'No configuration fields changed.'));
-    box.append(make('p', 'Saving appends a configuration revision. Existing models, concept extensions and advanced policy settings are preserved. No reviews or membership are rewritten.'));
+    get('saved-status').textContent = 'Saved configuration version ' + settingsData.version +
+      (changed.length || actorChanged ? ' · Unsaved changes.' : ' · No unsaved changes.');
   }
 }
 function showStep(next) {
+  if (editing) return;
   step = next;
   for (const group of document.querySelectorAll('[data-step]')) group.hidden = Number(group.dataset.step) !== step;
   get('back').disabled = step === 0; get('next').hidden = step === 5; get('save').hidden = step !== 5;
   get('progress').textContent = 'Step ' + (step + 1) + ' of 6';
   if (step === 5) summarize();
-  document.querySelector('[data-step="' + step + '"] legend').focus();
+  get('section-' + step).focus();
 }
-function validStep() {
-  for (const field of document.querySelectorAll('[data-step="' + step + '"] input, [data-step="' + step + '"] textarea')) {
+function validStep(index = step) {
+  for (const field of document.querySelectorAll('[data-step="' + index + '"] input, [data-step="' + index + '"] textarea')) {
     if (!field.reportValidity()) return false;
   }
   return true;
 }
+function populateSettings() {
+  entryData.draftConcepts = [];
+  for (const id of ['name', 'description', 'scope', 'reviewer']) get(id).value = settingsData.fields[id];
+  get('concepts').value = settingsData.fields.search.map(c => c.label).join('\n');
+  get('authorized-reviewers').value = settingsData.fields.authorized_reviewers.join('\n');
+  get('scope').required = settingsData.definition.scope_present;
+  options('provider', entryData.capabilities.providers, settingsData.fields.providers.map(p => p.adapter));
+  options('resolver', entryData.capabilities.resolvers, settingsData.fields.resolvers);
+  get('definition-version').textContent = settingsData.definition.scope_present ? 'The saved definition belongs to configuration version ' + settingsData.version + '.' : 'No separate corpus definition is configured. Other settings can be saved without inventing one.';
+  get('configuration-location').textContent = 'Project location: ' + settingsData.location;
+  get('configuration-definition').textContent = 'Definition/configuration hash: ' + settingsData.definition.sha256;
+  const history = get('configuration-history'); history.replaceChildren();
+  for (const item of settingsData.history) history.append(make('li', 'Version ' + item.version + ' · ' + item.created_by + ' · ' + item.created_at));
+  requestId = null;
+  for (const id of ['confirm-authority', 'confirm-sessions', 'confirm-scope']) get(id).checked = false;
+  summarize();
+}
 async function initialize() {
   entryData = await request('projects');
+  get(editing ? 'nav-settings' : 'nav-projects').setAttribute('aria-current', 'page');
   if (location.pathname !== '/projects/new' && !editing) {
     get('entry').hidden = false; get('root-location').textContent = 'Projects location: ' + entryData.projects_root;
     renderProjects(entryData); return;
   }
   if (editing) {
     settingsData = await request('project-settings');
-    get('reload-settings').hidden = false;
+    get('reload-settings').hidden = false; get('discard').hidden = false; get('configuration-info').hidden = false;
     get('setup-title').textContent = 'Project Settings'; get('save').textContent = 'Save Changes';
     get('new-location').hidden = true; get('folder').required = false;
     get('initial-authority').hidden = true; get('existing-authority').hidden = false;
-    for (const id of ['name', 'description', 'scope', 'reviewer']) get(id).value = settingsData.fields[id];
-    get('concepts').value = settingsData.fields.search.map(c => c.label).join('\n');
-    get('authorized-reviewers').value = settingsData.fields.authorized_reviewers.join('\n');
-    get('saved-status').textContent = 'Saved configuration version ' + settingsData.version + ' · ' + settingsData.location + '. Changes remain unsaved until Save Changes.';
-    get('definition-version').textContent = settingsData.definition.scope_present ? 'The saved definition belongs to configuration version ' + settingsData.version + '.' : 'No separate corpus definition is configured. Other settings can be saved without inventing one.';
+    get('project-form').className = 'settings-form';
+    get('project-form').prepend(get('save-actions'));
+    get('progress').textContent = 'Edit the sections you need, then Save Changes. Nothing is saved while you type.';
+    get('section-5').textContent = 'Changes before saving';
+    get('return-link').textContent = 'Return to dashboard'; get('return-link').href = '/dashboard';
+    for (const group of document.querySelectorAll('[data-step]')) group.hidden = false;
+    get('back').hidden = true; get('next').hidden = true; get('save').hidden = false;
+    populateSettings();
   } else get('scope').required = true;
-  options('provider', entryData.capabilities.providers, settingsData?.fields.providers.map(p => p.id) || []);
-  options('resolver', entryData.capabilities.resolvers, settingsData?.fields.resolvers || []);
-  for (const legend of document.querySelectorAll('legend')) legend.tabIndex = -1;
-  get('setup').hidden = false; showStep(0);
+  get('setup').hidden = false;
+  if (!editing) {
+    options('provider', entryData.capabilities.providers, []);
+    options('resolver', entryData.capabilities.resolvers, []);
+    showStep(0);
+  }
 }
 function renderProjects(page) {
   for (const item of page.items) {
@@ -159,17 +200,27 @@ get('name').addEventListener('input', () => {
 });
 get('folder').addEventListener('input', () => { get('folder').dataset.edited = 'true'; get('intended-location').textContent = 'Will be saved at: ' + entryData.projects_root + '/' + get('folder').value; });
 get('project-form').addEventListener('input', () => {
-  requestId = null; get('confirm-authority').checked = false; get('confirm-sessions').checked = false;
-  if (editing) get('saved-status').textContent = 'Saved configuration version ' + settingsData.version + ' · Unsaved changes. Review the summary before Save Changes.';
+  requestId = null;
+  for (const id of ['confirm-authority', 'confirm-sessions', 'confirm-scope']) get(id).checked = false;
+  if (editing) summarize();
 });
 // Confirmation toggles must not clear their own checks.
-for (const id of ['confirm-authority', 'confirm-sessions']) get(id).addEventListener('input', event => event.stopPropagation());
+for (const id of ['confirm-authority', 'confirm-sessions', 'confirm-scope']) get(id).addEventListener('input', event => event.stopPropagation());
+get('discard').onclick = () => { if (!busy) { populateSettings(); message('Unsaved changes discarded. Saved settings and research data are unchanged.'); } };
 get('back').onclick = () => { if (!busy) showStep(Math.max(0, step - 1)); };
 get('next').onclick = () => { if (!busy && validStep()) showStep(Math.min(5, step + 1)); };
 get('project-form').addEventListener('submit', async event => {
   event.preventDefault();
-  if (step !== 5) { if (validStep()) showStep(Math.min(5, step + 1)); return; }
   if (busy) return;
+  if (!editing && step !== 5) { if (validStep()) showStep(Math.min(5, step + 1)); return; }
+  if (editing) {
+    for (let index = 0; index < 5; index++) if (!validStep(index)) return;
+    summarize();
+    if (!changedFields().length) return message(fields().reviewer !== settingsData.fields.reviewer ?
+      'A pseudonym-only edit does not change configuration. No new revision was created; the pseudonym is recorded when configuration changes.' :
+      'No configuration fields changed; no new revision was created.');
+  }
+  if (!get('scope-confirmation').hidden && !get('confirm-scope').checked) return message('Confirm the broad-corpus definition change before saving.');
   if (!get('authority-confirmation').hidden && !get('confirm-authority').checked) return message('Confirm the displayed authority configuration before saving.');
   if (!get('session-confirmation').hidden && !get('confirm-sessions').checked) return message('Confirm the review-session safeguard before saving changes.');
   busy = true; get('save').disabled = true; requestId ||= crypto.randomUUID();
@@ -183,10 +234,7 @@ get('project-form').addEventListener('submit', async event => {
     if (editing) {
       settingsData = await request('project-settings?handle=' + settingsData.project_handle);
       message(result.changed ? 'Changes saved as configuration version ' + result.version + '. No review or corpus decision was changed.' : 'No configuration fields changed; no new revision was created.');
-      get('saved-status').textContent = 'Saved configuration version ' + settingsData.version + '. No unsaved changes.';
-      get('definition-version').textContent = 'Saved definition/configuration version ' + settingsData.version + '.';
-      requestId = null; get('confirm-authority').checked = false; get('confirm-sessions').checked = false;
-      showStep(0);
+      populateSettings();
     } else location.assign(result.dashboard_url + '#created');
   } catch (error) { message(error.message); }
   finally {

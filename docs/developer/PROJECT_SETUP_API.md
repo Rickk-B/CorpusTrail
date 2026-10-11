@@ -7,8 +7,14 @@ change or dependency is introduced. Python/HTTP interfaces remain experimental.
 
 ## Routes and explicit writes
 
-Pages: `/projects`, `/projects/new`, `/settings`, plus existing dashboard/catalogue.
+Pages: `/home`, `/projects`, `/projects/new`, `/settings`, plus existing dashboard/catalogue.
+`/` shows static packaged Home without an active project; direct project launches
+retain the dashboard. Home uses no JavaScript or API requests. Project navigation
+visibility follows launcher state only, never scientific state or an inferred role.
 Packaged `projects.html`/`projects.js` are separate from the accepted browsing UI.
+Creation retains six steps; settings shows all sections with explicit save/discard.
+The same POST/configuration contract and controller are used without modification.
+Definition-change acknowledgment is a UI confirmation, not a new authority rule.
 
 | Route | Contract |
 |---|---|
