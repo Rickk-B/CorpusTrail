@@ -1,10 +1,10 @@
-# Read-only local project browser
+# Local projects, settings and read-only paper browser
 
-This is Checkpoint 1 of the `0.1.0a3.dev0` development branch, not a public a3
-release. It opens an **existing** standalone project. It does not create projects,
-change configuration, discover papers, acquire evidence, record reviews, invoke
-models or alter scientific/workflow state. No migrations or new dependencies are
-required for a current a2 project.
+This development build includes Checkpoints 1–2 of `0.1.0a3.dev0`, not a public a3
+release. The project wizard and settings have explicit configuration writes.
+Dashboard, catalogue, details and provenance browsing remain read-only. No page
+automatically discovers papers, acquires evidence, records reviews or invokes
+models. No migrations or new dependencies are required for a current a2 project.
 
 ## Launch
 
@@ -12,6 +12,8 @@ Activate the environment containing this development build, then run:
 
 ```bash
 corpustrail --version
+corpustrail app --open-browser
+# Alternatively, open an existing project directly:
 corpustrail app "/path/to/existing/project" --open-browser
 ```
 
@@ -30,13 +32,11 @@ This chooses an available port and prints its exact URL. Use that `127.0.0.1` UR
 not a hostname alias. Omit `--open-browser` to open it yourself. Launching does not
 contact any external provider or test any configured account.
 
-## Mac installation from an unpushed local checkpoint
+## Mac installation from a development artifact
 
-Public `0.1.0a2` does not include this UI. Since this development checkpoint has not
-been pushed or released, `git pull` or reinstalling public main will not obtain it.
-Transfer the supplied pure-Python development wheel to your Mac first.
-After a separately approved push, the [GitHub development-artifact workflow](../developer/DEVELOPMENT_BUILDS.md)
-provides a downloadable wheel/commit receipt instead of a manual file transfer.
+Public `0.1.0a2` does not include this UI. Installing public main will not obtain it.
+Download and unzip the approved [GitHub development artifact](../developer/DEVELOPMENT_BUILDS.md).
+Keep its commit receipt: successive checkpoints share the development version.
 
 1. Open Terminal and activate your existing CorpusTrail environment. Substitute
    your actual environment directory:
@@ -68,7 +68,8 @@ provides a downloadable wheel/commit receipt instead of a manual file transfer.
    ```
 
 4. Use Project dashboard → Papers / Corpus → a paper title → optional Advanced
-   provenance. All actions in this application are read-only.
+   provenance. These browsing actions remain read-only. Projects and Project
+   Settings now support explicit configuration operations as described below.
 
 5. Stop with Ctrl+C. The separate legacy review UI still uses:
 
@@ -79,9 +80,95 @@ provides a downloadable wheel/commit receipt instead of a manual file transfer.
    That review interface retains its original write/authority behavior. Do not
    confuse it with the new read-only browser.
 
-The checkpoint was tested on Linux/Python 3.12. macOS native browser/installer
-validation has not been performed here; no Mac installer is claimed. The code is
-standard-library Python with packaged local assets and avoids OS-specific paths.
+Checkpoint 1 received user-performed macOS visual acceptance. New Checkpoint 2
+tests run on Linux; native macOS wizard acceptance remains for the tester.
+No desktop installer is claimed. The product uses standard-library Python and
+packaged local assets.
+
+## New Project / Open Existing Project
+
+Run `corpustrail app --open-browser` for the project entry screen. The default
+allowed projects root is `~/CorpusTrailProjects`. To explicitly choose a different
+root at launch, use `corpustrail app --projects-root "/path/to/projects" --open-browser`.
+Opening pages does not even create a missing projects-root directory.
+
+Choose **New Project**, then follow six steps:
+
+1. Enter a project name and topic description. Check the proposed folder/location.
+2. Enter an explicit broad-corpus definition. Topical inclusion/exclusion criteria
+   may be written in this existing scope field; they are not new independent fields.
+3. Select installed discovery providers and optional search concepts, one per line.
+   Optional credential configuration accepts an environment-variable name only.
+4. Select evidence resolvers separately. Europe PMC currently requires an already
+   known PMCID; this wizard does not add DOI/PMID enrichment.
+5. Enter a reviewer pseudonym. By default nobody is authorized to publish corpus
+   decisions. Optional initial authority needs an explicit choice and a final
+   confirmation; creation is not an implicit administrator grant.
+6. Review the summary and press **Create Project**. This is the first action that
+   creates files. The new dashboard confirms success; its paper counts start empty.
+
+The pseudonym is the author of the configuration event. It is not a separate new
+default-reviewer field: existing review sessions retain their explicit identities.
+Configuring authority does not record reviews or change corpus membership.
+
+**Open Existing Project** lists valid standalone projects immediately beneath the
+allowed root, plus any project explicitly supplied on the launch command line.
+Click the project name's **Open project** button. Outside-root projects require
+an explicit launch path or a different allowed root; there is no unrestricted
+HTTP filesystem picker. Symlink paths and existing target folders are rejected.
+Project folder names use portable letters/numbers/hyphens/underscores/dots, while
+project display names and scientific descriptions retain Unicode.
+
+One launcher has one active project; opening another changes its browsing context.
+Avoid keeping unrelated project tabs open in the same launcher. Settings writes
+are pinned to their enrolled project handle and revision, not a guessed active ID.
+
+## Project Settings
+
+Use **Project settings** from the dashboard. The same six readable sections show
+saved values. Edits remain in browser memory until **Save Changes** on the final
+summary. Navigation, Back and Cancel do not write configuration.
+
+Saving uses the existing append-only configuration event/revision service. The
+bootstrap is never rewritten. A stale revision is rejected: reload and reapply
+your intended changes rather than overwrite newer settings. No-op saves add no
+event. Duplicate clicks or exact retries within the running application's bounded
+receipt cache return the original successful result. After restart, exclusive
+project reservation and configuration revision checks still prevent overwrite;
+reload/inspect persisted state rather than force a retry. Receipts are not a
+durable job/recovery system.
+
+The existing service freezes review sessions against **every** configuration
+revision. The form requires acknowledgment that saved changes make existing
+sessions stale; historical packets and saved work stay intact. It never restarts
+sessions automatically. Scope/topic changes after authoritative review remain
+prohibited. The error explains the restriction; no scope-migration policy is added.
+
+The form preserves model configuration, concept extensions, retry settings,
+policy identifiers and custom adapters it cannot edit. Existing concept language,
+aliases and identifiers are retained for unchanged labels. New guided keywords
+use `en`; language/alias editing remains advanced API/CLI work. An absent legacy
+scope stays absent unless explicitly supplied, not derived from the project name.
+
+The saved configuration version and its scope provenance remain available via
+the existing configuration history/API. Secret values are never accepted, shown
+or logged. Configuration does not imply successful connectivity.
+
+## Storage, failures and removal
+
+Projects stay in the location shown before creation. No persistent application
+registry, browser storage, cache or new log directory is introduced. Enrolled
+locations and retry receipts are temporary server memory. The HTTP server refuses
+arbitrary paths, symlinks and overwriting existing project folders.
+
+Interrupted creation preserves any reserved folder/partial database and does not
+offer it as a valid project until initialization is complete. Inspect that folder
+and use a fresh location; this checkpoint does not automatically repair or delete
+partial projects. Filesystem checks are confinement safeguards, not a sandbox
+against a malicious process already running with your own filesystem permissions.
+
+`python -m pip uninstall corpus-trail` removes software from that environment, not
+projects. Downloaded wheels are independently removable. See [storage ownership](REMOVAL_STORAGE.md).
 
 ## Dashboard and papers
 
@@ -138,7 +225,8 @@ identifier field can be selected and copied manually.
 For updating/uninstalling the software without deleting your projects, see
 [removal and storage ownership](REMOVAL_STORAGE.md).
 
-- No write actions, new review lifecycle, classifier, references or import UI.
+- Only explicit project creation/configuration writes. No new review lifecycle,
+  classifier, references, discovery execution, evidence acquisition or import UI.
 - Catalogue cursors refer to a live revision, not a persisted population. If
   another process changes relevant project records, Refresh/reapply filters to
   restart pagination. The browser does not silently mix revisions.

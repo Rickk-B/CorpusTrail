@@ -20,6 +20,13 @@ FRONTEND = {'corpustrail/local_app/assets/index.html',
             'corpustrail/local_app/assets/app.css', 'corpustrail/local_app/assets/app.js'}
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
+# Checkpoint 2 delegates writes to unchanged scientific/configuration services.
+CHECKPOINT2_PATHS = {
+    'src/corpustrail/application/projects.py', 'src/corpustrail/cli.py',
+    'src/corpustrail/local_app/server.py', 'src/corpustrail/local_app/__init__.py',
+    'src/corpustrail/local_app/assets/index.html', 'src/corpustrail/local_app/assets/app.js',
+    'src/corpustrail/local_app/assets/app.css', 'src/corpustrail/local_app/assets/projects.html',
+    'src/corpustrail/local_app/assets/projects.js'}
 
 
 def git(root, *args):
@@ -40,8 +47,25 @@ def check_source(root, expected):
     return {'commit_sha': expected, 'tree_sha': git(root, 'rev-parse', 'HEAD^{tree}'), 'version': version}
 
 
-def check_implementation(root, implementation, expected, *, distribution=None):
+def check_implementation(root, implementation, expected, *, distribution=None, accepted_checkpoint1=None):
     """Keep the completed scientific checkpoint distinct from CI follow-up source."""
+    if accepted_checkpoint1 is not None:
+        if not re.fullmatch(r'[0-9a-f]{40}', accepted_checkpoint1):
+            raise ValueError('accepted Checkpoint 1 must be a full commit identity')
+        previous = check_implementation(root, implementation, accepted_checkpoint1, distribution=distribution)
+        if subprocess.run(['git', '-C', str(root), 'merge-base', '--is-ancestor', accepted_checkpoint1, expected]).returncode:
+            raise ValueError('Checkpoint 2 source must descend from accepted Checkpoint 1')
+        changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
+        if changed - CHECKPOINT2_PATHS:
+            raise ValueError('Checkpoint 2 may only change the approved guided application boundary')
+        return {**previous, 'name': 'Checkpoint 2 — guided project/configuration and definition',
+                'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
+                'application_source_unchanged': not bool(changed),
+                'configuration_writes_supported': True,
+                'application_paths_changed_since_accepted_checkpoint1': sorted(changed),
+                'scientific_service_source_unchanged': True,
+                'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
+                          'The source/build SHA identifies this guided-configuration artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):
         raise ValueError('implementation commit must be a full commit SHA')
     if git(root, 'cat-file', '-t', implementation) != 'commit':
@@ -98,9 +122,9 @@ def installed_version(name):
         return None
 
 
-def bundle(root, expected, validation_dir, output_dir, *, implementation, context, distribution=None):
+def bundle(root, expected, validation_dir, output_dir, *, implementation, context, distribution=None, accepted_checkpoint1=None):
     source = check_source(root, expected)
-    checkpoint = check_implementation(root, implementation, expected, distribution=distribution)
+    checkpoint = check_implementation(root, implementation, expected, distribution=distribution, accepted_checkpoint1=accepted_checkpoint1)
     wheels = list((root / 'dist').glob('*.whl'))
     if len(wheels) != 1:
         raise ValueError('expected exactly one newly built wheel')
@@ -149,13 +173,15 @@ def main():
     parser.add_argument('--expected-commit', required=True)
     parser.add_argument('--implementation-commit', required=True)
     parser.add_argument('--distribution-commit')
+    parser.add_argument('--accepted-checkpoint1')
     parser.add_argument('--validation-dir', type=Path)
     parser.add_argument('--output-dir', type=Path)
     args = parser.parse_args()
     if args.action == 'check-source':
         print(json.dumps({'source': check_source(ROOT, args.expected_commit),
                           'checkpoint': check_implementation(ROOT, args.implementation_commit, args.expected_commit,
-                                                             distribution=args.distribution_commit)}))
+                                                             distribution=args.distribution_commit,
+                                                             accepted_checkpoint1=args.accepted_checkpoint1)}))
         return
     if args.validation_dir is None or args.output_dir is None:
         parser.error('bundle requires --validation-dir and --output-dir')
@@ -164,7 +190,8 @@ def main():
         ('repository', 'GITHUB_REPOSITORY'), ('ref', 'GITHUB_REF'),
         ('run_id', 'GITHUB_RUN_ID'), ('run_attempt', 'GITHUB_RUN_ATTEMPT'))}
     name = bundle(ROOT, args.expected_commit, args.validation_dir, args.output_dir,
-                  implementation=args.implementation_commit, distribution=args.distribution_commit, context=context)
+                  implementation=args.implementation_commit, distribution=args.distribution_commit, context=context,
+                  accepted_checkpoint1=args.accepted_checkpoint1)
     with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as handle:
         handle.write('artifact_name=' + name + '\n')
     print(name)

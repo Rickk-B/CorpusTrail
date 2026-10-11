@@ -173,6 +173,28 @@ class DevelopmentArtifactTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             TOOL['check_implementation'](self.root, self.implementation, TOOL['git'](self.root, 'rev-parse', 'HEAD'), distribution=distribution)
 
+    def test_checkpoint2_receipt_preserves_accepted_baseline_and_rejects_core_changes(self):
+        distribution = self.sha
+        accepted = self.sha
+        file = self.root / 'src/corpustrail/application/projects.py'
+        file.parent.mkdir(parents=True)
+        file.write_text('synthetic_controller = True\n', encoding='utf-8')
+        self.commit()
+        source = TOOL['git'](self.root, 'rev-parse', 'HEAD')
+        receipt = TOOL['check_implementation'](self.root, self.implementation, source,
+            distribution=distribution, accepted_checkpoint1=accepted)
+        self.assertEqual(receipt['accepted_checkpoint1_commit_sha'], accepted)
+        self.assertEqual(receipt['implementation_commit_sha'], self.implementation)
+        self.assertTrue(receipt['configuration_writes_supported'])
+        self.assertTrue(receipt['scientific_service_source_unchanged'])
+        core = self.root / 'src/corpustrail/project/config.py'
+        core.parent.mkdir()
+        core.write_text('unexpected_schema_change = True\n', encoding='utf-8')
+        self.commit()
+        with self.assertRaises(ValueError):
+            TOOL['check_implementation'](self.root, self.implementation, TOOL['git'](self.root, 'rev-parse', 'HEAD'),
+                distribution=distribution, accepted_checkpoint1=accepted)
+
 
 if __name__ == '__main__':
     unittest.main()

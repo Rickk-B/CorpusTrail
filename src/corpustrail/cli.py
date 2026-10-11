@@ -16,8 +16,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="corpustrail", description="Broad scientific topic-corpus foundation")
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)
-    app = sub.add_parser('app', help='Read-only localhost dashboard and paper browser; no scientific writes')
-    app.add_argument('path', type=Path, help='Existing standalone project directory')
+    app = sub.add_parser('app', help='Local project setup and read-only dashboard/paper browser; no external calls')
+    app.add_argument('path', type=Path, nargs='?', help='Optional existing standalone project directory')
+    app.add_argument('--projects-root', type=Path, help='Allowed project creation/open root (default: ~/CorpusTrailProjects)')
     app.add_argument('--port', type=int, default=8766, help='Loopback port (0 chooses an available port)')
     app.add_argument('--open-browser', action='store_true', help='Explicitly open the local URL in the default browser')
     project = sub.add_parser("project").add_subparsers(dest="operation", required=True)
@@ -234,6 +235,15 @@ def main(argv=None) -> int:
     describe(parser)
     args = parser.parse_args(argv)
     try:
+        if args.command == 'app':
+            from corpustrail.local_app import serve
+            from corpustrail.application.projects import _safe_path
+            instance = Project.open(_safe_path(args.path)) if args.path is not None else None
+            options = {'port': args.port, 'open_browser': args.open_browser}
+            if args.projects_root is not None:
+                options['projects_root'] = args.projects_root
+            serve(instance, **options)
+            return 0
         if args.command == "project" and args.operation == "init":
             if args.config:
                 if any((args.project_id, args.name, args.description)):
@@ -248,10 +258,6 @@ def main(argv=None) -> int:
             instance = Project.upgrade(args.path, backup=args.backup)
         else:
             instance = Project.open(args.path)
-        if args.command == 'app':
-            from corpustrail.local_app import serve
-            serve(instance, port=args.port, open_browser=args.open_browser)
-            return 0
         result = instance.status()
         if args.command == 'project' and args.operation == 'configure':
             config = ProjectConfig.from_dict(json.loads(args.config.read_text(encoding='utf-8')))

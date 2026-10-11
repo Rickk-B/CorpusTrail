@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="corpustrail-session" content="SESSION_TOKEN">
+  <title>CorpusTrail — Projects and settings</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/projects.js" defer></script>
+</head>
+<body>
+  <header><a href="/projects" class="brand">CorpusTrail</a><span class="badge">Local project setup</span></header>
+  <nav aria-label="Project"><a href="/projects">Projects</a><a href="/dashboard">Project dashboard</a><a href="/papers">Papers / Corpus</a><a href="/settings">Project settings</a></nav>
+  <main>
+    <p class="muted">Opening pages does not change research data or contact external services. Only Create Project or Save Changes writes configuration.</p>
+    <p id="message" role="status" aria-live="polite"></p>
+    <section id="entry" hidden>
+      <h1>Your projects</h1><a class="button" href="/projects/new">New Project</a>
+      <h2>Open Existing Project</h2><p>Choose a project from the launcher-approved location. Opening preserves its data and never upgrades its database.</p>
+      <p id="root-location" class="scientific"></p><div id="project-list"></div><button id="more-projects" type="button" hidden>More projects</button>
+      <p class="muted">For a project outside this location, restart with that project path or a different allowed projects root. Arbitrary filesystem browsing is intentionally unavailable.</p>
+    </section>
+    <section id="setup" hidden>
+      <h1 id="setup-title">New Project</h1><p id="progress" aria-live="polite"></p>
+      <p id="saved-status" class="muted"></p>
+      <form id="project-form" novalidate>
+        <fieldset data-step="0"><legend>Project information</legend>
+          <label>Project name<input id="name" required maxlength="200" autocomplete="off"></label>
+          <label>Brief scientific topic description<textarea id="description" required maxlength="8000" rows="3"></textarea></label>
+          <div id="new-location"><label>Project folder name<input id="folder" required maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9_.\-]*" autocomplete="off"></label>
+            <p id="intended-location" class="scientific"></p>
+            <p class="muted">Research projects belong to you. Package upgrades or pip uninstall do not remove this folder. Existing folders are never overwritten.</p></div>
+        </fieldset>
+        <fieldset data-step="1"><legend>Broad-corpus definition</legend>
+          <p>This definition describes which scientific publications belong to your broad-topic literature collection, not eligibility for a particular systematic/scoping review.</p>
+          <label>Broad-corpus definition<textarea id="scope" maxlength="16000" rows="7"></textarea></label>
+          <p class="muted">Describe topical inclusion and exclusion criteria here if useful. They are preserved as the existing versioned scope text, not separate new scientific fields. ASReview handles downstream question-specific screening.</p>
+          <p id="definition-version" class="muted"></p>
+        </fieldset>
+        <fieldset data-step="2"><legend>Discovery providers</legend>
+          <div id="provider-options"></div>
+          <label>Search concepts / keywords (one per line)<textarea id="concepts" rows="4" maxlength="12000"></textarea></label>
+          <p class="muted">This only configures search concepts. No search is planned or executed here. Existing language tags, aliases and concept identifiers are preserved for unchanged concepts.</p>
+          <p>No API-key values are accepted. Optional credential settings name an environment variable only; configure its value outside CorpusTrail.</p>
+        </fieldset>
+        <fieldset data-step="3"><legend>Evidence resolvers</legend>
+          <div id="resolver-options"></div><p class="muted">Evidence resolvers are separate from discovery providers. No evidence acquisition or connectivity test occurs during setup.</p>
+        </fieldset>
+        <fieldset data-step="4"><legend>Reviewer configuration</legend>
+          <label>Reviewer pseudonym<input id="reviewer" required maxlength="100" autocomplete="off"></label>
+          <p class="muted">This pseudonym records who created or changed configuration. It does not grant authority. Existing review sessions continue to use their explicitly selected reviewer identity.</p>
+          <div id="initial-authority"><label class="choice"><input id="grant-authority" type="checkbox">Explicitly authorize this pseudonym to publish corpus-membership decisions under the existing review policy</label></div>
+          <div id="existing-authority" hidden><label>Authorized corpus reviewers (one pseudonym per line)<textarea id="authorized-reviewers" rows="3" maxlength="12000"></textarea></label></div>
+          <p>Recording a human review observation and publishing an authoritative corpus decision are different actions. Saving these settings never reviews a paper or changes corpus membership.</p>
+          <h2>Review settings</h2><p id="review-policy">Broad-topic corpus review. Existing authority, scope and frozen-session safeguards remain enforced.</p>
+        </fieldset>
+        <fieldset data-step="5"><legend>Review settings before saving</legend>
+          <div id="summary"></div>
+          <label id="authority-confirmation" class="choice" hidden><input id="confirm-authority" type="checkbox">I explicitly confirm the displayed corpus-reviewer authority configuration.</label>
+          <label id="session-confirmation" class="choice" hidden><input id="confirm-sessions" type="checkbox">I understand that saving changes makes existing frozen review sessions stale. Historical packets, reviews and saved work remain preserved; continuation requires a new session.</label>
+          <p>Configuration history is preserved. Scientific scope changes after authoritative review are prohibited by the current policy.</p>
+        </fieldset>
+        <div class="pager"><button id="back" type="button">Back</button><button id="next" type="button">Next</button><button id="save" type="submit" hidden>Create Project</button><a href="/projects">Cancel</a><a href="/settings" id="reload-settings" hidden>Reload saved settings (discards unsaved changes)</a></div>
+      </form>
+    </section>
+  </main>
+  <footer>CorpusTrail · Local project setup · No automatic network operations</footer>
+</body>
+</html>

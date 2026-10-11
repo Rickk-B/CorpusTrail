@@ -55,17 +55,21 @@ python -m pip install -e '.[prioritization]'
 python -I -m corpustrail.tutorial /tmp/materials-demo-ml --prioritize
 ```
 
-## Read-only local project browser (development checkpoint)
+## Local project setup and browser (development checkpoints)
 
 After installing this development build into your existing environment:
 
 ```bash
+corpustrail app --open-browser
+# Or open an existing project directly:
 corpustrail app /path/to/existing/project --open-browser
 ```
 
 Browse the dashboard, paginated paper catalogue, evidence status and optional
-advanced provenance at the printed loopback URL. No project state is changed;
-there are no discovery, acquisition, model or review-write actions in this UI.
+advanced provenance at the printed loopback URL. Browsing remains read-only.
+New Project and Project Settings provide explicit, provenance-preserving
+configuration saves without editing JSON. No discovery, acquisition, model or
+review-write actions are introduced; opening pages never contacts external services.
 The existing `corpustrail review serve` interface remains separate and unchanged.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
 

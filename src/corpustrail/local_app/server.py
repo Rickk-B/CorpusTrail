@@ -1,7 +1,7 @@
-"""Thin loopback HTTP transport for one explicitly opened project's read API.
+"""Thin loopback HTTP transport. Guided writes require explicit protected POSTs.
 
-No mutation routes. Session capability protects APIs from unrelated local origins;
-the existing human-review server remains separate and unchanged.
+The original make_server(project) remains a read-only compatibility surface.
+The existing human-review server remains separate and unchanged.
 """
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -17,7 +17,8 @@ from corpustrail.application import ProjectReads
 from corpustrail.application.reads import StaleCursor
 from corpustrail.errors import ContractError
 
-ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; charset=utf-8'}
+ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; charset=utf-8',
+          'projects.js': 'text/javascript; charset=utf-8'}
 
 
 def _query(value, allowed):
@@ -33,11 +34,13 @@ def _number(value):
     return int(value)
 
 
-def make_server(project, *, port=8766):
-    """No project/session creation, migrations, writes, plugins or network calls."""
+def make_server(project=None, *, port=8766, controller=None):
+    """Reads never write; only controller-enabled project POSTs can configure."""
     if type(port) is not int or not 0 <= port <= 65535:
         raise ContractError('port must be between 0 and 65535')
-    reads = ProjectReads(project)
+    reads = ProjectReads(project) if project is not None else None
+    if reads is None and controller is None:
+        raise ContractError('a project or guided project controller is required')
     token = secrets.token_urlsafe(32)
     assets = resources.files('corpustrail.local_app').joinpath('assets')
 
@@ -81,10 +84,12 @@ def make_server(project, *, port=8766):
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/dashboard', '/papers'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/dashboard', '/papers', '/projects', '/projects/new', '/settings'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
-                    html = assets.joinpath('index.html').read_text(encoding='utf-8')
+                    setup = controller is not None and (path in {'/projects', '/projects/new', '/settings'}
+                            or path == '/' and controller.active_handle is None)
+                    html = assets.joinpath('projects.html' if setup else 'index.html').read_text(encoding='utf-8')
                     return self.send(200, html.replace('SESSION_TOKEN', token), 'text/html; charset=utf-8')
                 if path.startswith('/assets/'):
                     name = path[len('/assets/'):]
@@ -95,14 +100,23 @@ def make_server(project, *, port=8766):
                     return self.error(404, 'not_found', 'Page not found.')
                 if self.headers.get_all('X-CorpusTrail-Session') != [token]:
                     return self.error(403, 'session_required', 'Open the local application before reading its API.')
+                if controller is not None and path == '/api/v1/projects':
+                    query = _query(route.query, {'offset', 'limit'})
+                    result = controller.entry(**{key: _number(value) for key, value in query.items()})
+                    return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
+                if controller is not None and path == '/api/v1/project-settings':
+                    query = _query(route.query, {'handle'})
+                    result = controller.settings(query.get('handle'))
+                    return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
+                current_reads = ProjectReads(controller.project()) if controller is not None else reads
                 if path == '/api/v1/dashboard':
                     _query(route.query, set())
-                    result = reads.dashboard()
+                    result = current_reads.dashboard()
                 elif path == '/api/v1/papers':
                     query = _query(route.query, {'limit', 'cursor', 'q', 'sort', 'membership', 'evidence', 'review'})
                     if 'limit' in query:
                         query['limit'] = _number(query['limit'])
-                    result = reads.papers(**query)
+                    result = current_reads.papers(**query)
                 else:
                     match = re.fullmatch(r'/api/v1/papers/([0-9a-f]{64})(?:/(provenance|evidence)(?:/([0-9a-f]{64}))?)?', path)
                     if match is None:
@@ -112,13 +126,13 @@ def make_server(project, *, port=8766):
                         query = _query(route.query, {'section', 'limit', 'cursor'})
                         if 'limit' in query:
                             query['limit'] = _number(query['limit'])
-                        result = reads.provenance(handle, **query)
+                        result = current_reads.provenance(handle, **query)
                     elif section == 'evidence' and representation:
                         query = _query(route.query, {'offset', 'limit'})
-                        result = reads.document(handle, representation, **{key: _number(value) for key, value in query.items()})
+                        result = current_reads.document(handle, representation, **{key: _number(value) for key, value in query.items()})
                     elif section is None:
                         _query(route.query, set())
-                        result = reads.paper(handle)
+                        result = current_reads.paper(handle)
                     else:
                         return self.error(404, 'not_found', 'API resource not found.')
                 return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
@@ -126,7 +140,10 @@ def make_server(project, *, port=8766):
                 self.error(409, 'stale_view', str(exc))
             except KeyError:
                 self.error(404, 'not_found', 'Paper or representation not found.')
-            except (ContractError, ValueError, TypeError):
+            except (ContractError, ValueError, TypeError) as exc:
+                from corpustrail.application.projects import ProjectCommandError
+                if isinstance(exc, ProjectCommandError):
+                    return self.error(exc.status, exc.code, str(exc))
                 self.error(400, 'invalid_request', 'Invalid request or unavailable trusted evidence. Refresh or check the selected filters.')
             except OSError:
                 self.error(400, 'artifact_unavailable', 'Local evidence is missing or inaccessible; no evidence was modified.')
@@ -143,7 +160,58 @@ def make_server(project, *, port=8766):
             self.send_header('Cache-Control', 'no-store')
             self.end_headers()
 
-        do_POST = readonly
+        def do_POST(self):
+            routes = {'/api/v1/projects/create', '/api/v1/projects/open', '/api/v1/project-settings/save'}
+            if controller is None or self.path not in routes:
+                return self.readonly()
+            self.close_connection = True
+            expected_origin = 'http://127.0.0.1:' + str(self.server.server_port)
+            if (not self.allowed() or self.headers.get_all('Origin') != [expected_origin]
+                    or self.headers.get_all('X-CorpusTrail-Session') != [token]
+                    or self.headers.get_all('X-CorpusTrail-CSRF') != [token]):
+                return self.error(403, 'csrf_required', 'Open the local application and submit from its project form.')
+            from corpustrail.application.projects import ProjectCommandError, SCHEMA
+            try:
+                lengths = self.headers.get_all('Content-Length')
+                if (self.headers.get_all('Content-Type') != ['application/json']
+                        or self.headers.get('Transfer-Encoding') is not None or not lengths or len(lengths) != 1
+                        or not re.fullmatch(r'[0-9]{1,6}', lengths[0]) or not 1 <= int(lengths[0]) <= 65536):
+                    return self.error(413, 'bounded_json_required', 'Submit a JSON project form smaller than 64 KiB.')
+                payload = self.rfile.read(int(lengths[0]))
+                if len(payload) != int(lengths[0]):
+                    raise ValueError('incomplete body')
+                def unique(pairs):
+                    result = {}
+                    for key, value in pairs:
+                        if key in result:
+                            raise ValueError('duplicate field')
+                        result[key] = value
+                    return result
+                body = json.loads(payload, object_pairs_hook=unique,
+                                  parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite JSON')))
+                if not isinstance(body, dict) or body.pop('schema', None) != SCHEMA:
+                    raise ValueError('invalid form version')
+                if self.path.endswith('/open'):
+                    if set(body) != {'handle'}:
+                        raise ValueError('unsupported open fields')
+                    result = controller.open(body['handle'])
+                else:
+                    fields = ({'request_id', 'folder', 'fields', 'confirm_authority'} if self.path.endswith('/create') else
+                              {'request_id', 'project_handle', 'revision', 'fields', 'confirm_authority', 'confirm_session_change'})
+                    if set(body) != fields:
+                        raise ValueError('unsupported command fields')
+                    for key in ('confirm_authority', 'confirm_session_change'):
+                        if key in body and type(body[key]) is not bool:
+                            raise ValueError('confirmation must be boolean')
+                    result = (controller.create if self.path.endswith('/create') else controller.configure)(**body)
+                self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
+            except ProjectCommandError as exc:
+                self.error(exc.status, exc.code, str(exc))
+            except (ContractError, ValueError, TypeError, KeyError, RecursionError):
+                self.error(400, 'invalid_project_form', 'Check the project form and refresh if its version is unsupported. No secret values are accepted.')
+            except (OSError, sqlite3.DatabaseError):
+                self.error(409, 'project_unavailable', 'Project operation failed. Check local permissions and inspect saved state before retrying; no automatic upgrade or cleanup was performed.')
+
         do_PUT = readonly
         do_PATCH = readonly
         do_DELETE = readonly
@@ -155,10 +223,12 @@ def make_server(project, *, port=8766):
     return ThreadingHTTPServer(('127.0.0.1', port), Handler)
 
 
-def serve(project, *, port=8766, open_browser=False):
-    server = make_server(project, port=port)
+def serve(project=None, *, port=8766, open_browser=False, projects_root=None):
+    from corpustrail.application.projects import ProjectController
+    controller = ProjectController(projects_root=projects_root, project=project)
+    server = make_server(port=port, controller=controller)
     url = 'http://127.0.0.1:' + str(server.server_port)
-    print('CorpusTrail read-only application: ' + url, flush=True)
+    print('CorpusTrail local application: ' + url, flush=True)
     try:
         if open_browser:
             webbrowser.open(url)

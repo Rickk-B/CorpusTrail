@@ -1,5 +1,18 @@
 # Development checkpoint wheels — not public releases
 
+## Checkpoint 2 provenance
+
+The guided-project build descends from accepted Checkpoint 1 visual baseline
+`88fd3b9e787de869187d72bb7e0c3d634bacf53f`. The receipt additionally records that
+baseline and the changed guided application paths. Original implementation
+`6e116118f05e53ec3694c60e9171cb873a437bf8` and original distribution follow-up
+`7086456aabd4c4edd124bddc12d6fb93ecf5017e` remain historical lineage, not the current
+wheel's source. The **source.commit_sha** always names its exact checked-out build.
+The Checkpoint 2 allowlist permits only application controller/transport/CLI and
+packaged UI changes; unchanged scientific/configuration service source and schema
+are verified. Configuration writes are explicitly supported now: unchanged
+scientific service source must not be mistaken for a read-only application.
+
 ## Chosen workflow and approval boundary
 
 Use the existing **Standalone alpha acceptance** GitHub Actions workflow. Its

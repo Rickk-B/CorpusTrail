@@ -103,6 +103,7 @@ async function dashboard() {
     node('p', data.identity_issues.notice));
   text('providers', 'Discovery providers: ' + (data.providers.map(serviceName).join(', ') || 'None configured'));
   text('resolvers', 'Evidence resolvers: ' + (data.resolvers.map(serviceName).join(', ') || 'None configured'));
+  if (location.hash === '#created') text('message', 'Project created successfully. No searches, evidence acquisition or paper reviews have been performed.');
 }
 let pageState;
 let listGeneration = 0;

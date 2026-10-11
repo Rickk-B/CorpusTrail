@@ -1,4 +1,4 @@
-"""Experimental read-only local application, separate from review-session HTTP."""
+"""Experimental local setup and read-only browsing, separate from review HTTP."""
 
 from .server import make_server, serve
 

@@ -1,5 +1,11 @@
 # Checkpoint 1 application/read boundary
 
+These paper/read contracts remain unchanged in Checkpoint 2. The controller-enabled
+local application additionally supports explicit protected project setup/settings
+POSTs; see [guided project configuration](PROJECT_SETUP_API.md). The compatibility
+`make_server(project)` remains read-only, and none of the GET routes below gains
+mutation behavior. The separate method-blind review server remains unchanged.
+
 `application.ProjectReads` is an experimental operational read service. It returns
 researcher-facing DTOs using one read-only SQLite transaction per operation.
 `local_app` is a thin loopback transport and packaged frontend. No CLI subprocess,

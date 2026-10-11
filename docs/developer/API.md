@@ -23,9 +23,12 @@ Serialized contracts/concepts/algorithms are separately versioned.
 
 ## Experimental
 
-Checkpoint 1: `corpustrail.application.ProjectReads` and `corpustrail.local_app`
-provide an operational read-only dashboard/catalogue. They are not method-blind
-review interfaces. See [local API and isolation boundaries](LOCAL_APP_API.md).
+Checkpoints 1–2: `corpustrail.application.ProjectReads`,
+`corpustrail.application.projects.ProjectController` and `corpustrail.local_app`
+provide an operational read-only dashboard/catalogue plus explicit guided project
+configuration. They are not method-blind review interfaces. See
+[local API and isolation boundaries](LOCAL_APP_API.md) and
+[guided configuration contract](PROJECT_SETUP_API.md).
 
 Provider/resolver/parser/prioritizer plugins (explicit object injection); optional
 TF-IDF/logistic implementation and fitted-model representation; advanced knowledge
