@@ -55,7 +55,10 @@ Exact confirmation text is required; attempts consume nonces before filesystem
 work. Capacity is 256 pending tokens; expiry/cancel/restart invalidates them.
 
 Lazy `MacOSTrash.move` imports only the optional, pinned Cocoa/core bindings.
-Foundation checks local/non-ubiquitous storage and calls
+Foundation checks local/non-ubiquitous storage using
+`isUbiquitousItemAtURL:` for the Boolean iCloud-targeted item check (the nullable
+NSURL resource property is not inferred to mean false). This is not detection of
+every third-party synchronization service. It moves the folder with
 `trashItemAtURL:resultingItemURL:error:`. Status, returned file destination and redacted
 numeric diagnostic are retained; raw NSError/stack/private-path text is not exposed.
 Success requires original path absent, returned same directory identity, valid

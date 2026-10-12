@@ -359,13 +359,19 @@ class RemovalTests(Fixture):
             def getResourceValue_forKey_error_(self, _, key, __): return True, key=='local', None
             def isFileURL(self): return True
             def path(self): return str(destination)
-        native=types.SimpleNamespace(trashItemAtURL_resultingItemURL_error_=lambda *args: (True,URL(),None))
+        native=types.SimpleNamespace(isUbiquitousItemAtURL_=lambda _:False,
+            trashItemAtURL_resultingItemURL_error_=lambda *args: (True,URL(),None))
         foundation=types.SimpleNamespace(NSFileManager=types.SimpleNamespace(defaultManager=lambda:native),
             NSURL=types.SimpleNamespace(fileURLWithPath_=lambda _:URL()), NSURLVolumeIsLocalKey='local', NSURLIsUbiquitousItemKey='cloud')
         with patch.dict(sys.modules, {'Foundation':foundation, 'objc':types.SimpleNamespace(autorelease_pool=nullcontext)}), \
              patch.object(MacOSTrash,'capability',return_value={'available':True}):
             result=MacOSTrash().move(self.path)
             self.assertEqual(result,TrashResult('moved',destination,None))
+            native.isUbiquitousItemAtURL_=lambda _:True
+            self.assertEqual(MacOSTrash().move(self.path),TrashResult('failed',None,'cloud_storage'))
+            native.isUbiquitousItemAtURL_=lambda _:None
+            self.assertEqual(MacOSTrash().move(self.path),TrashResult('failed',None,'cloud_storage_unknown'))
+            native.isUbiquitousItemAtURL_=lambda _:False
             native.trashItemAtURL_resultingItemURL_error_=lambda *args:(False,None,types.SimpleNamespace(code=lambda:13))
             self.assertEqual(MacOSTrash().move(self.path),TrashResult('failed',None,'native_13'))
 

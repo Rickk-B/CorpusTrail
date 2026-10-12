@@ -43,20 +43,23 @@ class MacOSTrash:
             return TrashResult('failed', diagnostic='trash_unavailable')
         try:
             import objc
-            from Foundation import NSFileManager, NSURL, NSURLVolumeIsLocalKey, NSURLIsUbiquitousItemKey
+            from Foundation import NSFileManager, NSURL, NSURLVolumeIsLocalKey
             with objc.autorelease_pool():
                 source = NSURL.fileURLWithPath_(str(path))
                 local_ok, local, _ = source.getResourceValue_forKey_error_(None, NSURLVolumeIsLocalKey, None)
-                cloud_ok, cloud, _ = source.getResourceValue_forKey_error_(None, NSURLIsUbiquitousItemKey, None)
                 if not local_ok or local is None:
                     return TrashResult('failed', diagnostic='local_storage_unknown')
                 if not bool(local):
                     return TrashResult('failed', diagnostic='nonlocal_storage')
-                if not cloud_ok or cloud is None:
+                manager = NSFileManager.defaultManager()
+                # The NSURL resource property may be unavailable for local items.
+                # Use the documented Boolean item check, not nil-as-false inference.
+                cloud = manager.isUbiquitousItemAtURL_(source)
+                if cloud is None:
                     return TrashResult('failed', diagnostic='cloud_storage_unknown')
                 if bool(cloud):
                     return TrashResult('failed', diagnostic='cloud_storage')
-                ok, destination, error = NSFileManager.defaultManager().trashItemAtURL_resultingItemURL_error_(
+                ok, destination, error = manager.trashItemAtURL_resultingItemURL_error_(
                     source, None, None)
                 result_path = Path(str(destination.path())) if destination is not None and destination.isFileURL() else None
                 code = 'native_' + str(int(error.code())) if error is not None else None
