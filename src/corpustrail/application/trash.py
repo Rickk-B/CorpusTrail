@@ -48,8 +48,14 @@ class MacOSTrash:
                 source = NSURL.fileURLWithPath_(str(path))
                 local_ok, local, _ = source.getResourceValue_forKey_error_(None, NSURLVolumeIsLocalKey, None)
                 cloud_ok, cloud, _ = source.getResourceValue_forKey_error_(None, NSURLIsUbiquitousItemKey, None)
-                if not local_ok or local is None or not bool(local) or not cloud_ok or cloud is None or bool(cloud):
-                    return TrashResult('failed', diagnostic='unsupported_storage')
+                if not local_ok or local is None:
+                    return TrashResult('failed', diagnostic='local_storage_unknown')
+                if not bool(local):
+                    return TrashResult('failed', diagnostic='nonlocal_storage')
+                if not cloud_ok or cloud is None:
+                    return TrashResult('failed', diagnostic='cloud_storage_unknown')
+                if bool(cloud):
+                    return TrashResult('failed', diagnostic='cloud_storage')
                 ok, destination, error = NSFileManager.defaultManager().trashItemAtURL_resultingItemURL_error_(
                     source, None, None)
                 result_path = Path(str(destination.path())) if destination is not None and destination.isFileURL() else None
