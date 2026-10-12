@@ -101,6 +101,24 @@ class Fixture(unittest.TestCase):
 
 
 class GuardTests(Fixture):
+    def test_closing_current_launcher_preserves_other_launcher_and_project(self):
+        before = fingerprint(self.path)
+        handle = next(x['handle'] for x in self.controller.entry()['items'] if x['name'] == 'Disposable project')
+        self.controller.open(handle)
+        other_launcher = self.child('app')
+        self.controller.close()
+        self.assertIsNone(self.controller.active_handle)
+        self.assertIsNone(other_launcher.poll())
+        self.assertEqual([x['handle'] for x in self.controller.entry()['items']], [handle])
+        with self.assertRaises(ProjectBusy): acquire_project_use(self.path, exclusive=True)
+        service = ProjectRemoval(self.controller, FakeTrash(self.base/'fake-trash'))
+        with self.assertRaises(ProjectCommandError): service.prepare(handle)
+        self.assertEqual(before, fingerprint(self.path))
+        self.stop(other_launcher)
+        with acquire_project_use(self.path, exclusive=True): pass
+        self.controller.open(handle)
+        self.assertEqual(before, fingerprint(self.path))
+
     def test_both_servers_never_resolve_hostnames(self):
         from corpustrail.local_app import make_server
         from corpustrail.curation.http import make_server as review_server
@@ -377,6 +395,22 @@ class RemovalTests(Fixture):
 
 
 class RemovalHttpTests(RemovalTests):
+    def test_confirmation_panel_labels_wrapping_and_explicit_action_boundary(self):
+        from importlib import resources
+        assets = resources.files('corpustrail.local_app').joinpath('assets')
+        html = assets.joinpath('projects.html').read_text(encoding='utf-8')
+        css = assets.joinpath('app.css').read_text(encoding='utf-8')
+        self.assertNotIn('id="close-project"', html)
+        self.assertIn('aria-labelledby="trash-heading"', html)
+        self.assertIn('for="trash-folder"', html)
+        self.assertIn('aria-describedby="trash-folder-name trash-help"', html)
+        self.assertIn('External files and libraries remain untouched.', html)
+        self.assertIn('retention is not guaranteed', html)
+        self.assertRegex(css, r'\.confirmation-field input\s*\{[^}]*width:\s*100%')
+        self.assertIn('overflow-wrap: anywhere', css)
+        self.assertIn('button:focus-visible', css)
+        self.assertIn('minmax(0, 1fr)', css)
+
     def test_versioned_csrf_host_origin_size_get_and_no_path_api(self):
         from corpustrail.local_app import make_server
         service, backend, handle=self.setup_removal()

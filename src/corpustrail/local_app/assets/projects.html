@@ -16,21 +16,26 @@
     <p id="message" role="status" aria-live="polite"></p>
     <section id="entry" hidden>
       <h1>Your projects</h1><a class="button" href="/projects/new">New Project</a>
-      <button id="close-project" type="button" hidden>Close active project</button>
       <h2 id="open-existing">Open Existing Project</h2><p>Choose a project from the launcher-approved location. Opening preserves its data and never upgrades its database.</p>
       <p id="root-location" class="scientific"></p><div id="project-list"></div><button id="more-projects" type="button" hidden>More projects</button>
       <p class="muted">For a project outside this location, restart with that project path or a different allowed projects root. Arbitrary filesystem browsing is intentionally unavailable.</p>
     </section>
-    <section id="trash-confirmation" hidden tabindex="-1" aria-labelledby="trash-heading">
+    <section id="trash-confirmation" class="card trash-panel" hidden tabindex="-1" aria-labelledby="trash-heading">
       <h1 id="trash-heading">Move project to Trash?</h1>
-      <dl class="configuration-summary"><dt>Project</dt><dd id="trash-name"></dd><dt>Location</dt><dd id="trash-location" class="scientific"></dd></dl>
-      <p>The complete project folder will move to your computer's Trash, including:</p>
-      <ul><li>Collected publication records and research corpus data</li><li>Review history</li><li>Evidence stored inside the project</li><li>Project settings and scientific provenance</li></ul>
-      <p>Files and libraries outside this project folder remain untouched. You may be able to recover this folder using Finder's Trash. Your computer or you may later empty Trash; CorpusTrail cannot guarantee retention.</p>
-      <label for="trash-folder">To confirm, type the exact folder name: <strong id="trash-folder-name"></strong></label>
-      <input id="trash-folder" autocomplete="off" maxlength="80" aria-describedby="trash-help">
-      <p id="trash-help" class="muted">Nothing moves until you explicitly confirm. A project in use cannot be removed. Close older CorpusTrail versions and unrelated programs using it first.</p>
-      <div class="pager"><button id="trash-cancel" type="button">Cancel</button><button id="trash-execute" class="danger" type="button" disabled>Move Project to Trash</button></div>
+      <p>You are about to move the following project to your computer's Trash.</p>
+      <dl class="configuration-summary trash-summary"><dt>Project</dt><dd id="trash-name"></dd><dt>Location</dt><dd id="trash-location"></dd></dl>
+      <div class="trash-explanation">
+        <p>The complete project folder will move, including collected publications, corpus data, stored evidence, review history, project settings and scientific provenance.</p>
+        <p>External files and libraries remain untouched.</p>
+        <p class="muted">You may be able to recover the folder from Finder's Trash. Your computer or you may later empty Trash; retention is not guaranteed.</p>
+      </div>
+      <div class="confirmation-field">
+        <label for="trash-folder">To confirm, type the exact folder name:</label>
+        <strong id="trash-folder-name"></strong>
+        <input id="trash-folder" autocomplete="off" maxlength="80" aria-describedby="trash-folder-name trash-help">
+        <p id="trash-help" class="muted">Nothing moves until you explicitly confirm. Other processes may still prevent removal. Close older CorpusTrail versions and unrelated programs using this project first.</p>
+      </div>
+      <div class="pager trash-actions"><button id="trash-cancel" type="button">Cancel</button><button id="trash-execute" class="danger" type="button" disabled>Move Project to Trash</button></div>
     </section>
     <section id="setup" hidden>
       <h1 id="setup-title">New Project</h1><p id="progress" aria-live="polite"></p>

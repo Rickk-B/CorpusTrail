@@ -27,8 +27,10 @@ with installation guidance. There is no permanent-delete fallback.
 
 1. Create a uniquely named project, e.g. `trash-test-20261012-01`, using only synthetic
    topic text. Never use a real research project for acceptance testing.
-2. Projects → **Close active project**, or switch to another project. Close other
-   launchers/review servers/CLI operations using it. Nothing is terminated for you.
+2. Projects → **Close Project** on the card labelled **Active project**. The list
+   reloads and the project stays listed. Closing releases only this launcher's use;
+   other launchers/review servers/CLI operations can still prevent removal. Nothing
+   else is terminated for you.
 3. Click **Move to Trash…** on that disposable card. Check its exact name/location
    and the explanation. Cancel first; verify it still opens unchanged.
 4. Close it again, reopen confirmation, type its exact folder name and explicitly

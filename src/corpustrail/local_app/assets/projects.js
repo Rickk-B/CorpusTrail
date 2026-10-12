@@ -175,28 +175,41 @@ async function initialize() {
   }
 }
 function renderProjects(page) {
-  get('close-project').hidden = !page.active_handle;
-  get('close-project').onclick = async () => {
-    if (busy) return;
-    try { await request('projects/close', {}); location.assign('/projects'); }
-    catch (error) { message(error.message); }
-  };
   for (const item of page.items) {
-    const card = make('article'); card.append(make('h2', item.name));
+    const active = !item.unavailable && item.handle === page.active_handle;
+    const card = make('article'); card.className = 'project-card' + (active ? ' active-project' : '');
+    const heading = make('div'); heading.className = 'project-card-heading'; heading.append(make('h2', item.name));
+    if (active) { const badge = make('span', 'Active project'); badge.className = 'badge'; heading.append(badge); }
+    card.append(heading);
     if (item.unavailable) card.append(make('p', 'Unavailable or incompatible project; no upgrade was attempted.'));
     else {
-      card.append(make('p', item.location)); const button = make('button', 'Open project'); button.type = 'button';
+      const path = make('p', item.location); path.className = 'project-location'; card.append(path);
+      const actions = make('div'); actions.className = 'project-actions'; actions.setAttribute('role', 'group');
+      actions.setAttribute('aria-label', 'Project actions');
+      const button = make('button', 'Open Project'); button.type = 'button';
       button.onclick = async () => {
         button.disabled = true;
         try { const result = await request('projects/open', {handle: item.handle}); location.assign(result.dashboard_url); }
         catch (error) { message(error.message); button.disabled = false; }
       };
-      card.append(button);
+      actions.append(button);
+      if (active) {
+        const close = make('button', 'Close Project'); close.type = 'button';
+        close.onclick = async () => {
+          if (busy) return;
+          busy = true; close.disabled = true;
+          try { await request('projects/close', {}); location.assign('/projects'); }
+          catch (error) { message(error.message); busy = false; close.disabled = false; }
+        };
+        actions.append(close);
+      }
       const remove = make('button', 'Move to Trash…'); remove.type = 'button'; remove.className = 'danger-secondary';
       remove.disabled = !item.removal?.available;
       remove.onclick = () => prepareTrash(item.handle);
-      card.append(remove);
-      if (!item.removal?.available) card.append(make('p', item.removal?.reason || 'Move to Trash is unavailable.'));
+      actions.append(remove); card.append(actions);
+      const reason = active ? 'Close this project before removal. Other processes may still keep it in use.' :
+        (!item.removal?.available ? item.removal?.reason || 'Move to Trash is unavailable.' : '');
+      if (reason) { const helper = make('p', reason); helper.className = 'muted'; card.append(helper); }
     }
     get('project-list').append(card);
   }

@@ -67,6 +67,21 @@ fieldset:disabled { opacity: .65; }
 .primary { background: #165b78; color: white; }
 .danger-secondary { margin-left: .6rem; color: #813c31; background: white; }
 .danger { color: white; background: #813c31; }
+.project-card-heading, .project-actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.project-card-heading h2 { margin: 0; }
+.active-project { border-color: #537b8d; }
+.project-location { overflow-wrap: anywhere; }
+.project-actions .danger-secondary { margin-left: 0; }
+.trash-panel { max-width: 46rem; box-sizing: border-box; padding: 1.25rem; }
+.trash-panel h1 { margin: 0 0 .75rem; }
+.trash-summary { grid-template-columns: minmax(6rem, 1fr) minmax(0, 4fr); margin: 1rem 0; }
+.trash-explanation { border-top: 1px solid #e2ecee; padding-top: .5rem; }
+.trash-explanation p { margin: .5rem 0; }
+.confirmation-field { display: grid; gap: .5rem; margin: 1.25rem 0; min-width: 0; }
+.confirmation-field strong { overflow-wrap: anywhere; }
+.confirmation-field input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 2.75rem; }
+.confirmation-field p { margin: 0; }
+.trash-actions { gap: .75rem; }
 .workflow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; list-style: none; padding: 0; }
 .workflow li { position: relative; display: flex; flex-direction: column; padding: .85rem; border: 1px solid #ccd6db; border-radius: .5rem; background: white; }
 .workflow li:not(:last-child)::after { content: '→'; position: absolute; right: -1.1rem; top: 1.1rem; color: #526570; }

@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from corpustrail.application.projects import ProjectController, ProjectCommandError, SCHEMA
 from corpustrail.application import ProjectReads
@@ -493,6 +493,12 @@ class GuidedHttpTests(ProjectFixture):
         assets = resources.files('corpustrail.local_app').joinpath('assets')
         html = assets.joinpath('projects.html').read_text(encoding='utf-8')
         script = assets.joinpath('projects.js').read_text(encoding='utf-8')
+        other = Project.create(self.root/'other', ProjectConfig('other-ui-fixture', 'Other project', 'Synthetic topic'),
+                               created_by='fixture')
+        other_before = fingerprint(other.root)
+        confirmation_backend = Mock()
+        confirmation_backend.capability.return_value = {'available': True, 'reason': ''}
+        self.controller.removal().backend = confirmation_backend
         harness = r"""
 const assert=require('node:assert/strict'), vm=require('node:vm');
 const input=JSON.parse(require('node:fs').readFileSync(0,'utf8'));
@@ -588,8 +594,38 @@ async function client(pathname) {
   assert.deepEqual(body.fields,{...initial,description:'Updated invented research topic'});
   assert.deepEqual(body.fields.authorized_reviewers,[]);
   const reopened=await client('/projects');
-  const open=reopened.elements['project-list'].children[0].children.find(e=>e.tag==='button');
-  await open.onclick();assert.equal(reopened.location.target,'/dashboard');
+  const cards=reopened.elements['project-list'].children;
+  const active=cards.find(e=>e.className.includes('active-project'));
+  const actions=card=>card.children.find(e=>e.className==='project-actions').children;
+  assert.equal(cards.length,2);assert(active);
+  assert.equal(active.children[0].children[1].textContent,'Active project');
+  const close=actions(active).find(e=>e.textContent==='Close Project');assert(close&&!close.disabled);
+  assert(actions(active).find(e=>e.textContent==='Move to Trash…').disabled);
+  assert.match(active.children.at(-1).textContent,/Other processes/);
+  assert(!cards.filter(e=>e!==active).some(e=>actions(e).some(b=>b.textContent==='Close Project')));
+  const removalBefore=requests.filter(r=>r.path.includes('/trash/')).length;
+  await close.onclick();assert.equal(reopened.location.target,'/projects');
+  const closed=await client('/projects');
+  assert.equal(closed.elements['project-list'].children.length,2);
+  assert(!closed.elements['project-list'].children.some(e=>e.className.includes('active-project')));
+  assert(!closed.elements['project-list'].children.some(e=>actions(e).some(b=>b.textContent==='Close Project')));
+  assert.equal(requests.filter(r=>r.path.includes('/trash/')).length,removalBefore);
+  assert.equal(requests.filter(r=>r.path.endsWith('/close')).length,1);
+  const selected=closed.elements['project-list'].children[0];
+  await actions(selected).find(e=>e.textContent==='Move to Trash…').onclick();
+  assert.equal(closed.elements['trash-confirmation'].hidden,false);
+  assert.equal(closed.elements['trash-name'].textContent,'Five-paper researcher test');
+  assert.equal(closed.elements['trash-location'].textContent,selected.children[1].textContent);
+  assert.equal(closed.elements['trash-execute'].disabled,true);
+  await closed.set('trash-folder','incorrect-name');assert.equal(closed.elements['trash-execute'].disabled,true);
+  await closed.set('trash-folder',closed.elements['trash-folder-name'].textContent);
+  assert.equal(closed.elements['trash-execute'].disabled,false);
+  await closed.elements['trash-cancel'].onclick();
+  assert.equal(closed.elements['trash-confirmation'].hidden,true);
+  assert.equal(closed.elements['project-list'].children.length,2);
+  assert.equal(requests.filter(r=>r.path.endsWith('/trash/execute')).length,0);
+  const open=actions(closed.elements['project-list'].children[0]).find(e=>e.textContent==='Open Project');
+  await open.onclick();assert.equal(closed.location.target,'/dashboard');
   const persisted=await client('/settings');
   assert.equal(persisted.elements.description.value,'Updated invented research topic');
   assert(s.steps.every(group=>!group.hidden));
@@ -633,6 +669,8 @@ async function client(pathname) {
         self.assertEqual(project.config.description, 'Updated invented research topic')
         self.assertEqual(len(project.configuration_history()), 3)
         self.assertEqual(project.config.review.authorized_reviewers, ())
+        self.assertEqual(other_before, fingerprint(other.root))
+        confirmation_backend.move.assert_not_called()
 
 
 if __name__ == '__main__':
