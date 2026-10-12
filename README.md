@@ -77,10 +77,12 @@ Save Changes and Discard Changes. Configuration saves preserve their history.
 The [Discovery page](docs/user/DISCOVERY.md) previews an exact saved search, requires
 explicit approval, then runs a bounded background search with progress/history.
 Discovery collects candidates, never membership decisions. Opening pages never
-contacts external services. Acquisition/export have command-line tools and the
+contacts external services. Publication details now support explicit eligible
+[Europe PMC structured-text retrieval](docs/user/EVIDENCE.md), with verification
+outcomes and evidence provenance. Missing PMCID prevents that retrieval; automatic
+DOI/PMID enrichment is not implemented. Export has command-line tools and the
 separate review UI remains available; their guided graphical workflows, assisted
-assessment and corpus import remain planned. No acquisition/model/review-write
-actions are introduced.
+assessment and corpus import remain planned. No model/review-write actions are introduced.
 The existing `corpustrail review serve` interface remains separate and unchanged.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
 Optional [macOS project removal](docs/user/PROJECT_REMOVAL.md) moves a confirmed,

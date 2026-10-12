@@ -81,6 +81,12 @@ metadata preserves selected-field sources/alternatives; missing stays missing.
 
 ## Evidence and document trust
 
+For the graphical workflow, open **Corpus**, select a publication and inspect
+**Evidence → Additional evidence**. Follow the [evidence guide](EVIDENCE.md):
+retrieve only through a supported configured resolver and known eligible PMCID,
+then inspect the separate network and verification outcomes. Browsing never
+retrieves evidence automatically. Automatic DOI/PMID-to-PMCID enrichment is absent.
+
 ```bash
 corpustrail evidence /tmp/my-materials --paper-id CANONICAL_ID
 ```

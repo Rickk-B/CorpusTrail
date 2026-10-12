@@ -7,9 +7,10 @@
   <title>CorpusTrail — Project browser</title>
   <link rel="stylesheet" href="/assets/app.css">
   <script src="/assets/app.js" defer></script>
+  <script src="/assets/evidence.js" defer></script>
 </head>
 <body>
-  <header><a href="/home" class="brand">CorpusTrail</a><span class="badge">Read-only project browser</span></header>
+  <header><a href="/home" class="brand">CorpusTrail</a><span class="badge">PROJECT_BROWSER_STATUS</span></header>
   <nav aria-label="Application"><a href="/home">Home</a><a href="/projects">Projects</a><a PROJECT_NAV_HIDDEN id="nav-dashboard" href="/dashboard">Project dashboard</a><a DISCOVERY_NAV_HIDDEN href="/discovery">Discovery</a><a PROJECT_NAV_HIDDEN id="nav-papers" href="/papers">Corpus</a><a PROJECT_NAV_HIDDEN href="/settings">Project Settings</a></nav>
   <main>
     <p class="muted app-note">Browsing does not change your project or contact external services.</p>
@@ -41,11 +42,22 @@
     <section id="detail" hidden><a href="/papers">Back to Corpus</a><h1 id="paper-title"></h1>
       <p id="bibliography"></p><p id="identifiers"></p><p id="paper-sources"></p><div id="paper-status"></div>
       <h2>Evidence</h2>
-      <h3>Abstract</h3><p id="abstract" class="scientific"></p>
+      <h3>Abstract</h3><p id="abstract-source" class="muted"></p><p id="abstract" class="scientific"></p>
       <h3>Full / structured text</h3><div id="representations"></div>
       <div id="document-controls"></div><pre id="document-text" class="scientific" hidden></pre>
       <p id="document-position"></p><button id="document-next" hidden>Read next text segment</button>
       <p class="muted">Missing evidence does not imply exclusion. Viewing evidence does not record a review or change corpus membership; it is not an attestation that the full paper was read. Unverified documents are not trusted evidence.</p>
+      <section id="evidence-acquisition" class="card" EVIDENCE_WORKFLOW_HIDDEN aria-labelledby="evidence-heading">
+        <h3 id="evidence-heading">Additional evidence</h3>
+        <p id="evidence-eligibility"></p><p id="evidence-request" class="muted"></p>
+        <button id="retrieve-evidence" type="button" hidden>Retrieve structured text from Europe PMC</button>
+        <p id="evidence-result" role="status" aria-live="polite"></p>
+        <h4>Evidence history</h4><ul id="evidence-history"></ul><button id="more-evidence" type="button" hidden>More evidence history</button>
+        <h4>Retrieval operations</h4><ul id="evidence-operations"></ul><button id="more-operations" type="button" hidden>More retrieval operations</button>
+        <details id="advanced-evidence"><summary>Advanced evidence details — operational, not method-blind</summary>
+          <button id="evidence-provenance" type="button">Show complete provenance records</button><pre id="evidence-raw"></pre><button id="more-evidence-provenance" type="button" hidden>More provenance records</button>
+        </details>
+      </section>
       <details id="advanced"><summary>Advanced provenance and technical identifiers</summary>
         <p>Operational provenance may contain prior judgments, retrieval methods and source locations. It is not a method-blind review view.</p>
         <h3>Technical identifiers</h3><div id="technical-identifiers"></div><p id="copy-status" role="status" aria-live="polite"></p>

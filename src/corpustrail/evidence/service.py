@@ -244,3 +244,27 @@ class EvidenceService:
             "pending_identity": sum(x["payload"]["artifact_validity"] == "pending_identity" for x in reps),
             "mismatch_or_invalid": sum(x["payload"]["artifact_validity"] in {"mismatch", "invalid"} for x in reps),
             "membership_implication": None}
+
+    # Checkpoint 4 read projections. Acquisition and trust methods above are unchanged.
+    def acquisition_page(self, paper_id, *, resolution_id=None, offset=0, limit=20):
+        """Bounded verified provenance, including attempts made outside the UI."""
+        from corpustrail._internal.database import connection
+        from corpustrail._internal.values import digest_bytes
+        import json
+        if type(offset)!=int or offset<0 or type(limit)!=int or not 1<=limit<=100:
+            raise ContractError('invalid acquisition provenance page')
+        self.project.discovery.metadata(paper_id)
+        clause = ' AND (scope_id=? OR json_extract(payload_json,\'$.payload.resolution_id\')=?)' if resolution_id else ''
+        values = (paper_id,resolution_id,resolution_id) if resolution_id else (paper_id,)
+        with connection(self.project.database_path) as db:
+            rows = db.execute("SELECT * FROM ct_pipeline_events WHERE paper_id=? AND kind IN "
+                "('resolution_plan','acquisition_started','acquisition_result','representation')"+clause+
+                ' ORDER BY sequence DESC LIMIT ? OFFSET ?', (*values,limit+1,offset)).fetchall()
+            items = []
+            for row in rows[:limit]:
+                payload = json.loads(row['payload_json'])
+                if (identifier('pipeline',payload)!=row['event_id'] or digest_bytes(row['payload_json'].encode('utf-8'))!=row['content_sha256']
+                    or any(payload[k]!=row[k] for k in ('kind','scope_id','paper_id','source_sha256','config_event_id'))):
+                    raise ContractError('evidence provenance integrity differs')
+                items.append({'event_id':row['event_id'],**payload})
+        return {'items':items,'next_offset':offset+limit if len(rows)>limit else None}

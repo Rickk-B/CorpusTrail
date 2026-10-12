@@ -58,6 +58,7 @@ jobs:
           python -m pip install --no-deps .
           python -I -m unittest discover -s tests -p test_project_management.py -v
           python -I -m unittest discover -s tests -p test_discovery_app.py -v
+          python -I -m unittest discover -s tests -p test_evidence_app.py -v
           python -c "import platform; print(platform.platform(), platform.machine())"
       - name: Install only the approved macOS native bindings
         if: runner.os == 'macOS'
@@ -70,6 +71,7 @@ jobs:
         run: |
           python -I -m unittest discover -s tests -p test_project_management.py -v
           python -I -m unittest discover -s tests -p test_discovery_app.py -v
+          python -I -m unittest discover -s tests -p test_evidence_app.py -v
   development-artifact:
     name: Validated development wheel (not a release)
     needs: [acceptance, project-lifecycle]
@@ -125,4 +127,4 @@ jobs:
           ARTIFACT_URL: '${{ steps.upload.outputs.artifact-url }}'
         run: |
           printf '\n[Download validated development wheel](%s)\n\nNot a public release. Artifact source/build commit: `%s`.\n\nCheckpoint 1 implementation commit: `%s`.\n\nPrevious CI/distribution commit: `%s`.\n' "$ARTIFACT_URL" "$GITHUB_SHA" "$CHECKPOINT_IMPLEMENTATION_SHA" "$CHECKPOINT_DISTRIBUTION_SHA" >> "$GITHUB_STEP_SUMMARY"
-          printf '\nAccepted Checkpoint 1 visual baseline: `%s`. This wheel includes Checkpoint 2 guided configuration and Checkpoint 3 exact discovery/local jobs. It is built from the source SHA above.\n' "$ACCEPTED_CHECKPOINT1_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nAccepted Checkpoint 1 visual baseline: `%s`. This wheel includes Checkpoint 2 configuration, Checkpoint 3 discovery and Checkpoint 4 evidence acquisition. It is built from the source SHA above.\n' "$ACCEPTED_CHECKPOINT1_SHA" >> "$GITHUB_STEP_SUMMARY"

@@ -21,7 +21,8 @@ from corpustrail.errors import ContractError
 from corpustrail.application.project_use import leased_server_factory
 
 ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; charset=utf-8',
-          'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8'}
+          'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8',
+          'evidence.js': 'text/javascript; charset=utf-8'}
 
 
 def _query(value, allowed):
@@ -38,7 +39,7 @@ def _number(value):
 
 
 @leased_server_factory
-def make_server(project=None, *, port=8766, controller=None, discovery=None):
+def make_server(project=None, *, port=8766, controller=None, discovery=None, evidence=None):
     """Reads never write; only controller-enabled project POSTs can configure."""
     if type(port) is not int or not 0 <= port <= 65535:
         raise ContractError('port must be between 0 and 65535')
@@ -50,6 +51,9 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None):
     if controller is not None and discovery is None:
         from corpustrail.application.discovery import DiscoveryController
         discovery = DiscoveryController(controller)
+    if controller is not None and evidence is None:
+        from corpustrail.application.evidence import EvidenceController
+        evidence = EvidenceController(controller)
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
@@ -104,6 +108,8 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None):
                     html = assets.joinpath(page).read_text(encoding='utf-8')
                     html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active else 'hidden')
                     html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
+                    html = html.replace('EVIDENCE_WORKFLOW_HIDDEN', '' if active and evidence is not None else 'hidden')
+                    html = html.replace('PROJECT_BROWSER_STATUS', 'Local project workspace' if evidence is not None else 'Read-only project browser')
                     return self.send(200, html, 'text/html; charset=utf-8')
                 if path.startswith('/assets/'):
                     name = path[len('/assets/'):]
@@ -124,6 +130,19 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None):
                     query = _query(route.query, {'handle'})
                     result = controller.settings(query.get('handle'))
                     return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
+                if evidence is not None and path.startswith('/api/v1/evidence/'):
+                    with controller.use() as current:
+                        match = re.fullmatch(r'/api/v1/evidence/(papers|operations)/([0-9a-f]{64})(?:/(history|provenance))?',path)
+                        if not match: return self.error(404,'not_found','Evidence resource not found.')
+                        kind,handle,section = match.groups()
+                        query = _query(route.query, {'offset','limit'} if section or kind=='papers' else set())
+                        page = {k:_number(v) for k,v in query.items()}
+                        if kind=='operations':
+                            if section: return self.error(404,'not_found','Evidence operation resource not found.')
+                            result = evidence.inspect(current,handle)
+                        elif section=='history': result = evidence.history(current,handle,**page)
+                        else: result = evidence.view(current,handle,advanced=section=='provenance',**page)
+                        return self.send(200,json.dumps(result,ensure_ascii=False,allow_nan=False))
                 if discovery is not None and path.startswith('/api/v1/discovery/'):
                     with controller.use() as current:
                         if path == '/api/v1/discovery/configuration':
@@ -203,6 +222,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None):
                       '/api/v1/projects/close', '/api/v1/projects/trash/prepare',
                       '/api/v1/projects/trash/cancel', '/api/v1/projects/trash/execute'}
             routes.update('/api/v1/discovery/'+name for name in ('prepare', 'approve', 'start', 'invalidate', 'cancel'))
+            routes.add('/api/v1/evidence/start')
             if controller is None or self.path not in routes:
                 return self.readonly()
             self.close_connection = True
@@ -213,6 +233,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None):
                 return self.error(403, 'csrf_required', 'Open the local application and submit from its project form.')
             from corpustrail.application.projects import ProjectCommandError, SCHEMA
             is_discovery = self.path.startswith('/api/v1/discovery/')
+            is_evidence = self.path=='/api/v1/evidence/start'
             try:
                 lengths = self.headers.get_all('Content-Length')
                 if (self.headers.get_all('Content-Type') != ['application/json']
@@ -233,10 +254,14 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None):
                                   parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite JSON')))
                 from corpustrail.application.trash import SCHEMA as TRASH_SCHEMA
                 from corpustrail.application.discovery import SCHEMA as DISCOVERY_SCHEMA
-                expected_schema = DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                from corpustrail.application.evidence import SCHEMA as EVIDENCE_SCHEMA
+                expected_schema = EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
                 if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if is_discovery:
+                if is_evidence:
+                    if set(body)!={'paper','request_id','eligibility_hash','confirm_external'}: raise ValueError('unsupported evidence fields')
+                    with controller.use() as current: result = evidence.start(current,**body)
+                elif is_discovery:
                     with controller.use() as current:
                         result = discovery.command(current, self.path.rsplit('/', 1)[1], body)
                 elif '/trash/' in self.path:
@@ -286,6 +311,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None):
         original_close = server.server_close
         def close():
             discovery.close()
+            if evidence is not None: evidence.close()
             original_close()
         server.server_close = close
     return server

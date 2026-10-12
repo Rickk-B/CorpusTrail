@@ -375,7 +375,7 @@ class GuidedHttpTests(ProjectFixture):
         self.assertIn('href="/projects/new">Create New Project', html)
         self.assertIn('href="/projects#open-existing">Open Existing Project', html)
         self.assertIn('Discovery workflow in this UI', html)
-        self.assertIn('View here · Retrieval UI planned', html)
+        self.assertIn('Evidence inspection and eligible Europe PMC retrieval here', html)
         self.assertIn('Commands available · Export UI planned', html)
         self.assertIn('Separate review UI · Guided flow planned', html)
         self.assertIn('assisted assessment and importing existing collections are planned', html)

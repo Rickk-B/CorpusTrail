@@ -198,7 +198,8 @@ async function detail(handle) {
   for (const rep of paper.representations) {
     if (rep.readable) { const button = node('button', 'Read verified structured text'); button.onclick = () => readDocument(rep.handle).catch(failure); controls.append(button); }
     else if (rep.validity === 'pending_identity') reps.append(node('p', 'Pending document — identity not verified; not offered as trusted evidence.'));
-    else if (['mismatch', 'invalid'].includes(rep.validity)) reps.append(node('p', 'Invalid or mismatched document — not offered as trusted evidence.'));
+    else if (rep.validity === 'mismatch') reps.append(node('p', 'Document identity mismatch — not offered as trusted evidence.'));
+    else if (rep.validity === 'invalid') reps.append(node('p', 'Invalid document — content validation failed; not offered as trusted evidence.'));
   }
   if (!paper.representations.some(rep => rep.readable)) reps.prepend(node('p', 'No full-text document is currently available to read as verified evidence in CorpusTrail.'));
 }
@@ -211,6 +212,7 @@ byId('provenance-previous').onclick = () => provenance(provenanceState.previous_
 byId('provenance-next').onclick = () => provenance(provenanceState.next_cursor).catch(failure);
 byId('document-next').onclick = () => readDocument(documentState.representation_handle, documentState.next_offset).catch(failure);
 const match = location.pathname.match(/^\/papers\/([0-9a-f]{64})$/);
+if (match) globalThis.corpustrailRefreshEvidence = () => detail(match[1]);
 byId(match || location.pathname === '/papers' ? 'nav-papers' : 'nav-dashboard').setAttribute('aria-current', 'page');
 if (match) detail(match[1]).catch(failure);
 else if (location.pathname === '/papers') catalogue().catch(failure);

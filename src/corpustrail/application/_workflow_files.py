@@ -14,10 +14,12 @@ def operation_lease(project, purpose):
     return _acquire_key(('local-discovery/v1', directory_identity(project.root), purpose), True)
 
 
-def location(project):
+def location(project, *, family='discovery'):
     # ProjectConfig already validates the relative data directory. Reject all
     # symlink components, including links that stay within the project.
-    return no_links(project.root / project.config.data_directory / 'discovery-workflows' / 'v1', missing=True)
+    if family not in {'discovery', 'evidence'}:
+        raise ContractError('unsupported local workflow family')
+    return no_links(project.root / project.config.data_directory / (family+'-workflows') / 'v1', missing=True)
 
 
 def read(path):
@@ -64,8 +66,8 @@ def publish(path, payload):
             temporary.unlink()
 
 
-def history(project, handle):
-    directory = location(project) / 'events' / handle
+def history(project, handle, *, family='discovery'):
+    directory = location(project, family=family) / 'events' / handle
     if not directory.exists():
         return []
     no_links(directory)
@@ -79,9 +81,9 @@ def history(project, handle):
     return result
 
 
-def append(project, handle, kind, payload, at):
-    prior = history(project, handle)
+def append(project, handle, kind, payload, at, *, family='discovery'):
+    prior = history(project, handle, family=family)
     event = {'sequence': len(prior), 'previous': content_hash(prior[-1]) if prior else None,
              'kind': kind, 'payload': payload, 'timestamp': at}
-    publish(location(project) / 'events' / handle / f'{len(prior):08d}.json', event)
+    publish(location(project, family=family) / 'events' / handle / f'{len(prior):08d}.json', event)
     return event
