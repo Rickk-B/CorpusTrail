@@ -368,8 +368,15 @@ class DiscoveryController:
         history = files.history(project, handle)
         terminal = [e for e in history if e['kind']=='terminal']
         queued = any(e['kind']=='queued' for e in history)
+        alive = self._alive(project, handle) if queued and not terminal else False
+        if queued and not terminal and not alive:
+            # The worker may have published its terminal receipt and released
+            # its lease after our first history read. Refresh immutable history
+            # under that observed quiescence before claiming interruption.
+            history = files.history(project, handle)
+            terminal = [e for e in history if e['kind']=='terminal']
         status = (terminal[-1]['payload']['status'] if terminal else
-                  ('running' if any(e['kind']=='running' for e in history) else 'queued') if queued and self._alive(project, handle) else 'interrupted' if queued else
+                  ('running' if any(e['kind']=='running' for e in history) else 'queued') if queued and alive else 'interrupted' if queued else
                   'invalidated' if any(e['kind']=='invalidated' for e in history) else
                   'approved' if any(e['kind']=='approved' for e in history) else 'prepared')
         results = {e['payload']['provider']: e['payload'] for e in history if e['kind']=='provider_finished'}

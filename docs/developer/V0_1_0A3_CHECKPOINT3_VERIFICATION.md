@@ -69,8 +69,8 @@ HTTP servers and independent cooperating processes.
 
 | Check | Result |
 |---|---|
-| Focused discovery/application/HTTP/packaged-JavaScript tests | 18 tests, OK |
-| Complete standalone suite with optional ML installed | 435 tests, OK (1 native macOS opt-in test skipped), 107.044 seconds |
+| Focused discovery/application/HTTP/packaged-JavaScript tests | 19 tests, OK, including deterministic completion/probe race |
+| Complete standalone suite with optional ML installed | 436 tests, OK (1 native macOS opt-in test skipped), 102.172 seconds |
 | Development-artifact regression tests | 12 tests, OK |
 | Ruff (`src tests tools`) | Passed |
 | JavaScript syntax (`app.js`, `projects.js`, `discovery.js`) | Passed |
@@ -82,12 +82,26 @@ HTTP servers and independent cooperating processes.
 | Independent sdist→wheel/optional-ML full suite | 435 tests, OK (1 native skip), 99.441 seconds |
 | Core/ML wheel/sdist tutorials, installed CLI and synthetic examples | Passed, `network_used=false` |
 | Sdist uninstall/reinstall and project reopen | Passed in core and ML environments; project status preserved |
+| Clean wheel/core focused suite after race fix | 19 tests, OK; offline tutorial and installed version passed |
+| Clean sdist→wheel/core focused suite after race fix | 19 tests, OK; offline tutorial and installed version passed |
 
 Clean installed-wheel/sdist core and optional-ML acceptance above is recorded by
 `tools/smoke_install.py`; hosted acceptance and the exact downloadable wheel's
 test receipt are authoritative for the artifact source commit. The artifact
 includes exact build/source SHA and historical Checkpoint 1 implementation lineage;
 it is not described as built from an earlier checkpoint.
+
+The four 435-test full clean-install results above precede a narrowly scoped
+read-projection follow-up. Hosted run `38252884592` detected a completion/liveness
+race on Python 3.12: a worker could finish after history was read but before its
+lock was probed, briefly projecting Interrupted despite a terminal receipt.
+The reader now refreshes immutable history after observing the free worker lock.
+A deterministic test reproduces that exact timing. No event write, execution,
+scientific state or automatic retry was added. The implementation commit and
+separate corrective commit remain in normal history; the final hosted run must
+rerun the full clean-install matrix at the corrected exact source SHA before an
+artifact is accepted. All six first-run macOS/Windows lifecycle jobs passed,
+including native macOS guard/Trash acceptance; final-commit gates remain required.
 
 The public-source privacy heuristic scan found no new blocking finding. Its one
 credential-URL match is the existing deliberately fake URL rejection fixture in

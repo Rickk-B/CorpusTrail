@@ -145,6 +145,24 @@ class DiscoveryWorkflowTests(DiscoveryFixture):
         self.assertEqual([x['status'] for x in result['providers']],['completed','failed'])
         self.assertEqual(len(self.transport.calls),2)
         self.manager.inspect(self.project,p['handle']);self.manager.history(self.project);self.assertEqual(len(self.transport.calls),2)
+    def test_completion_between_history_read_and_liveness_probe_is_not_interruption(self):
+        self.transport.block=threading.Event()
+        p=self.prepare(['openalex']);self.approve(p)
+        self.manager.start(self.project,handle=p['handle'],request_id='completion-race-start')
+        self.assertTrue(self.transport.entered.wait(5))
+        thread=next(iter(self.manager._workers.values()))[0]
+        probe=self.manager._alive
+        def finish_before_probe(project,handle):
+            self.transport.block.set();thread.join(10)
+            self.assertFalse(thread.is_alive())
+            return probe(project,handle)
+        with patch.object(self.manager,'_alive',side_effect=finish_before_probe):
+            view=self.manager.inspect(self.project,p['handle'])
+        self.assertEqual(view['status'],'completed')
+        self.assertEqual(view['providers_finished'],1)
+        before=fingerprint(self.root)
+        self.assertEqual(self.manager.inspect(self.project,p['handle'])['status'],'completed')
+        self.assertEqual(before,fingerprint(self.root))
     def test_rediscovery_preserves_existing_reviews_membership_evidence_and_frozen_session(self):
         config=self.project.config
         self.project.configure(replace(config,config_version=2,review=ReviewPolicy(authorized_reviewers=('fixture_reviewer',))),

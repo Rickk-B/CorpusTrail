@@ -62,6 +62,9 @@ cancellation. There is no distributed framework or crash-resume. Daemon workers
 may be interrupted by host exit; receipt status without a live job key projects
 Interrupted without any read-side write or implicit resend. A parent terminal
 receipt is required to claim completion even if a child scientific run completed.
+If the worker finishes between the first history read and a free liveness probe,
+the reader refreshes immutable history before projecting Interrupted. This avoids
+a false interruption without any read-side event append or reconciliation.
 
 ## Read models, privacy and HTTP
 
