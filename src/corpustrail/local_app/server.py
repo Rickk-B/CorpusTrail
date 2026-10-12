@@ -21,7 +21,7 @@ from corpustrail.errors import ContractError
 from corpustrail.application.project_use import leased_server_factory
 
 ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; charset=utf-8',
-          'projects.js': 'text/javascript; charset=utf-8'}
+          'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8'}
 
 
 def _query(value, allowed):
@@ -38,7 +38,7 @@ def _number(value):
 
 
 @leased_server_factory
-def make_server(project=None, *, port=8766, controller=None):
+def make_server(project=None, *, port=8766, controller=None, discovery=None):
     """Reads never write; only controller-enabled project POSTs can configure."""
     if type(port) is not int or not 0 <= port <= 65535:
         raise ContractError('port must be between 0 and 65535')
@@ -47,6 +47,9 @@ def make_server(project=None, *, port=8766, controller=None):
         raise ContractError('a project or guided project controller is required')
     token = secrets.token_urlsafe(32)
     assets = resources.files('corpustrail.local_app').joinpath('assets')
+    if controller is not None and discovery is None:
+        from corpustrail.application.discovery import DiscoveryController
+        discovery = DiscoveryController(controller)
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
@@ -89,15 +92,18 @@ def make_server(project=None, *, port=8766, controller=None):
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
                     active = controller.active_handle is not None if controller is not None else project is not None
                     home = path == '/home' or path == '/' and not active
                     setup = controller is not None and path in {'/projects', '/projects/new', '/settings'}
-                    page = 'home.html' if home else 'projects.html' if setup else 'index.html'
+                    if path == '/discovery' and (not active or discovery is None):
+                        return self.error(409, 'project_required', 'Open a project before using Discovery.')
+                    page = 'home.html' if home else 'projects.html' if setup else 'discovery.html' if path == '/discovery' else 'index.html'
                     html = assets.joinpath(page).read_text(encoding='utf-8')
                     html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active else 'hidden')
+                    html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
                     return self.send(200, html, 'text/html; charset=utf-8')
                 if path.startswith('/assets/'):
                     name = path[len('/assets/'):]
@@ -118,6 +124,25 @@ def make_server(project=None, *, port=8766, controller=None):
                     query = _query(route.query, {'handle'})
                     result = controller.settings(query.get('handle'))
                     return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
+                if discovery is not None and path.startswith('/api/v1/discovery/'):
+                    with controller.use() as current:
+                        if path == '/api/v1/discovery/configuration':
+                            _query(route.query, set()); result = discovery.configuration(current)
+                        elif path == '/api/v1/discovery/history':
+                            query = _query(route.query, {'offset', 'limit'})
+                            result = discovery.history(current, **{k: _number(v) for k,v in query.items()})
+                        else:
+                            match = re.fullmatch(r'/api/v1/discovery/plans/([0-9a-f]{64})(?:/(papers|provenance))?', path)
+                            if not match: return self.error(404, 'not_found', 'Discovery resource not found.')
+                            handle, section = match.groups()
+                            if section is None:
+                                _query(route.query, set()); result = discovery.inspect(current, handle)
+                            else:
+                                query = _query(route.query, {'offset', 'limit', 'provider'} if section=='provenance' else {'offset', 'limit'})
+                                for key in ('offset', 'limit'):
+                                    if key in query: query[key] = _number(query[key])
+                                result = getattr(discovery, section)(current, handle, **query)
+                        return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
                 current_reads = ProjectReads(leases.enter_context(controller.use())) if controller is not None else reads
                 if path == '/api/v1/dashboard':
                     _query(route.query, set())
@@ -154,7 +179,8 @@ def make_server(project=None, *, port=8766, controller=None):
                 from corpustrail.application.projects import ProjectCommandError
                 if isinstance(exc, ProjectCommandError):
                     return self.error(exc.status, exc.code, str(exc))
-                self.error(400, 'invalid_request', 'Invalid request or unavailable trusted evidence. Refresh or check the selected filters.')
+                self.error(400, 'invalid_request', 'Saved search request is invalid or unavailable. Refresh Discovery and inspect its history.' if self.path.startswith('/api/v1/discovery/') else
+                    'Invalid request or unavailable trusted evidence. Refresh or check the selected filters.')
             except OSError:
                 self.error(400, 'artifact_unavailable', 'Local evidence is missing or inaccessible; no evidence was modified.')
             except sqlite3.DatabaseError:
@@ -176,6 +202,7 @@ def make_server(project=None, *, port=8766, controller=None):
             routes = {'/api/v1/projects/create', '/api/v1/projects/open', '/api/v1/project-settings/save',
                       '/api/v1/projects/close', '/api/v1/projects/trash/prepare',
                       '/api/v1/projects/trash/cancel', '/api/v1/projects/trash/execute'}
+            routes.update('/api/v1/discovery/'+name for name in ('prepare', 'approve', 'start', 'invalidate', 'cancel'))
             if controller is None or self.path not in routes:
                 return self.readonly()
             self.close_connection = True
@@ -185,6 +212,7 @@ def make_server(project=None, *, port=8766, controller=None):
                     or self.headers.get_all('X-CorpusTrail-CSRF') != [token]):
                 return self.error(403, 'csrf_required', 'Open the local application and submit from its project form.')
             from corpustrail.application.projects import ProjectCommandError, SCHEMA
+            is_discovery = self.path.startswith('/api/v1/discovery/')
             try:
                 lengths = self.headers.get_all('Content-Length')
                 if (self.headers.get_all('Content-Type') != ['application/json']
@@ -204,10 +232,14 @@ def make_server(project=None, *, port=8766, controller=None):
                 body = json.loads(payload, object_pairs_hook=unique,
                                   parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite JSON')))
                 from corpustrail.application.trash import SCHEMA as TRASH_SCHEMA
-                expected_schema = TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                from corpustrail.application.discovery import SCHEMA as DISCOVERY_SCHEMA
+                expected_schema = DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
                 if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if '/trash/' in self.path:
+                if is_discovery:
+                    with controller.use() as current:
+                        result = discovery.command(current, self.path.rsplit('/', 1)[1], body)
+                elif '/trash/' in self.path:
                     operation = self.path.rsplit('/', 1)[1]
                     fields = {'prepare': {'handle'}, 'cancel': {'confirmation'}, 'execute': {'confirmation', 'folder'}}[operation]
                     if set(body) != fields:
@@ -235,7 +267,9 @@ def make_server(project=None, *, port=8766, controller=None):
             except ProjectCommandError as exc:
                 self.error(exc.status, exc.code, str(exc))
             except (ContractError, ValueError, TypeError, KeyError, RecursionError):
-                self.error(400, 'invalid_project_form', 'Check the project form and refresh if its version is unsupported. No secret values are accepted.')
+                self.error(400, 'invalid_search' if is_discovery else 'invalid_project_form',
+                    'Check the query, bounded settings and current plan. No secret values or arbitrary endpoints are accepted.' if is_discovery else
+                    'Check the project form and refresh if its version is unsupported. No secret values are accepted.')
             except (OSError, sqlite3.DatabaseError):
                 self.error(409, 'project_unavailable', 'Project operation failed. Check local permissions and inspect saved state before retrying; no automatic upgrade or cleanup was performed.')
 
@@ -247,7 +281,14 @@ def make_server(project=None, *, port=8766, controller=None):
         do_TRACE = readonly
         do_CONNECT = readonly
 
-    return ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    if discovery is not None:
+        original_close = server.server_close
+        def close():
+            discovery.close()
+            original_close()
+        server.server_close = close
+    return server
 
 
 def serve(project=None, *, port=8766, open_browser=False, projects_root=None):

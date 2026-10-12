@@ -47,6 +47,7 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
                      'src/corpustrail/local_app/assets/home.html',
                      'src/corpustrail/local_app/assets/app.css', 'src/corpustrail/local_app/assets/app.js',
                      'src/corpustrail/local_app/assets/projects.html', 'src/corpustrail/local_app/assets/projects.js',
+                     'src/corpustrail/local_app/assets/discovery.html', 'src/corpustrail/local_app/assets/discovery.js',
                      'src/corpustrail/resources/origins.json'):
         if not (source / required).is_file():
             raise RuntimeError('sdist omitted required provenance/tutorial: ' + required)
@@ -100,7 +101,8 @@ def run(*, dependency_wheels=None) -> dict:
         for required in ('corpustrail/local_app/assets/index.html',
                          'corpustrail/local_app/assets/home.html',
                          'corpustrail/local_app/assets/app.css', 'corpustrail/local_app/assets/app.js',
-                         'corpustrail/local_app/assets/projects.html', 'corpustrail/local_app/assets/projects.js'):
+                         'corpustrail/local_app/assets/projects.html', 'corpustrail/local_app/assets/projects.js',
+                         'corpustrail/local_app/assets/discovery.html', 'corpustrail/local_app/assets/discovery.js'):
             if required not in wheel_entries:
                 raise RuntimeError('wheel omitted local frontend asset: ' + required)
         if any(not name.startswith(("corpustrail/", "corpus_trail-")) for name in wheel_entries):

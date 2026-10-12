@@ -74,11 +74,13 @@ actions. A direct project launch still opens its dashboard. Browse **Corpus**, p
 details, evidence status and optional advanced provenance. Browsing remains read-only.
 New Project keeps a six-step wizard; Project Settings is a direct-edit page with
 Save Changes and Discard Changes. Configuration saves preserve their history.
-Discovery, acquisition and export already have command-line tools; the separate
-review UI also remains available. Their guided graphical workflows, assisted
-assessment and corpus import are planned, not included in this checkpoint.
-No discovery, acquisition, model or review-write actions are introduced; opening
-pages never contacts external services.
+The [Discovery page](docs/user/DISCOVERY.md) previews an exact saved search, requires
+explicit approval, then runs a bounded background search with progress/history.
+Discovery collects candidates, never membership decisions. Opening pages never
+contacts external services. Acquisition/export have command-line tools and the
+separate review UI remains available; their guided graphical workflows, assisted
+assessment and corpus import remain planned. No acquisition/model/review-write
+actions are introduced.
 The existing `corpustrail review serve` interface remains separate and unchanged.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
 Optional [macOS project removal](docs/user/PROJECT_REMOVAL.md) moves a confirmed,

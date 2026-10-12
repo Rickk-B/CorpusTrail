@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="corpustrail-session" content="SESSION_TOKEN">
+  <title>CorpusTrail — Discovery</title><link rel="stylesheet" href="/assets/app.css"><script src="/assets/discovery.js" defer></script></head>
+<body>
+  <header><a href="/home" class="brand">CorpusTrail</a><span class="badge">Local discovery workspace</span></header>
+  <nav aria-label="Application"><a href="/home">Home</a><a href="/projects">Projects</a><a href="/dashboard">Project dashboard</a><a href="/discovery" aria-current="page">Discovery</a><a href="/papers">Corpus</a><a href="/settings">Project Settings</a></nav>
+  <main>
+    <h1>Discovery</h1><p>Collect publications for your research topic. A discovered publication is a candidate, not an accepted corpus member.</p>
+    <p id="message" role="status" aria-live="polite"></p>
+    <section id="search-setup" class="card" aria-labelledby="configure-heading">
+      <h2 id="configure-heading">Configure a search</h2>
+      <form id="search-form">
+        <label for="concept">Start from a configured concept</label><select id="concept"><option value="">Enter your own query</option></select>
+        <label for="query">Exact search query</label><textarea id="query" required maxlength="4000" rows="3" aria-describedby="query-help"></textarea>
+        <p id="query-help" class="muted">One exact query goes to each selected database. No automatic alias expansion. Each database interprets its own search syntax; unsupported separate date/language filters are not added.</p>
+        <fieldset><legend>Select databases</legend><div id="providers"></div></fieldset>
+        <details><summary>Search limits and retries</summary><div id="bounds" class="discovery-bounds"></div><p class="muted">Limits bound this search; they are not a stopping rule or proof that all relevant literature has been found. Requested page size is not a guaranteed result count.</p></details>
+        <p>This search does not edit Project Settings. Previewing saves the exact plan locally but does not contact databases.</p>
+        <button id="preview" type="submit">Preview Search Plan</button>
+      </form>
+    </section>
+    <section id="plan-section" class="card" hidden aria-labelledby="plan-heading">
+      <h2 id="plan-heading">Exact search plan</h2><p id="plan-query" class="scientific"></p><div id="plan-providers"></div>
+      <p>Only these queries and settings will be sent to the selected scholarly providers. Documents, review labels and corpus-membership decisions are not sent. Third-party service terms apply.</p>
+      <div id="approval-area" hidden>
+        <label class="choice"><input id="transfer" type="checkbox">I authorize this exact search to contact the displayed databases.</label>
+        <label class="choice"><input id="identity" type="checkbox">I approve organizing retrieved records using exact identifiers/source provenance. This does not accept papers into the corpus.</label>
+        <button id="approve" type="button">Approve Search Plan</button>
+      </div>
+      <div class="pager"><button id="edit" type="button" hidden>Edit Search</button><button id="run" type="button" hidden>Run Discovery</button><button id="repeat" type="button">Prepare a new search from these settings</button></div>
+      <p id="plan-notice" class="muted"></p>
+      <details><summary>Advanced plan details</summary><pre id="plan-details"></pre></details>
+    </section>
+    <section id="job-section" class="card" hidden aria-labelledby="job-heading">
+      <h2 id="job-heading">Progress and results</h2><p id="job-status" role="status" aria-live="polite"></p><ul id="provider-progress"></ul>
+      <dl id="results" class="configuration-summary"></dl>
+      <p class="muted">Preserved observations are provider records, not unique publications. Created/previously known publication counts come from exact canonical links. Unlinked observations may need identity inspection. None of these counts represents accepted corpus membership.</p>
+      <button id="cancel" type="button" hidden>Stop after current provider</button><p id="cancel-notice" class="muted"></p>
+      <div class="pager"><a href="/papers" class="button">View Corpus</a><a href="/dashboard">Project dashboard</a></div>
+      <h3>Publications linked to this search</h3><ul id="result-papers"></ul><button id="more-papers" type="button" hidden>More publications</button>
+      <details><summary>Advanced operational provenance — not a method-blind review</summary>
+        <label for="provenance-provider">Database</label><select id="provenance-provider"></select><button id="show-provenance" type="button">Show request provenance</button>
+        <pre id="provenance"></pre><button id="more-provenance" type="button" hidden>More provenance</button>
+      </details>
+    </section>
+    <section class="card" aria-labelledby="history-heading"><h2 id="history-heading">Previous searches</h2><p class="muted">Viewing plans or history never reruns a search. Interrupted searches require inspection and a new explicitly approved search; automatic crash-resume is not provided.</p><ul id="history"></ul><button id="more-history" type="button" hidden>More searches</button></section>
+  </main><footer>CorpusTrail · Intentional, bounded discovery · No automatic membership decisions</footer>
+</body></html>

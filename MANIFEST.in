@@ -10,6 +10,8 @@ include docs/developer/MODEL_ADAPTERS.md
 include docs/developer/DEVELOPMENT_BUILDS.md
 include docs/developer/PROJECT_SETUP_API.md
 include docs/developer/PROJECT_REMOVAL.md
+include docs/developer/DISCOVERY_WORKFLOWS.md
+include docs/developer/V0_1_0A3_CHECKPOINT3_VERIFICATION.md
 include docs/phase2b_migration_origins.json
 include docs/phase2c_migration_origins.json
 include tools/smoke_install.py tools/smoke_asreview.py tools/release_manifest.py

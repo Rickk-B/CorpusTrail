@@ -236,3 +236,62 @@ class DiscoveryService:
                     "observation_id": x["event_id"]} for x in recovered]
         return {"paper_id": paper_id, "selection_rule": "first_supported_nonempty/v1", "fields": fields,
                 "field_provenance": provenance, "alternatives": alternatives, "identifiers": ids}
+
+    # Checkpoint 3 read projections. Existing planning/execution/enrollment above
+    # remain unchanged. Polls query indexed run scopes, not the whole catalogue.
+    def run_summary(self, run_ids):
+        if not run_ids or len(run_ids) > 4 or any(not isinstance(x, str) for x in run_ids):
+            raise ContractError('invalid discovery run selection')
+        placeholders = ','.join('?' for _ in run_ids)
+        with connection(self.project.database_path) as db:
+            rows = db.execute('SELECT scope_id,kind,COUNT(*) n FROM ct_pipeline_events '
+                'WHERE scope_id IN (' + placeholders + ') GROUP BY scope_id,kind', run_ids).fetchall()
+            counts = {run: {} for run in run_ids}
+            for row in rows: counts[row['scope_id']][row['kind']] = row['n']
+            ids = ('SELECT event_id FROM ct_pipeline_events WHERE kind=\'candidate_observation\' '
+                   'AND scope_id IN (' + placeholders + ')')
+            links = db.execute("SELECT COUNT(*) links,COUNT(DISTINCT paper_id) papers,"
+                "COUNT(DISTINCT CASE WHEN json_extract(payload_json,'$.payload.action')='create' THEN paper_id END) created "
+                "FROM ct_pipeline_events WHERE kind='canonical_link' AND scope_id IN (" + ids + ')', run_ids).fetchone()
+            unresolved = db.execute("SELECT COUNT(*) FROM ct_pipeline_events o WHERE o.kind='candidate_observation' "
+                'AND o.scope_id IN (' + placeholders + ") AND NOT EXISTS (SELECT 1 FROM ct_pipeline_events l "
+                "WHERE l.kind='canonical_link' AND l.scope_id=o.event_id)", run_ids).fetchone()[0]
+            completed = {run: events_in_connection(db, scope_id=run, kind='discovery_complete') for run in run_ids}
+            return {'runs': {run: {'observations_preserved': counts[run].get('candidate_observation', 0),
+                'physical_requests_started': counts[run].get('request_started', 0),
+                'completion': completed[run][0]['payload'] if completed[run] else None} for run in run_ids},
+                'observations_preserved': sum(x.get('candidate_observation', 0) for x in counts.values()),
+                'linked_observations': links['links'], 'unique_publications': links['papers'],
+                'publications_created_by_run': links['created'],
+                'previously_known_publications': links['papers'] - links['created'],
+                'observations_not_linked': unresolved}
+
+    def run_papers(self, run_ids, *, offset=0, limit=20):
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100 or not 1 <= len(run_ids) <= 4:
+            raise ContractError('invalid discovery result page')
+        placeholders = ','.join('?' for _ in run_ids)
+        with connection(self.project.database_path) as db:
+            rows = db.execute("SELECT DISTINCT l.paper_id FROM ct_pipeline_events l JOIN ct_pipeline_events o "
+                "ON l.scope_id=o.event_id WHERE l.kind='canonical_link' AND o.kind='candidate_observation' "
+                'AND o.scope_id IN (' + placeholders + ') ORDER BY l.paper_id LIMIT ? OFFSET ?', (*run_ids, limit+1, offset)).fetchall()
+            items = [self._metadata(db, row['paper_id']) for row in rows[:limit]]
+            return {'items': items, 'next_offset': offset+limit if len(rows) > limit else None}
+
+    def run_provenance(self, run_id, *, offset=0, limit=20):
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 100:
+            raise ContractError('invalid provenance page')
+        with connection(self.project.database_path) as db:
+            rows = db.execute("SELECT event_id FROM ct_pipeline_events WHERE scope_id=? AND kind IN "
+                "('discovery_plan','request_started','request_result','discovery_complete') ORDER BY sequence LIMIT ? OFFSET ?",
+                (run_id, limit+1, offset)).fetchall()
+            # Use the same immutable-envelope verification as other pipeline reads.
+            from corpustrail._internal.values import digest_bytes
+            items = []
+            for row in rows[:limit]:
+                raw = db.execute('SELECT payload_json,content_sha256 FROM ct_pipeline_events WHERE event_id=?', (row[0],)).fetchone()
+                import json
+                payload = json.loads(raw[0])
+                if identifier('pipeline', payload) != row[0] or digest_bytes(raw[0].encode('utf-8')) != raw[1]:
+                    raise ContractError('pipeline provenance is corrupt')
+                items.append({'event_id': row[0], **payload})
+            return {'items': items, 'next_offset': offset+limit if len(rows) > limit else None}

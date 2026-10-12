@@ -43,6 +43,12 @@ token/password fields are rejected. Do not put secrets into topic/query free tex
 
 ## Discovery and providers
 
+For the researcher-facing workflow, open a project and choose **Discovery**.
+Follow the [graphical discovery guide](DISCOVERY.md): select databases, preview
+the exact saved plan, explicitly approve it, then run and inspect progress/results.
+The following command-line interface remains available for advanced use; each CLI
+invocation plans afresh, unlike the persisted exact-plan graphical workflow.
+
 Built-in optional keyword adapters: openalex, crossref, europepmc, semantic_scholar.
 Configure provider_id equal to adapter, for example
 `{"provider_id":"openalex","adapter":"openalex","credential_env":"CORPUSTRAIL_OPENALEX_TOKEN"}`.

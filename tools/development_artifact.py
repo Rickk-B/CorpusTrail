@@ -1,6 +1,7 @@
 """CI-only development-wheel receipt. Never changes package/scientific state."""
 
 import argparse
+import ast
 from datetime import datetime, timezone
 import email
 import hashlib
@@ -19,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = {'corpustrail/local_app/assets/index.html',
             'corpustrail/local_app/assets/home.html',
             'corpustrail/local_app/assets/app.css', 'corpustrail/local_app/assets/app.js'}
+FRONTEND.update({'corpustrail/local_app/assets/discovery.html', 'corpustrail/local_app/assets/discovery.js'})
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
 # Checkpoint 2 delegates writes to unchanged scientific/configuration services.
@@ -32,6 +34,9 @@ CHECKPOINT2_PATHS.add('src/corpustrail/local_app/assets/home.html')
 CHECKPOINT2_PATHS.update({'src/corpustrail/application/project_use.py', 'src/corpustrail/application/trash.py',
                          'src/corpustrail/_internal/loopback_http.py',
                          'src/corpustrail/curation/http.py', 'src/corpustrail/tutorial.py'})
+CHECKPOINT3_PATHS = {'src/corpustrail/application/discovery.py', 'src/corpustrail/application/_workflow_files.py',
+                    'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py',
+                    'src/corpustrail/local_app/assets/discovery.html', 'src/corpustrail/local_app/assets/discovery.js'}
 
 
 def git(root, *args):
@@ -61,8 +66,26 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         if subprocess.run(['git', '-C', str(root), 'merge-base', '--is-ancestor', accepted_checkpoint1, expected]).returncode:
             raise ValueError('Checkpoint 2 source must descend from accepted Checkpoint 1')
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
-        if changed - CHECKPOINT2_PATHS:
+        if changed - (CHECKPOINT2_PATHS | CHECKPOINT3_PATHS):
             raise ValueError('Checkpoint 2 may only change the approved guided application boundary')
+        for path, marker in (('src/corpustrail/discovery/service.py', '    # Checkpoint 3 read projections.'),
+                             ('src/corpustrail/providers/metadata.py', '\ndef request_preview(')):
+            if path in changed:
+                baseline = git(root, 'show', accepted_checkpoint1 + ':' + path)
+                current = (root/path).read_text(encoding='utf-8').split(marker)[0].strip()
+                if current != baseline:
+                    raise ValueError('Discovery scientific execution/normalization may only gain approved read helpers')
+                tree = ast.parse((root/path).read_text(encoding='utf-8'))
+                old_tree = ast.parse(baseline)
+                if path.endswith('discovery/service.py'):
+                    old_class = next(n for n in old_tree.body if isinstance(n, ast.ClassDef) and n.name=='DiscoveryService')
+                    new_class = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name=='DiscoveryService')
+                    names = [n.name for n in new_class.body if isinstance(n, ast.FunctionDef)]
+                    old_names = [n.name for n in old_class.body if isinstance(n, ast.FunctionDef)]
+                    if names != old_names+['run_summary','run_papers','run_provenance'] or len(tree.body)!=len(old_tree.body):
+                        raise ValueError('Scientific executor cannot be overridden or monkeypatched by read helpers')
+                elif any(not isinstance(n, ast.FunctionDef) for n in tree.body[len(old_tree.body):]) or [n.name for n in tree.body[len(old_tree.body):]] != ['request_preview','verify_preview_request']:
+                    raise ValueError('Metadata adapter may only add the reviewed pure preview helpers')
         # Lifecycle wrappers are allowed, not arbitrary historical review/scientific changes.
         review_path = 'src/corpustrail/curation/http.py'
         if review_path in changed:
@@ -81,14 +104,18 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
             current = (root / tutorial_path).read_text(encoding='utf-8')
             if current.split("if __name__=='__main__':")[0] != baseline.split("if __name__=='__main__':")[0]:
                 raise ValueError('Tutorial scientific fixture functions must remain unchanged')
-        return {**previous, 'name': 'Checkpoint 2 — guided project/configuration and definition',
+        checkpoint3 = (root/'src/corpustrail/application/discovery.py').is_file()
+        return {**previous, 'name': 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
                 'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
                 'application_source_unchanged': not bool(changed),
                 'configuration_writes_supported': True,
                 'application_paths_changed_since_accepted_checkpoint1': sorted(changed),
-                'scientific_service_source_unchanged': True,
+                'scientific_source_unchanged': not bool(changed & {'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py'}),
+                'scientific_service_source_unchanged': not bool(changed & {'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py'}),
+                'scientific_execution_source_unchanged': True,
+                'discovery_workflow_supported': checkpoint3,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
-                          'The source/build SHA identifies this guided-configuration artifact; it is not built from an earlier checkpoint.'}
+                          'The source/build SHA identifies this development artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):
         raise ValueError('implementation commit must be a full commit SHA')
     if git(root, 'cat-file', '-t', implementation) != 'commit':

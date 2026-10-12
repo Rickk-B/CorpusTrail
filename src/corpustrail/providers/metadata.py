@@ -150,3 +150,34 @@ class MetadataProvider:
                                      _year(year), _text(source), tuple(ids))
         # Bad identifiers must preserve the observation for review, not invalidate its whole page.
         return CandidateObservation(record_id, record, item)
+
+
+def request_preview(provider, plan):
+    """Derive initial request and cursor rule from the actual adapter, without IO."""
+    from dataclasses import asdict
+    from urllib.parse import parse_qsl, urlsplit
+    from corpustrail.providers.network import safe_url
+    marker = 'CORPUSTRAIL_RUNTIME_CURSOR_V1'
+    if marker in plan.query:
+        raise ContractError('reserved cursor placeholder cannot be a search term')
+    first = provider.request(plan, None)
+    template = provider.request(plan, marker)
+    safe_url(first.url, provider.hosts); safe_url(template.url, provider.hosts)
+    pairs = parse_qsl(urlsplit(template.url).query, keep_blank_values=True)
+    cursor_parameters = [key for key, value in pairs if value == marker]
+    if first.method != 'GET' or template.method != 'GET' or len(cursor_parameters) != 1 or template.url.count(marker) != 1:
+        raise ContractError('adapter cannot describe a bounded cursor request')
+    return {'initial_request': asdict(first), 'cursor_request_template': asdict(template),
+            'cursor_placeholder': marker, 'cursor_parameter': cursor_parameters[0],
+            'parameters': [{'name': k, 'value': v} for k, v in parse_qsl(urlsplit(first.url).query, keep_blank_values=True)],
+            'runtime_components': 'Later cursor values come from provider responses and are preserved with actual requests.'}
+
+
+def verify_preview_request(preview, spec, cursor):
+    from dataclasses import asdict
+    from urllib.parse import quote_plus
+    expected = preview['initial_request'] if cursor is None else {
+        **preview['cursor_request_template'], 'url': preview['cursor_request_template']['url'].replace(
+            preview['cursor_placeholder'], quote_plus(str(cursor)))}
+    if asdict(spec) != expected:
+        raise ContractError('adapter request differs from the frozen approved request rule')

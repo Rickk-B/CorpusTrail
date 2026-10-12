@@ -1,7 +1,9 @@
 # Local projects, settings and read-only paper browser
 
-This development build includes Checkpoints 1–2 of `0.1.0a3.dev0`, not a public a3
+This development build includes Checkpoints 1–3 of `0.1.0a3.dev0`, not a public a3
 release. The project wizard and settings have explicit configuration writes.
+The [Discovery workflow](DISCOVERY.md) prepares, approves and executes exact frozen
+searches as separate actions, with local background progress and search history.
 Dashboard, catalogue, details and provenance browsing remain read-only. No page
 automatically discovers papers, acquires evidence, records reviews or invokes
 models. No migrations or new dependencies are required for a current a2 project.
@@ -257,8 +259,9 @@ identifier field can be selected and copied manually.
 For updating/uninstalling the software without deleting your projects, see
 [removal and storage ownership](REMOVAL_STORAGE.md).
 
-- Only explicit project creation/configuration writes. No new review lifecycle,
-  classifier, references, discovery execution, evidence acquisition or import UI.
+- Only explicit creation/configuration, confirmed macOS Trash and approved
+  discovery actions write state. No new review lifecycle, classifier, references,
+  evidence acquisition or import UI.
 - Catalogue cursors refer to a live revision, not a persisted population. If
   another process changes relevant project records, Refresh/reapply filters to
   restart pagination. The browser does not silently mix revisions.
