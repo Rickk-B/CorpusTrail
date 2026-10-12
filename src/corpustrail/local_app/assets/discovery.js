@@ -33,15 +33,16 @@ async function action(work) {
   }
 }
 function renderPlan(value) {
+  if(!view||view.handle!==value.handle)get('plan-advanced').open=false;
   view=value;get('plan-section').hidden=false;get('plan-query').textContent=value.plan.query;
   get('plan-providers').replaceChildren();get('provenance-provider').replaceChildren();
   for(const provider of value.plan.providers) {
-    const card=make('article'), heading=make('h3',provider.label);card.append(heading);
-    const dl=make('dl');dl.className='configuration-summary';
-    const names={search:'Search text (search)','query.bibliographic':'Bibliographic query (query.bibliographic)',query:'Search query (query)',per_page:'Requested records per page (per_page)',rows:'Requested records per page (rows)',pageSize:'Requested records per page (pageSize)',limit:'Requested records per page (limit)',cursor:'Initial page cursor',cursorMark:'Initial page cursor',offset:'Initial result offset',format:'Response format',resultType:'Response detail',fields:'Requested metadata fields'};
+    const card=make('article'), heading=make('h3',provider.label);card.className='discovery-provider';card.append(heading);
+    const dl=make('dl');dl.className='plan-summary';
+    const names={search:'Search query','query.bibliographic':'Bibliographic search query',query:'Search query',per_page:'Records per page',rows:'Records per page',pageSize:'Records per page',limit:'Records per page',cursor:'Initial page cursor',cursorMark:'Initial page cursor',offset:'Initial result offset',format:'Response format',resultType:'Response detail',fields:'Requested metadata fields'};
     for(const parameter of provider.request_preview.parameters)dl.append(make('dt',names[parameter.name]||parameter.name),make('dd',parameter.value));
-    card.append(dl,make('p',provider.request_preview.runtime_components));
-    card.append(make('p','At most '+provider.plan.max_pages+' pages; requested page size '+provider.plan.page_size+'; at most '+provider.plan.max_attempts+' attempts per request.'));
+    for(const [label,key] of [['Maximum pages','max_pages'],['Maximum attempts per request','max_attempts'],['Retry delay (seconds)','retry_delay_seconds'],['Maximum allowed retry wait (seconds)','max_retry_wait_seconds']])dl.append(make('dt',label),make('dd',String(provider.plan[key])));
+    const runtime=make('p',provider.request_preview.runtime_components);runtime.className='muted';card.append(dl,runtime);
     get('plan-providers').append(card);
     const option=make('option',provider.label);option.value=provider.provider;get('provenance-provider').append(option);
   }

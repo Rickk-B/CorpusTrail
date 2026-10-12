@@ -23,14 +23,16 @@
     <section id="plan-section" class="card" hidden aria-labelledby="plan-heading">
       <h2 id="plan-heading">Exact search plan</h2><p id="plan-query" class="scientific"></p><div id="plan-providers"></div>
       <p>Only these queries and settings will be sent to the selected scholarly providers. Documents, review labels and corpus-membership decisions are not sent. Third-party service terms apply.</p>
-      <div id="approval-area" hidden>
-        <label class="choice"><input id="transfer" type="checkbox">I authorize this exact search to contact the displayed databases.</label>
-        <label class="choice"><input id="identity" type="checkbox">I approve organizing retrieved records using exact identifiers/source provenance. This does not accept papers into the corpus.</label>
-        <button id="approve" type="button">Approve Search Plan</button>
-      </div>
+      <section id="approval-area" class="discovery-approval" aria-labelledby="approval-heading" hidden>
+        <h3 id="approval-heading">Approve search plan</h3>
+        <p class="muted">Review the exact settings above before approving. Running discovery remains a separate action.</p>
+        <label class="discovery-consent" for="transfer"><input id="transfer" type="checkbox"><span>I authorize this exact search to contact the displayed databases.</span></label>
+        <label class="discovery-consent" for="identity"><input id="identity" type="checkbox"><span>I approve organizing retrieved records using exact identifiers and source provenance. This does not accept papers into the corpus.</span></label>
+        <div class="approval-actions"><button id="approve" type="button">Approve Search Plan</button></div>
+      </section>
       <div class="pager"><button id="edit" type="button" hidden>Edit Search</button><button id="run" type="button" hidden>Run Discovery</button><button id="repeat" type="button">Prepare a new search from these settings</button></div>
       <p id="plan-notice" class="muted"></p>
-      <details><summary>Advanced plan details</summary><pre id="plan-details"></pre></details>
+      <details id="plan-advanced"><summary>Advanced plan details</summary><pre id="plan-details"></pre></details>
     </section>
     <section id="job-section" class="card" hidden aria-labelledby="job-heading">
       <h2 id="job-heading">Progress and results</h2><p id="job-status" role="status" aria-live="polite"></p><ul id="provider-progress"></ul>

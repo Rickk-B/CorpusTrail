@@ -160,3 +160,59 @@ See [Discovery guide](../user/DISCOVERY.md) and
 [workflow contract](DISCOVERY_WORKFLOWS.md). Hosted run/artifact identities and
 checksums belong to the generated build receipt and completion report, avoiding a
 self-referential source-commit identifier inside this document.
+
+## Final Checkpoint 3 Discovery presentation refinement
+
+Baseline: accepted commit `187b3f57bc74ace9c726d8cf1c0f5a09578ddff8`.
+The researcher reports successful native macOS graphical discovery with real
+OpenAlex and Europe PMC searches, including repeated-search identity recognition,
+history across restart, separate approval/execution and unchanged membership
+authority. That report does not establish live access for Crossref or Semantic
+Scholar, exhaustive literature coverage, or real model-server interoperability.
+No live provider/model request was made for this presentation follow-up.
+
+Changes are restricted to Discovery HTML/CSS/JavaScript, focused tests and this
+report. Both required approvals are grouped beneath a labelled approval heading,
+with first-line checkbox alignment, wrapping labels and a nearby approval action.
+Provider previews use dedicated responsive definition lists with readable labels,
+exact adapter-derived values, visible page/retry bounds and runtime cursor rules.
+All technical parameter names and the complete original plan remain available in
+Advanced Details. The disclosure starts collapsed for a newly displayed plan and
+retains its open state across approval/progress updates for the same plan.
+
+No application controller, HTTP handler, scientific service, provider adapter,
+project-use guard, configuration contract, storage, migration, dependency or CI
+workflow changed. Approval and execution remain separate explicit actions. Both
+consents remain mandatory on the frontend and backend. Search history, repeated
+execution rules, immutable plans and all safety/authority semantics are unchanged.
+
+Local Linux/Python 3.12.3 results:
+
+- Focused Discovery suite: 21 tests, OK (16.061 seconds).
+- Complete standalone suite with optional ML: 438 tests, OK, one native macOS
+  opt-in skip (109.245 seconds).
+- Ruff, syntax checks for all three local-app scripts, and diff whitespace checks
+  passed.
+- Changed-file privacy heuristics found no blocking result.
+- Independent wheel/core: 438 tests, OK (47 optional/native skips), 93.301 seconds.
+- Independent wheel/ML: 438 tests, OK (one native skip), 100.898 seconds.
+- Independent sdist→wheel/core: 438 tests, OK (47 skips), 86.100 seconds.
+- Independent sdist→wheel/ML: 438 tests, OK (one skip), 100.493 seconds.
+- All four installed environments passed offline tutorials/CLI acceptance;
+  `network_used=false`. Sdist core/ML uninstall/reinstall preserved project status.
+
+New markup checks cover explicit checkbox-label associations, the approval region,
+separate buttons and initially collapsed native disclosure. Packaged-JavaScript
+tests verify all four actual adapter previews (including multi-provider OpenAlex /
+Europe PMC), exact values and raw plan preservation, safe long Unicode/script-like
+query text, each missing-consent combination, explicit execution and per-plan
+disclosure state. Existing exact-plan, repeat, history, no-network-on-navigation,
+fingerprint, security, cross-process and Trash tests remain required.
+
+Clean wheel/sdist core/ML suites, installed CLI, tutorials and the hosted Linux /
+Windows / native macOS matrix are additional gates for the exact artifact source
+commit. Their receipts and final run/checksum are reported with the downloaded
+artifact. DOM/markup and CSS contract checks are not browser rendering or native
+macOS visual acceptance. No browser engine was installed for this follow-up;
+the researcher will perform final graphical acceptance. No Checkpoint 4 or release
+work was started.

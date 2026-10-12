@@ -3,6 +3,7 @@ from dataclasses import replace
 import concurrent.futures
 from importlib import resources
 import http.client
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
@@ -202,9 +203,9 @@ class DiscoveryWorkflowTests(DiscoveryFixture):
             with self.subTest(args=args),self.assertRaises((ProjectCommandError,ValueError,TypeError)):self.prepare(**args)
         p=self.prepare(['openalex'])
         with self.assertRaises(ProjectCommandError):self.manager.start(self.project,handle=p['handle'],request_id='no-approval-start')
-        for consent in (False,None):
+        for consent,organization in ((False,True),(None,True),(True,False),(True,None)):
             with self.assertRaises(ProjectCommandError):self.manager.approve(self.project,handle=p['handle'],request_id='no-consent-'+str(consent),
-                preview_nonce=p['preview_nonce'],confirm_external=consent,approve_identities=True)
+                preview_nonce=p['preview_nonce'],confirm_external=consent,approve_identities=organization)
         with self.assertRaises(ProjectCommandError):self.manager.approve(self.project,handle=p['handle'],request_id='forged-preview-command',
                 preview_nonce='forged',confirm_external=True,approve_identities=True)
         self.approve(p);self.manager.invalidate(self.project,handle=p['handle'])
@@ -360,6 +361,91 @@ sys.stdin.readline()
 
 
 class DiscoveryHttpTests(DiscoveryFixture):
+    def test_approval_markup_labels_disclosure_and_local_assets(self):
+        assets=resources.files('corpustrail.local_app').joinpath('assets')
+        html=assets.joinpath('discovery.html').read_text(encoding='utf-8')
+        class Markup(HTMLParser):
+            def __init__(self):
+                super().__init__();self.tags=[];self.labels={};self.current=None
+            def handle_starttag(self,tag,attrs):
+                attrs=dict(attrs);self.tags.append((tag,attrs))
+                if tag=='label':self.current=attrs.get('for');self.labels[self.current]=''
+            def handle_endtag(self,tag):
+                if tag=='label':self.current=None
+            def handle_data(self,text):
+                if self.current:self.labels[self.current]+=text
+        markup=Markup();markup.feed(html)
+        by_id={attrs['id']:(tag,attrs) for tag,attrs in markup.tags if 'id' in attrs}
+        for identifier in ('transfer','identity'):
+            self.assertEqual(by_id[identifier][0],'input')
+            self.assertEqual(by_id[identifier][1]['type'],'checkbox')
+            self.assertTrue(markup.labels[identifier])
+        self.assertIn('exact search',markup.labels['transfer'])
+        self.assertIn('source provenance',markup.labels['identity'])
+        self.assertIn('does not accept papers',markup.labels['identity'])
+        self.assertIn(by_id['approval-area'][1]['aria-labelledby'],by_id)
+        for identifier in ('approve','run'):
+            self.assertEqual(by_id[identifier][1]['type'],'button')
+        self.assertEqual(by_id['plan-advanced'][0],'details')
+        self.assertNotIn('open',by_id['plan-advanced'][1])
+        self.assertIn(('summary',{}),markup.tags)
+        css=assets.joinpath('app.css').read_text(encoding='utf-8')
+        self.assertIn('.discovery-consent',css);self.assertIn('.plan-summary',css)
+        self.assertIn('@media (max-width: 640px)',css)
+        self.assertIn('focus-visible',css);self.assertNotIn('https://',css)
+
+    @unittest.skipUnless(shutil.which('node'),'Optional developer Node harness, not a runtime dependency')
+    def test_provider_preview_presentation_exact_values_safe_text_and_disclosure_state(self):
+        assets=resources.files('corpustrail.local_app').joinpath('assets')
+        query='Invented material <script>alert("fixture")</script> '+('μceramic'*60)
+        preview=self.prepare(['openalex','europepmc','crossref','semantic_scholar'],query=query)
+        harness=r'''
+const assert=require('node:assert/strict'),vm=require('node:vm');
+const input=JSON.parse(require('node:fs').readFileSync(0,'utf8')),elements={},nodes=[];
+class Element{
+ constructor(tag,text=''){this.tag=tag;this.textContent=text;this.value='';this.hidden=false;this.open=false;this.dataset={};this.children=[];nodes.push(this);}
+ append(...args){this.children.push(...args);}prepend(...args){this.children.unshift(...args);}replaceChildren(...args){this.children=[...args];}
+}
+for(const m of input.html.matchAll(/id="([^"]+)"/g))elements[m[1]]=new Element('element');
+const context={input,document:{getElementById:id=>elements[id],createElement:tag=>new Element(tag),querySelector:()=>({content:'fixture-session'})},
+ fetch:async()=>({ok:false,json:async()=>({error:{message:'Presentation test makes no API calls'}})}),setTimeout,clearTimeout};
+vm.createContext(context);vm.runInContext(input.script,context);
+const original=JSON.stringify(input.preview.plan);
+vm.runInContext('renderPlan(input.preview)',context);
+assert.equal(elements['plan-advanced'].open,false);
+assert.equal(elements['plan-query'].textContent,input.preview.plan.query);
+const cards=elements['plan-providers'].children;assert.equal(cards.length,4);
+for(let i=0;i<cards.length;i++){
+ const provider=input.preview.plan.providers[i],dl=cards[i].children.find(e=>e.tag==='dl');
+ assert.equal(cards[i].children[0].textContent,provider.label);
+ assert.equal(dl.className,'plan-summary');assert.equal(dl.children.length%2,0);
+ for(let j=0;j<provider.request_preview.parameters.length;j++){
+  const label=dl.children[j*2],value=dl.children[j*2+1],parameter=provider.request_preview.parameters[j];
+  assert.equal(label.tag,'dt');assert.equal(value.tag,'dd');assert.equal(value.textContent,parameter.value);
+  assert.equal(value.children.length,0);
+  if(['per_page','pageSize','rows','limit'].includes(parameter.name))assert.equal(label.textContent,'Records per page');
+  assert(!label.textContent.includes('(per_page)'));assert(!label.textContent.includes('(pageSize)'));
+ }
+ const offset=provider.request_preview.parameters.length*2;
+ for(const [j,key] of ['max_pages','max_attempts','retry_delay_seconds','max_retry_wait_seconds'].entries())assert.equal(dl.children[offset+j*2+1].textContent,String(provider.plan[key]));
+ assert.equal(cards[i].children.at(-1).textContent,provider.request_preview.runtime_components);
+}
+assert.deepEqual(JSON.parse(elements['plan-details'].textContent),input.preview.plan);
+assert(elements['plan-details'].textContent.includes('per_page'));assert(elements['plan-details'].textContent.includes('pageSize'));
+elements['plan-advanced'].open=true;
+vm.runInContext('renderPlan({...input.preview,status:"approved"})',context);
+assert.equal(elements['plan-advanced'].open,true);
+assert.equal(JSON.stringify(input.preview.plan),original);
+vm.runInContext('renderPlan({...input.preview,handle:"another-plan"})',context);
+assert.equal(elements['plan-advanced'].open,false);
+assert.equal(nodes.filter(e=>e.tag==='script').length,0);
+console.log('Four adapter previews preserve exact values, safe query text and per-plan disclosure state.');
+'''
+        result=subprocess.run(['node','-e',harness],input=json.dumps({'html':assets.joinpath('discovery.html').read_text(encoding='utf-8'),
+            'script':assets.joinpath('discovery.js').read_text(encoding='utf-8'),'preview':preview}),text=True,capture_output=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertEqual(self.transport.calls,[])
+
     @unittest.skipUnless(shutil.which('node'),'Optional developer Node harness, not a runtime dependency')
     def test_packaged_javascript_researcher_workflow_against_actual_local_api(self):
         assets=resources.files('corpustrail.local_app').joinpath('assets')
@@ -367,7 +453,7 @@ class DiscoveryHttpTests(DiscoveryFixture):
 const assert=require('node:assert/strict'),vm=require('node:vm');
 const input=JSON.parse(require('node:fs').readFileSync(0,'utf8')),nodes=[],elements={},requests=[];
 class Element{
- constructor(tag){this.tag=tag;this.textContent='';this.value='';this.checked=false;this.disabled=false;this.hidden=false;this.dataset={};this.children=[];nodes.push(this);}
+ constructor(tag){this.tag=tag;this.textContent='';this.value='';this.checked=false;this.disabled=false;this.hidden=false;this.open=false;this.dataset={};this.children=[];nodes.push(this);}
  append(...args){this.children.push(...args);}prepend(...args){this.children.unshift(...args);}replaceChildren(...args){this.children=[...args];}focus(){}
 }
 for(const m of input.html.matchAll(/id="([^"]+)"/g))elements[m[1]]=new Element('element');
@@ -383,18 +469,23 @@ async function preview(){elements['search-form'].onsubmit({preventDefault(){}});
  assert.equal(requests.filter(r=>r.options.method==='POST').length,0);
  elements.query.value='porous ceramic';for(const e of nodes.filter(e=>e.dataset.provider))e.checked=['openalex','crossref'].includes(e.value);
  await preview();assert.equal(elements['plan-query'].textContent,'porous ceramic');
+ assert.equal(elements['plan-advanced'].open,false);elements['plan-advanced'].open=true;
  assert.equal(elements['plan-providers'].children.length,2);assert(!elements['approval-area'].hidden);
  assert.equal(requests.filter(r=>r.path.endsWith('/start')).length,0);
  await elements.approve.onclick();assert.match(elements.message.textContent,/explicitly/);
+ elements.transfer.checked=true;await elements.approve.onclick();assert.match(elements.message.textContent,/explicitly/);
+ elements.transfer.checked=false;elements.identity.checked=true;await elements.approve.onclick();assert.match(elements.message.textContent,/explicitly/);
  elements.transfer.checked=true;elements.identity.checked=true;await elements.approve.onclick();
  assert(!elements.run.hidden);assert.equal(requests.filter(r=>r.path.endsWith('/start')).length,0);
+ assert.equal(elements['plan-advanced'].open,true);
  await elements.run.onclick();await until(()=>vm.runInContext('view.status === "completed"',context)&&elements['result-papers'].children.length===5);
  assert.equal(elements.results.children.find(e=>e.textContent==='Unique publications linked').tag,'dt');
  assert.equal(elements['result-papers'].children[0].children[0].tag,'a');assert.equal(elements.provenance.textContent,'');
+ assert.equal(elements['plan-advanced'].open,true);
  elements['provenance-provider'].value='openalex';await elements['show-provenance'].onclick();assert.match(elements.provenance.textContent,/discovery_plan/);
  const starts=requests.filter(r=>r.path.endsWith('/start')).length;await elements.repeat.onclick();
  assert(!elements['search-setup'].hidden);assert.equal(requests.filter(r=>r.path.endsWith('/start')).length,starts);
- await preview();elements.transfer.checked=true;elements.identity.checked=true;await elements.approve.onclick();await elements.run.onclick();
+ await preview();assert.equal(elements['plan-advanced'].open,false);elements.transfer.checked=true;elements.identity.checked=true;await elements.approve.onclick();await elements.run.onclick();
  await until(()=>vm.runInContext('view.status === "completed" && view.summary.previously_known_publications === 5',context));
  vm.runInContext('stopPolling()',context);console.log('Packaged Discovery UI exact-preview, consent, explicit run, provenance and repeat passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
