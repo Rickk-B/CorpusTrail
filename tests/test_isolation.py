@@ -32,6 +32,8 @@ class IsolationTests(unittest.TestCase):
         denied = {"socket", "urllib", "http", "requests", "subprocess"}
         for path in root.rglob("*.py"):
             tree = ast.parse(path.read_text(encoding="utf-8"))
+            native_imports = {node for fn in ast.walk(tree) if isinstance(fn, ast.FunctionDef) and fn.name == 'move'
+                              for node in ast.walk(fn)} if path.relative_to(root).as_posix() == 'application/trash.py' else set()
             for node in ast.walk(tree):
                 if isinstance(node, (ast.Import, ast.ImportFrom)):
                     names = [x.name for x in node.names] if isinstance(node, ast.Import) else [node.module or ""]
@@ -40,6 +42,10 @@ class IsolationTests(unittest.TestCase):
                         if isinstance(node, ast.ImportFrom) and node.level:
                             continue
                         optional = {'sklearn','numpy','scipy'} if path.relative_to(root).as_posix()=='prioritization/_algorithm.py' else set()
+                        if path.relative_to(root).as_posix() == 'application/trash.py':
+                            optional = {'objc', 'Foundation'}
+                            if top in optional:
+                                self.assertIn(node, native_imports, 'Native bindings must remain lazy inside move')
                         self.assertIn(top, sys.stdlib_module_names | {"corpustrail"} | optional, (path, name))
                         allowed_network = {"providers/network.py", "providers/metadata.py", "curation/http.py",
                                            "models/integrations/compatible_endpoint.py", "local_app/server.py"}

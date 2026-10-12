@@ -26,6 +26,11 @@ scikit-learn, joblib and threadpoolctl have BSD-style licenses; NumPy and SciPy
 include permissive/component notices. Their installed wheels contain the complete
 applicable terms. Those libraries are not relicensed or bundled by CorpusTrail.
 
+Optional macOS Trash uses separately installed PyObjC Cocoa/core bindings under
+their own MIT terms/notices. CorpusTrail vendors neither those libraries nor the
+umbrella collection. Installed dependency wheels contain their applicable notices;
+CorpusTrail's MIT license does not replace them.
+
 ASReview is optional downstream software (the tested SDK is Apache-2.0); it is
 neither copied nor a core dependency. Its importer was inspected for bibliographic
 interoperability, not included. Build/development tools also retain their own

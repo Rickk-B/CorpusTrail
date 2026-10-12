@@ -40,9 +40,35 @@ jobs:
         run: python tools/smoke_install.py --dependency-wheels /tmp/ct-dependency-wheels
       - name: Check code-only release population
         run: python tools/release_manifest.py
+  project-lifecycle:
+    name: Project lifecycle (${{ matrix.os }}, ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['macos-15', 'windows-latest']
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '${{ matrix.python }}'
+      - name: Core installation and real-process guards (no native dependency)
+        run: |
+          python -m pip install --no-deps .
+          python -I -m unittest discover -s tests -p test_project_management.py -v
+          python -c "import platform; print(platform.platform(), platform.machine())"
+      - name: Install only the approved macOS native bindings
+        if: runner.os == 'macOS'
+        run: python -m pip install --only-binary=:all: '.[macos-trash]'
+      - name: Native macOS Trash and independent-process acceptance
+        if: runner.os == 'macOS'
+        env:
+          CORPUSTRAIL_NATIVE_TRASH_TEST: '1'
+        run: python -I -m unittest discover -s tests -p test_project_management.py -v
   development-artifact:
     name: Validated development wheel (not a release)
-    needs: acceptance
+    needs: [acceptance, project-lifecycle]
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       startsWith(github.ref, 'refs/heads/development/')

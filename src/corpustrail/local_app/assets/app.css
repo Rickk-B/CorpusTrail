@@ -65,6 +65,8 @@ fieldset:disabled { opacity: .65; }
 .welcome-intro h1 { margin-top: .4rem; }
 .eyebrow { color: #526570; font-weight: 600; margin-bottom: .4rem; }
 .primary { background: #165b78; color: white; }
+.danger-secondary { margin-left: .6rem; color: #813c31; background: white; }
+.danger { color: white; background: #813c31; }
 .workflow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; list-style: none; padding: 0; }
 .workflow li { position: relative; display: flex; flex-direction: column; padding: .85rem; border: 1px solid #ccd6db; border-radius: .5rem; background: white; }
 .workflow li:not(:last-child)::after { content: '→'; position: absolute; right: -1.1rem; top: 1.1rem; color: #526570; }

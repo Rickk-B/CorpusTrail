@@ -95,4 +95,6 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('project',type=Path); parser.add_argument('--prioritize',action='store_true')
     args=parser.parse_args()
-    print(json.dumps(run(args.project,prioritize=args.prioritize),sort_keys=True))
+    from corpustrail.application.project_use import creation_use
+    with creation_use(args.project):
+        print(json.dumps(run(args.project,prioritize=args.prioritize),sort_keys=True))

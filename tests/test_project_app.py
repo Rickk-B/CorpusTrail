@@ -49,6 +49,7 @@ class ProjectFixture(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name) / 'projects'
         self.controller = ProjectController(projects_root=self.root)
+        self.addCleanup(self.controller.close)
 
     def create(self, *, fields=None, folder='materials', request_id='create-request-fixture', confirm_authority=False):
         return self.controller.create(request_id=request_id, folder=folder, fields=fields or form(), confirm_authority=confirm_authority)

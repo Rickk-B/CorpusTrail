@@ -132,6 +132,10 @@ are pinned to their enrolled project handle and revision, not a guessed active I
 
 ## Project Settings — direct editing
 
+The approved follow-up adds optional macOS **Move to Trash…** for confirmed,
+inactive projects. See [safe removal](PROJECT_REMOVAL.md) before testing:
+`--no-deps` does not install the native extra. Windows/Linux removal is unavailable.
+
 Use **Project Settings** from the dashboard. All editable sections are directly
 accessible on one page: project information, corpus definition, discovery,
 evidence and reviewers. Change just the topic description and click **Save

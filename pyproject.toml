@@ -24,6 +24,7 @@ classifiers = [
 [project.optional-dependencies]
 prioritization = ["scikit-learn>=1.5,<2"]
 dev = ["build>=1.2,<2", "ruff>=0.9,<1"]
+macos-trash = ["pyobjc-framework-Cocoa==12.2.2; sys_platform == 'darwin'", "pyobjc-core==12.2.2; sys_platform == 'darwin'"]
 
 [project.scripts]
 corpustrail = "corpustrail.cli:main"

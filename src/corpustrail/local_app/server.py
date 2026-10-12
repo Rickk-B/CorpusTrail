@@ -5,6 +5,7 @@ The existing human-review server remains separate and unchanged.
 """
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from contextlib import ExitStack
 from importlib import resources
 import json
 import re
@@ -16,6 +17,7 @@ import webbrowser
 from corpustrail.application import ProjectReads
 from corpustrail.application.reads import StaleCursor
 from corpustrail.errors import ContractError
+from corpustrail.application.project_use import leased_server_factory
 
 ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; charset=utf-8',
           'projects.js': 'text/javascript; charset=utf-8'}
@@ -34,6 +36,7 @@ def _number(value):
     return int(value)
 
 
+@leased_server_factory
 def make_server(project=None, *, port=8766, controller=None):
     """Reads never write; only controller-enabled project POSTs can configure."""
     if type(port) is not int or not 0 <= port <= 65535:
@@ -77,6 +80,7 @@ def make_server(project=None, *, port=8766, controller=None):
         def do_GET(self):
             if not self.allowed():
                 return self.error(403, 'origin_required', 'A same-origin loopback request is required.')
+            leases = ExitStack()
             try:
                 if len(self.path) > 4096:
                     raise ContractError('request target is too long')
@@ -103,6 +107,8 @@ def make_server(project=None, *, port=8766, controller=None):
                     return self.error(404, 'not_found', 'Page not found.')
                 if self.headers.get_all('X-CorpusTrail-Session') != [token]:
                     return self.error(403, 'session_required', 'Open the local application before reading its API.')
+                if path.startswith('/api/v1/projects/trash/') or path == '/api/v1/projects/close':
+                    return self.error(404, 'not_found', 'This operation requires explicit protected submission.')
                 if controller is not None and path == '/api/v1/projects':
                     query = _query(route.query, {'offset', 'limit'})
                     result = controller.entry(**{key: _number(value) for key, value in query.items()})
@@ -111,7 +117,7 @@ def make_server(project=None, *, port=8766, controller=None):
                     query = _query(route.query, {'handle'})
                     result = controller.settings(query.get('handle'))
                     return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
-                current_reads = ProjectReads(controller.project()) if controller is not None else reads
+                current_reads = ProjectReads(leases.enter_context(controller.use())) if controller is not None else reads
                 if path == '/api/v1/dashboard':
                     _query(route.query, set())
                     result = current_reads.dashboard()
@@ -152,6 +158,8 @@ def make_server(project=None, *, port=8766, controller=None):
                 self.error(400, 'artifact_unavailable', 'Local evidence is missing or inaccessible; no evidence was modified.')
             except sqlite3.DatabaseError:
                 self.error(500, 'read_unavailable', 'Project data could not be read. No project state was modified.')
+            finally:
+                leases.close()
 
         def readonly(self):
             if not self.allowed():
@@ -164,7 +172,9 @@ def make_server(project=None, *, port=8766, controller=None):
             self.end_headers()
 
         def do_POST(self):
-            routes = {'/api/v1/projects/create', '/api/v1/projects/open', '/api/v1/project-settings/save'}
+            routes = {'/api/v1/projects/create', '/api/v1/projects/open', '/api/v1/project-settings/save',
+                      '/api/v1/projects/close', '/api/v1/projects/trash/prepare',
+                      '/api/v1/projects/trash/cancel', '/api/v1/projects/trash/execute'}
             if controller is None or self.path not in routes:
                 return self.readonly()
             self.close_connection = True
@@ -192,9 +202,22 @@ def make_server(project=None, *, port=8766, controller=None):
                     return result
                 body = json.loads(payload, object_pairs_hook=unique,
                                   parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite JSON')))
-                if not isinstance(body, dict) or body.pop('schema', None) != SCHEMA:
+                from corpustrail.application.trash import SCHEMA as TRASH_SCHEMA
+                expected_schema = TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if self.path.endswith('/open'):
+                if '/trash/' in self.path:
+                    operation = self.path.rsplit('/', 1)[1]
+                    fields = {'prepare': {'handle'}, 'cancel': {'confirmation'}, 'execute': {'confirmation', 'folder'}}[operation]
+                    if set(body) != fields:
+                        raise ValueError('unsupported removal fields')
+                    result = controller.remove_command(operation, **body)
+                elif self.path.endswith('/close'):
+                    if body:
+                        raise ValueError('unsupported close fields')
+                    controller.close()
+                    result = {'schema': SCHEMA, 'status': 'closed'}
+                elif self.path.endswith('/open'):
                     if set(body) != {'handle'}:
                         raise ValueError('unsupported open fields')
                     result = controller.open(body['handle'])
@@ -229,7 +252,11 @@ def make_server(project=None, *, port=8766, controller=None):
 def serve(project=None, *, port=8766, open_browser=False, projects_root=None):
     from corpustrail.application.projects import ProjectController
     controller = ProjectController(projects_root=projects_root, project=project)
-    server = make_server(port=port, controller=controller)
+    try:
+        server = make_server(port=port, controller=controller)
+    except BaseException:
+        controller.close()
+        raise
     url = 'http://127.0.0.1:' + str(server.server_port)
     print('CorpusTrail local application: ' + url, flush=True)
     try:

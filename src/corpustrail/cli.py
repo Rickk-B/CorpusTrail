@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import json
 import sys
 from pathlib import Path
@@ -234,16 +235,24 @@ def main(argv=None) -> int:
 
     describe(parser)
     args = parser.parse_args(argv)
+    leases = ExitStack()
     try:
+        from corpustrail.application.project_use import project_use, creation_use
         if args.command == 'app':
             from corpustrail.local_app import serve
             from corpustrail.application.projects import _safe_path
-            instance = Project.open(_safe_path(args.path)) if args.path is not None else None
+            if args.path is not None:
+                with project_use(_safe_path(args.path)):
+                    instance = Project.open(_safe_path(args.path))
+            else:
+                instance = None
             options = {'port': args.port, 'open_browser': args.open_browser}
             if args.projects_root is not None:
                 options['projects_root'] = args.projects_root
             serve(instance, **options)
             return 0
+        if not (args.command == 'project' and args.operation == 'init'):
+            leases.enter_context(project_use(args.path))
         if args.command == "project" and args.operation == "init":
             if args.config:
                 if any((args.project_id, args.name, args.description)):
@@ -253,7 +262,9 @@ def main(argv=None) -> int:
                 if not all((args.project_id, args.name, args.description)):
                     raise ContractError('project init requires --config or all of --project-id, --name, --description')
                 config = ProjectConfig(args.project_id, args.name, args.description)
+            leases.enter_context(creation_use(args.path))
             instance = Project.create(args.path, config, created_by=args.created_by)
+            leases.enter_context(project_use(instance.root))
         elif args.command == "project" and args.operation == "upgrade":
             instance = Project.upgrade(args.path, backup=args.backup)
         else:
@@ -394,3 +405,5 @@ def main(argv=None) -> int:
     except (ContractError, OSError, TypeError, ValueError, KeyError, ImportError) as exc:
         print("corpustrail: " + str(exc), file=sys.stderr)
         return 2
+    finally:
+        leases.close()

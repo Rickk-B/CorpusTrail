@@ -81,6 +81,8 @@ No discovery, acquisition, model or review-write actions are introduced; opening
 pages never contacts external services.
 The existing `corpustrail review serve` interface remains separate and unchanged.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
+Optional [macOS project removal](docs/user/PROJECT_REMOVAL.md) moves a confirmed,
+inactive project to native Trash; it never falls back to permanent deletion.
 
 ## Scientific boundaries
 

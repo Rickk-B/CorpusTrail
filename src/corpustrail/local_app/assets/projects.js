@@ -7,12 +7,12 @@ const make = (tag, value = '') => { const el = document.createElement(tag); el.t
 let entryData, settingsData, step = 0, requestId = null, busy = false;
 const editing = location.pathname === '/settings';
 function message(value) { get('message').textContent = value; }
-async function request(path, body) {
+async function request(path, body, schema = formSchema) {
   const options = {headers: {'X-CorpusTrail-Session': sessionToken}, cache: 'no-store'};
   if (body !== undefined) {
     options.method = 'POST'; options.headers['Content-Type'] = 'application/json';
     options.headers['X-CorpusTrail-CSRF'] = sessionToken;
-    options.body = JSON.stringify({schema: formSchema, ...body});
+    options.body = JSON.stringify({schema, ...body});
   }
   const response = await fetch('/api/v1/' + path, options);
   const value = await response.json();
@@ -175,6 +175,12 @@ async function initialize() {
   }
 }
 function renderProjects(page) {
+  get('close-project').hidden = !page.active_handle;
+  get('close-project').onclick = async () => {
+    if (busy) return;
+    try { await request('projects/close', {}); location.assign('/projects'); }
+    catch (error) { message(error.message); }
+  };
   for (const item of page.items) {
     const card = make('article'); card.append(make('h2', item.name));
     if (item.unavailable) card.append(make('p', 'Unavailable or incompatible project; no upgrade was attempted.'));
@@ -186,6 +192,11 @@ function renderProjects(page) {
         catch (error) { message(error.message); button.disabled = false; }
       };
       card.append(button);
+      const remove = make('button', 'Move to Trash…'); remove.type = 'button'; remove.className = 'danger-secondary';
+      remove.disabled = !item.removal?.available;
+      remove.onclick = () => prepareTrash(item.handle);
+      card.append(remove);
+      if (!item.removal?.available) card.append(make('p', item.removal?.reason || 'Move to Trash is unavailable.'));
     }
     get('project-list').append(card);
   }
@@ -194,6 +205,48 @@ function renderProjects(page) {
     try { renderProjects(await request('projects?offset=' + page.next_offset)); } catch (error) { message(error.message); }
   };
 }
+const trashSchema = 'corpustrail-project-trash/v1';
+let trashPlan = null;
+async function refreshProjects() {
+  entryData = await request('projects'); get('project-list').replaceChildren(); renderProjects(entryData);
+}
+async function prepareTrash(handle) {
+  if (busy) return;
+  busy = true;
+  try {
+    trashPlan = await request('projects/trash/prepare', {handle}, trashSchema);
+    get('trash-name').textContent = trashPlan.name; get('trash-location').textContent = trashPlan.location;
+    get('trash-folder-name').textContent = trashPlan.folder; get('trash-folder').value = '';
+    get('trash-execute').disabled = true; get('entry').hidden = true; get('trash-confirmation').hidden = false;
+    get('trash-folder').focus(); message('Review the selected project before confirming.');
+  } catch (error) { message(error.message); }
+  finally { busy = false; }
+}
+get('trash-folder').addEventListener('input', () => {
+  get('trash-execute').disabled = busy || !trashPlan || get('trash-folder').value !== trashPlan.folder;
+});
+get('trash-cancel').onclick = async () => {
+  if (busy) return;
+  busy = true;
+  try {
+    if (trashPlan) await request('projects/trash/cancel', {confirmation: trashPlan.confirmation}, trashSchema);
+    trashPlan = null; get('trash-confirmation').hidden = true; get('entry').hidden = false;
+    await refreshProjects(); message('Confirmation closed. Cancelling does not move or restore any project.');
+    get('open-existing').setAttribute('tabindex', '-1'); get('open-existing').focus();
+  } catch (error) { message(error.message); }
+  finally { busy = false; }
+};
+get('trash-execute').onclick = async () => {
+  if (busy || !trashPlan || get('trash-folder').value !== trashPlan.folder) return;
+  busy = true; get('trash-execute').disabled = true; get('trash-cancel').disabled = true;
+  const plan = trashPlan; trashPlan = null; // Never automatically replay a removal.
+  try {
+    const result = await request('projects/trash/execute', {confirmation: plan.confirmation, folder: get('trash-folder').value}, trashSchema);
+    get('trash-confirmation').hidden = true; get('entry').hidden = false;
+    await refreshProjects(); message(result.message);
+  } catch (error) { message(error.message + ' Refresh Projects and inspect the project before continuing.'); }
+  finally { busy = false; get('trash-cancel').disabled = false; }
+};
 get('name').addEventListener('input', () => {
   if (!editing && !get('folder').dataset.edited) get('folder').value = get('name').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'project';
   get('intended-location').textContent = 'Will be saved at: ' + entryData.projects_root + '/' + get('folder').value;

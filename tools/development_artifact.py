@@ -29,6 +29,8 @@ CHECKPOINT2_PATHS = {
     'src/corpustrail/local_app/assets/app.css', 'src/corpustrail/local_app/assets/projects.html',
     'src/corpustrail/local_app/assets/projects.js'}
 CHECKPOINT2_PATHS.add('src/corpustrail/local_app/assets/home.html')
+CHECKPOINT2_PATHS.update({'src/corpustrail/application/project_use.py', 'src/corpustrail/application/trash.py',
+                         'src/corpustrail/curation/http.py', 'src/corpustrail/tutorial.py'})
 
 
 def git(root, *args):
@@ -60,6 +62,21 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
         if changed - CHECKPOINT2_PATHS:
             raise ValueError('Checkpoint 2 may only change the approved guided application boundary')
+        # Lifecycle wrappers are allowed, not arbitrary historical review/scientific changes.
+        review_path = 'src/corpustrail/curation/http.py'
+        if review_path in changed:
+            baseline = git(root, 'show', accepted_checkpoint1 + ':' + review_path)
+            current = (root / review_path).read_text(encoding='utf-8').strip()
+            current = current.replace('from corpustrail.application.project_use import leased_server_factory\n', '')
+            current = current.replace('@leased_server_factory\n', '')
+            if current != baseline:
+                raise ValueError('Review server may only add the approved lifecycle wrapper')
+        tutorial_path = 'src/corpustrail/tutorial.py'
+        if tutorial_path in changed:
+            baseline = git(root, 'show', accepted_checkpoint1 + ':' + tutorial_path)
+            current = (root / tutorial_path).read_text(encoding='utf-8')
+            if current.split("if __name__=='__main__':")[0] != baseline.split("if __name__=='__main__':")[0]:
+                raise ValueError('Tutorial scientific fixture functions must remain unchanged')
         return {**previous, 'name': 'Checkpoint 2 — guided project/configuration and definition',
                 'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
                 'application_source_unchanged': not bool(changed),

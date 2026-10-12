@@ -125,7 +125,8 @@ class DevelopmentArtifactTests(unittest.TestCase):
     def test_workflow_is_validation_gated_and_read_only_to_github(self):
         source = (ROOT / '.github/workflows/standalone.yml').read_text(encoding='utf-8')
         artifact = source.split('  development-artifact:', 1)[1]
-        self.assertIn('needs: acceptance', artifact)
+        self.assertRegex(artifact, r'needs:\s*\[acceptance, project-lifecycle\]')
+        self.assertIn("os: ['macos-15', 'windows-latest']", source)
         self.assertIn("ref: '${{ github.sha }}'", artifact)
         self.assertIn('persist-credentials: false', artifact)
         self.assertIn("CHECKPOINT_IMPLEMENTATION_SHA: '6e116118f05e53ec3694c60e9171cb873a437bf8'", artifact)

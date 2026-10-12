@@ -6,6 +6,7 @@ import secrets
 from urllib.parse import parse_qs, urlsplit
 
 from corpustrail._internal.values import ContractError
+from corpustrail.application.project_use import leased_server_factory
 
 
 HTML = r'''<!doctype html><html lang="en"><meta charset="utf-8">
@@ -55,6 +56,7 @@ window.addEventListener('beforeunload',e=>{if(dirty||pending){e.preventDefault()
 </script></html>'''
 
 
+@leased_server_factory
 def make_server(project, session_id, *, port=8765):
     """Start/resume an existing session; never prepare packets or train implicitly."""
     project.review_sessions.view(session_id)

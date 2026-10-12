@@ -52,6 +52,11 @@ References: [pip installation](https://pip.pypa.io/en/stable/cli/pip_install/),
 
 ## Ownership boundaries
 
+The approved Checkpoint 2 follow-up adds [optional macOS project Trash](PROJECT_REMOVAL.md).
+Shared/exclusive coordination anchors are application-owned metadata outside projects,
+retained after uninstall; never clear them while clients are running. Removing software
+still never implicitly removes projects. No permanent/bulk project deletion is offered.
+
 | Material | Owner/category | Default removal |
 |---|---|---|
 | Installed code, CLI, packaged migrations/frontend | Application software | Package/OS uninstaller |
@@ -67,9 +72,11 @@ review histories and ranking snapshots must not be removed by “Clear cache”.
 Project-specific configuration, reviewer authority and scientific state are not
 global application preferences and must not be changed by “Reset settings”.
 
-The current read-only browser creates no global app settings/cache/log store and
-no browser storage. Scientific data remains in explicit project paths. The storage
-controls below are approved **future design**, not working a3 Checkpoint 1 features.
+The project-use guard creates application-owned zero-content coordination anchors
+outside projects, as described in [safe project removal](PROJECT_REMOVAL.md). No
+browser storage or new persistent project registry is added. Scientific data remains
+in explicit project paths. macOS Trash is the narrowly approved exception; the broader
+storage controls below remain future design, not current cleanup/uninstall features.
 
 ## Future removal experience
 

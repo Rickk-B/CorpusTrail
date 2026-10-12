@@ -5,6 +5,8 @@ Browser paths are names under a launcher-approved root, never arbitrary filename
 """
 
 from dataclasses import replace
+from contextlib import contextmanager
+from functools import wraps
 import hashlib
 import json
 import os
@@ -21,6 +23,7 @@ from corpustrail.project.config import EvidencePolicy, ProviderConfig, ReviewPol
 from corpustrail.project.service import BOOTSTRAP
 from corpustrail.providers import metadata_provider
 from corpustrail.evidence.service import EuropePmcResolver
+from .project_use import acquire_project_use, creation_use, ProjectBusy, ProjectUseError
 
 SCHEMA = 'corpustrail-project-form/v1'
 NAMES = {'openalex': 'OpenAlex', 'crossref': 'Crossref', 'europepmc': 'Europe PMC',
@@ -33,6 +36,23 @@ class ProjectCommandError(ContractError):
     def __init__(self, message, *, code='invalid_configuration', status=400):
         super().__init__(message)
         self.code, self.status = code, status
+
+
+def _acquire_use(path):
+    try:
+        return acquire_project_use(path)
+    except ProjectUseError as exc:
+        raise ProjectCommandError(str(exc), code='project_busy' if isinstance(exc, ProjectBusy)
+                                  else 'project_lock_unavailable', status=409) from exc
+
+
+def _using_registered_project(method):
+    @wraps(method)
+    def guarded(self, *args, **kwargs):
+        handle = kwargs.get('project_handle', kwargs.get('handle')) or (args[0] if args else None)
+        with self.use(handle):
+            return method(self, *args, **kwargs)
+    return guarded
 
 
 def _text(value, label, maximum=16000, *, optional=False):
@@ -80,9 +100,10 @@ class ProjectController:
         self._registered = {}
         self._receipts = {}
         self.active_handle = None
+        self._active_lease = None
+        self._removal_service = None
         if project is not None:
-            self.active_handle = self._register(project.root)
-            self.project()  # Validate enrollment, without migration.
+            self.open(self._register(project.root))
 
     def _register(self, path):
         path = _safe_path(path)
@@ -94,6 +115,10 @@ class ProjectController:
         return handle
 
     def _open(self, path):
+        with _acquire_use(path):
+            return self._open_leased(path)
+
+    def _open_leased(self, path):
         path = _safe_path(path)
         bootstrap = _safe_path(path / BOOTSTRAP)
         if not bootstrap.is_file() or bootstrap.stat().st_size > 1024 * 1024:
@@ -126,8 +151,10 @@ class ProjectController:
             items = []
             for path in ordered[offset:offset+limit]:
                 try:
-                    project = self._open(path)
-                    items.append({'handle': self._register(path), 'name': project.config.name, 'location': str(path)})
+                    with _acquire_use(path):
+                        project = self._open(path)
+                        items.append({'handle': self._register(path), 'name': project.config.name, 'location': str(path)})
+                    items[-1]['removal'] = self.removal().eligibility(items[-1]['handle'])
                 except ProjectCommandError:
                     items.append({'name': path.name, 'unavailable': True})
             return {'schema': SCHEMA, 'projects_root': str(self.root), 'items': items,
@@ -148,10 +175,47 @@ class ProjectController:
 
     def open(self, handle):
         with self._lock:
-            self.project(handle)
-            self.active_handle = handle
+            if handle not in self._registered:
+                raise ProjectCommandError('Choose a project first.', code='project_required', status=409)
+            lease = _acquire_use(self._registered[handle])
+            try:
+                self.project(handle)
+            except BaseException:
+                lease.close()
+                raise
+            previous = self._active_lease
+            self.active_handle, self._active_lease = handle, lease
+            if previous:
+                previous.close()
             return {'schema': SCHEMA, 'project_handle': handle, 'dashboard_url': '/dashboard'}
 
+    def close(self):
+        with self._lock:
+            if self._active_lease:
+                self._active_lease.close()
+            self._active_lease, self.active_handle = None, None
+
+    def removal(self):
+        if self._removal_service is None:
+            from .trash import ProjectRemoval
+            self._removal_service = ProjectRemoval(self)
+        return self._removal_service
+
+    def remove_command(self, operation, **fields):
+        with self._lock:
+            service = self.removal()
+            return getattr(service, operation)(**fields)
+
+    @contextmanager
+    def use(self, handle=None):
+        with self._lock:
+            path = self._registered.get(handle or self.active_handle)
+            if path is None:
+                raise ProjectCommandError('Choose a project first.', code='project_required', status=409)
+            with _acquire_use(path):
+                yield self._open(path)
+
+    @_using_registered_project
     def settings(self, handle=None):
         from .reads import ProjectReads
         project = self.project(handle)
@@ -252,13 +316,15 @@ class ProjectController:
             if target.exists():
                 raise ProjectCommandError('That project folder already exists. Choose another folder; nothing was overwritten.', code='location_exists', status=409)
             try:
-                project = Project.create(target, config, created_by=actor)
+                with creation_use(target):
+                    project = Project.create(target, config, created_by=actor)
+                    self.open(self._register(project.root))
             except Exception as exc:
                 raise ProjectCommandError('Project creation did not complete. Any reserved folder/data has been preserved; inspect it before retrying with a new location.', code='creation_failed', status=409) from exc
-            self.active_handle = self._register(project.root)
             return {'schema': SCHEMA, 'project_handle': self.active_handle, 'dashboard_url': '/dashboard', 'version': 1}
         return self._once(request_id, ['create', folder, fields, confirm_authority], action)
 
+    @_using_registered_project
     def configure(self, *, request_id, project_handle, revision, fields, confirm_authority=False, confirm_session_change=False):
         def action():
             project = self.project(project_handle)
