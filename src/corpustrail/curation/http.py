@@ -1,6 +1,7 @@
 """Loopback-only, dependency-free broad-corpus review interface."""
 
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from corpustrail._internal.loopback_http import LoopbackHTTPServer as ThreadingHTTPServer
 import json
 import secrets
 from urllib.parse import parse_qs, urlsplit

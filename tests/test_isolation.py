@@ -48,6 +48,7 @@ class IsolationTests(unittest.TestCase):
                                 self.assertIn(node, native_imports, 'Native bindings must remain lazy inside move')
                         self.assertIn(top, sys.stdlib_module_names | {"corpustrail"} | optional, (path, name))
                         allowed_network = {"providers/network.py", "providers/metadata.py", "curation/http.py",
+                                           "_internal/loopback_http.py",
                                            "models/integrations/compatible_endpoint.py", "local_app/server.py"}
                         if path.relative_to(root).as_posix() not in allowed_network:
                             self.assertNotIn(top, denied, (path, name))

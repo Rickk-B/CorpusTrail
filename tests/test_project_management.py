@@ -22,7 +22,8 @@ from corpustrail.identity import BibliographicRecord, SourceReference
 from corpustrail.project import Project, ProjectConfig
 
 CHILD = r'''
-import sys, runpy
+import sys, runpy, faulthandler
+faulthandler.dump_traceback_later(15)
 from pathlib import Path
 import corpustrail.application.project_use as guard
 root, directory, mode = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
@@ -88,7 +89,8 @@ class Fixture(unittest.TestCase):
                 future = pool.submit(proc.stdout.readline)
                 try: line = future.result(timeout=20)
                 except concurrent.futures.TimeoutError:
-                    self.stop(proc); raise
+                    proc.kill(); _, diagnostic = proc.communicate(timeout=20)
+                    self.fail('Disposable subprocess startup timed out: ' + diagnostic)
             self.assertTrue(line.startswith(('READY', 'CorpusTrail local application:', 'Review session:')), repr(line))
         return proc
 
@@ -99,6 +101,13 @@ class Fixture(unittest.TestCase):
 
 
 class GuardTests(Fixture):
+    def test_both_servers_never_resolve_hostnames(self):
+        from corpustrail.local_app import make_server
+        from corpustrail.curation.http import make_server as review_server
+        with patch('socket.getfqdn', side_effect=AssertionError('No DNS allowed')):
+            server = make_server(self.project, port=0); server.server_close()
+            server = review_server(self.project, 'session', port=0); server.server_close()
+
     def test_independent_launchers_review_cli_and_shared_access(self):
         before = fingerprint(self.path)
         for pair in (('app', 'app'), ('app', 'review'), ('app', 'cli'), ('shared', 'shared')):

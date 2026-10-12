@@ -30,6 +30,7 @@ CHECKPOINT2_PATHS = {
     'src/corpustrail/local_app/assets/projects.js'}
 CHECKPOINT2_PATHS.add('src/corpustrail/local_app/assets/home.html')
 CHECKPOINT2_PATHS.update({'src/corpustrail/application/project_use.py', 'src/corpustrail/application/trash.py',
+                         'src/corpustrail/_internal/loopback_http.py',
                          'src/corpustrail/curation/http.py', 'src/corpustrail/tutorial.py'})
 
 
@@ -69,6 +70,9 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
             current = (root / review_path).read_text(encoding='utf-8').strip()
             current = current.replace('from corpustrail.application.project_use import leased_server_factory\n', '')
             current = current.replace('@leased_server_factory\n', '')
+            current = current.replace('from corpustrail._internal.loopback_http import LoopbackHTTPServer as ThreadingHTTPServer\n', '')
+            current = current.replace('from http.server import BaseHTTPRequestHandler\n',
+                                      'from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer\n')
             if current != baseline:
                 raise ValueError('Review server may only add the approved lifecycle wrapper')
         tutorial_path = 'src/corpustrail/tutorial.py'

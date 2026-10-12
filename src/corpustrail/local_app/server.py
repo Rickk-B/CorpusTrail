@@ -4,7 +4,8 @@ The original make_server(project) remains a read-only compatibility surface.
 The existing human-review server remains separate and unchanged.
 """
 
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
+from corpustrail._internal.loopback_http import LoopbackHTTPServer as ThreadingHTTPServer
 from contextlib import ExitStack
 from importlib import resources
 import json
