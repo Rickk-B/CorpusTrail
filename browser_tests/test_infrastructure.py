@@ -1,0 +1,98 @@
+"""Developer-only self-tests for visual failure sensitivity and approval guards."""
+import json
+from pathlib import Path
+import tempfile
+import unittest
+import types
+import zipfile
+from unittest.mock import Mock
+from PIL import Image, ImageDraw
+from .visual import approve, compare
+
+
+class VisualInfrastructureTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory(prefix='ct-visual-unit-');self.addCleanup(self.temp.cleanup)
+        self.root=Path(self.temp.name)
+        self.before=self.root/'before.png';self.after=self.root/'after.png'
+        self.difference=self.root/'difference.png'
+
+    def test_identical_images_pass(self):
+        image=Image.new('RGB',(200,200),'white');image.save(self.before);image.save(self.after)
+        self.assertTrue(compare(self.before,self.after,self.difference)['passed'])
+        self.assertFalse(self.difference.exists())
+
+    def test_small_channel_noise_but_not_layout_shift_is_tolerated(self):
+        Image.new('RGB',(200,200),(255,255,255)).save(self.before)
+        Image.new('RGB',(200,200),(250,250,250)).save(self.after)
+        self.assertTrue(compare(self.before,self.after,self.difference)['passed'])
+        image=Image.open(self.after);ImageDraw.Draw(image).rectangle((20,20,60,60),fill='black');image.save(self.after)
+        self.assertFalse(compare(self.before,self.after,self.difference)['passed'])
+        self.assertTrue(self.difference.is_file())
+
+    def test_concentrated_small_control_change_fails_local_tile_budget(self):
+        Image.new('RGB',(1440,900),'white').save(self.before)
+        image=Image.new('RGB',(1440,900),'white');ImageDraw.Draw(image).rectangle((1,1,20,20),fill='black');image.save(self.after)
+        result=compare(self.before,self.after,self.difference)
+        self.assertLess(result['changed_ratio'],.0005)
+        self.assertFalse(result['passed'])
+
+    def test_changed_dimensions_fail(self):
+        Image.new('RGB',(200,200),'white').save(self.before)
+        Image.new('RGB',(201,200),'white').save(self.after)
+        self.assertFalse(compare(self.before,self.after,self.difference)['passed'])
+
+    def candidate(self,**changes):
+        (self.root/'screenshots').mkdir(exist_ok=True)
+        Image.new('RGB',(10,10),'white').save(self.root/'screenshots'/'desktop-example.png')
+        value={'mode':'capture','passed':True,'suite':'all','viewports':['desktop','laptop','narrow'],
+               'environment':{'platform':'linux'},'screenshots':[{'path':'screenshots/desktop-example.png'}]}
+        value.update(changes)
+        (self.root/'report.json').write_text(json.dumps(value),encoding='utf-8')
+
+    def test_explicit_review_is_required_and_manifest_records_hashes(self):
+        self.candidate()
+        with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=False)
+        approve(self.root,self.root/'approved',reviewed=True)
+        value=json.loads((self.root/'approved'/'manifest.json').read_text(encoding='utf-8'))
+        self.assertEqual(len(value['images_sha256']['desktop-example.png']),64)
+
+    def test_failed_compare_partial_or_other_platform_cannot_be_approved(self):
+        for change in ({'passed':False},{'mode':'compare'},{'suite':'evidence'},
+                       {'viewports':['desktop']},{'environment':{'platform':'darwin'}}):
+            self.candidate(**change)
+            with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=True)
+        self.assertFalse((self.root/'approved').exists())
+
+    def test_candidate_paths_and_symlinks_are_confined(self):
+        self.candidate(screenshots=[{'path':'../outside.png'}])
+        with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=True)
+        self.candidate()
+        image=self.root/'screenshots'/'desktop-example.png';image.unlink();image.symlink_to(self.root/'before.png')
+        with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=True)
+
+    def test_failure_artifacts_exist_and_ephemeral_session_is_redacted(self):
+        from tools.browser_acceptance import Runtime
+        output=self.root/'report';output.mkdir()
+        runtime=Runtime(types.SimpleNamespace(version='test-renderer'),output,'capture','all',['desktop'])
+        runtime.viewport_name='desktop'
+        token='ephemeral-browser-session-fixture'
+        context=Mock()
+        def trace(*,path):
+            with zipfile.ZipFile(path,'w') as archive:archive.writestr('trace.json','{"session":"'+token+'"}')
+        context.tracing.stop.side_effect=trace
+        page=Mock()
+        page.screenshot.side_effect=lambda **args:Image.new('RGB',(10,10),'white').save(args['path'])
+        case=types.SimpleNamespace(tokens={token},fixture=types.SimpleNamespace(base=self.root,origin='http://127.0.0.1:1',
+            transport=types.SimpleNamespace(calls=[],errors=[]),errors=[]),page=page,context=context,
+            local_requests=1,_testMethodName='synthetic_failure')
+        case._outcome=types.SimpleNamespace(result=types.SimpleNamespace(failures=[(case,'Synthetic failure')],errors=[]))
+        runtime.finish_case(case,['Console: '+token])
+        with zipfile.ZipFile(output/'traces'/'desktop-synthetic_failure.zip') as archive:
+            self.assertNotIn(token.encode(),archive.read('trace.json'))
+        self.assertTrue((output/'failures'/'desktop-synthetic_failure.png').is_file())
+        self.assertNotIn(token,(output/'diagnostics'/'desktop-synthetic_failure.txt').read_text(encoding='utf-8'))
+        self.assertFalse(runtime.cases[0]['passed'])
+
+
+if __name__=='__main__':unittest.main()

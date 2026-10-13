@@ -125,7 +125,9 @@ class DevelopmentArtifactTests(unittest.TestCase):
     def test_workflow_is_validation_gated_and_read_only_to_github(self):
         source = (ROOT / '.github/workflows/standalone.yml').read_text(encoding='utf-8')
         artifact = source.split('  development-artifact:', 1)[1]
-        self.assertRegex(artifact, r'needs:\s*\[acceptance, project-lifecycle\]')
+        self.assertRegex(artifact, r'needs:\s*\[acceptance, project-lifecycle, browser-acceptance, browser-macos-smoke\]')
+        self.assertIn('python tools/browser_acceptance.py --visual compare', source)
+        self.assertNotIn('--approve-baselines', source)
         self.assertIn("os: ['macos-15', 'windows-latest']", source)
         self.assertIn("ref: '${{ github.sha }}'", artifact)
         self.assertIn('persist-credentials: false', artifact)

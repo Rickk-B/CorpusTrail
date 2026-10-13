@@ -1,0 +1,3 @@
+# Developer-only. Never an ordinary package dependency or bundled browser.
+playwright==1.63.0
+Pillow==12.0.0

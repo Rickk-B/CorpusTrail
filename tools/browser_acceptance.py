@@ -1,0 +1,183 @@
+"""Opt-in Python Playwright runner over an installed wheel and real loopback API."""
+import argparse
+import hashlib
+import html
+import io
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import sys
+import subprocess
+import time
+import tempfile
+import unittest
+import zipfile
+
+ROOT=Path(__file__).resolve().parents[1]
+VIEWPORTS={'desktop':{'width':1440,'height':900},'laptop':{'width':1280,'height':800},'narrow':{'width':390,'height':844}}
+BASELINES=ROOT/'browser_tests'/'baselines'/'linux-chromium'
+LIMITED={'laptop':{'catalogue','discovery-preview','evidence-availability'},
+         'narrow':{'welcome','projects','wizard','settings','catalogue','trash-confirmation','discovery-preview','discovery-approval','evidence-availability','evidence-result'}}
+
+
+class Runtime:
+    def __init__(self,browser,output,mode,suite,viewports):
+        from browser_tests.visual import rendering_environment
+        self.browser=browser;self.output=output;self.mode=mode;self.suite=suite;self.viewports=viewports
+        self.environment=rendering_environment(browser.version)
+        self.screenshots=[];self.cases=[];self.comparisons=[]
+        self.baselines=None
+        if mode=='compare':
+            self.baselines=json.loads((BASELINES/'manifest.json').read_text(encoding='utf-8'))
+            if self.baselines['environment']!=self.environment:
+                raise ValueError('Renderer differs from reviewed Linux baseline. Use capture for inspection; never silently update or compare another OS/browser/font.')
+        for folder in ('screenshots','failures','traces','diagnostics'):(output/folder).mkdir(parents=True)
+
+    def snapshot(self,case,name,full_page=True,subject=None):
+        if self.viewport_name in LIMITED and name not in LIMITED[self.viewport_name]:return
+        page=case.page
+        page.wait_for_load_state('networkidle')
+        if full_page:
+            page.evaluate('window.scrollTo(0,0)')
+            page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
+        # Controlled rendering only, not frontend API mocking or science edits.
+        # Preserve geometry/content; normalize transient dates/elapsed times and
+        # mask opaque raw payloads, hashes and disposable machine-specific paths.
+        old=page.evaluate('''() => {
+          const nodes=[],walk=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+          while(walk.nextNode()){const n=walk.currentNode;const text=n.textContent;
+            const clean=text.replace(/\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})/g,'2026-01-01T00:00:00+00:00').replace(/\\d+(?:\\.\\d+)? seconds elapsed/g,'0 seconds elapsed');
+            if(clean!==text){nodes.push([n,text]);n.textContent=clean;}}
+          window.__ctScreenshotNodes=nodes;return nodes.length;
+        }''')
+        path=self.output/'screenshots'/(self.viewport_name+'-'+name+'.png')
+        masks=page.locator('#root-location,#intended-location,#trash-location,#configuration-location,#configuration-definition,#project-list .project-location,#summary dl dd:last-child,#evidence-raw,#plan-details,#document-position,#technical-identifiers input').filter(visible=True)
+        try:
+            if subject:
+                page.locator(subject).screenshot(path=str(path),animations='disabled',caret='hide')
+            else:
+                page.screenshot(path=str(path),full_page=full_page,animations='disabled',caret='hide',mask=[masks],mask_color='#e2ecee')
+        finally:
+            if old:page.evaluate('''() => {for(const [n,text] of window.__ctScreenshotNodes)n.textContent=text;delete window.__ctScreenshotNodes;}''')
+        record={'name':name,'viewport':self.viewport_name,'path':str(path.relative_to(self.output)),'subject':subject or 'page'}
+        self.screenshots.append(record)
+        if self.mode=='compare':
+            from browser_tests.visual import compare
+            expected=BASELINES/path.name
+            wanted=self.baselines['images_sha256'].get(path.name)
+            if not wanted or not expected.is_file() or hashlib.sha256(expected.read_bytes()).hexdigest()!=wanted:
+                raise AssertionError('Reviewed baseline missing or hash changed: '+path.name)
+            result=compare(expected,path,self.output/'failures'/(path.stem+'-diff.png'))
+            self.comparisons.append({**record,**result})
+            case.assertTrue(result['passed'],'Visual regression '+path.name+': '+json.dumps(result))
+
+    def redact(self,value,case):
+        for token in case.tokens:value=value.replace(token,'<redacted-session>')
+        value=value.replace(str(case.fixture.base),'<disposable-root>').replace(case.fixture.origin,'<local-origin>')
+        value=value.replace(str(ROOT),'<source>').replace(sys.prefix,'<test-environment>')
+        return value
+
+    def finish_case(self,case,errors):
+        result=case._outcome.result
+        failed=bool(errors) or any(test is case for test,_ in result.failures+result.errors)
+        name=self.viewport_name+'-'+case._testMethodName
+        trace=self.output/'traces'/(name+'.zip')
+        if failed:
+            case.page.screenshot(path=str(self.output/'failures'/(name+'.png')),full_page=True)
+            case.context.tracing.stop(path=str(trace))
+            # Browser protocol archives can contain ephemeral local session
+            # values. Redact before publishing; no network/body snapshots enabled.
+            rewritten=io.BytesIO()
+            with zipfile.ZipFile(trace) as source,zipfile.ZipFile(rewritten,'w',zipfile.ZIP_DEFLATED) as target:
+                for entry in source.infolist():
+                    body=source.read(entry.filename)
+                    for token in case.tokens:body=body.replace(token.encode(),b'<redacted-session>')
+                    try:body=self.redact(body.decode('utf-8'),case).encode('utf-8')
+                    except UnicodeDecodeError:pass  # Synthetic screenshot bytes.
+                    target.writestr(entry.filename,body)
+            trace.write_bytes(rewritten.getvalue())
+        else:case.context.tracing.stop()
+        diagnostic=self.redact('\n'.join(errors),case)
+        (self.output/'diagnostics'/(name+'.txt')).write_text(diagnostic or 'No browser/runtime/network errors.\n',encoding='utf-8')
+        self.cases.append({'scenario':case._testMethodName,'viewport':self.viewport_name,'passed':not failed,
+            'errors':diagnostic.splitlines(),'controlled_provider_requests':len(case.fixture.transport.calls),
+            'local_http_requests':case.local_requests,
+            'unexpected_external_requests':getattr(case,'external_requests',0)+len(case.fixture.errors)+len(case.fixture.transport.errors)})
+
+    def report(self,passed,logs):
+        # unittest tracebacks are synthetic but should not leak local home paths.
+        logs=logs.replace(str(ROOT),'<source>').replace(sys.prefix,'<test-environment>')
+        logs=re.sub(r'/tmp/ct-browser-disposable-[^/\s]+','<disposable-root>',logs)
+        value={'schema':'corpustrail-browser-acceptance/v1','passed':passed,'mode':self.mode,'suite':self.suite,
+            'viewports':self.viewports,'viewport_sizes':{k:VIEWPORTS[k] for k in self.viewports},
+            'environment':self.environment,'os':platform.system()+' '+platform.release(),
+            'cases':self.cases,'screenshots':self.screenshots,'comparisons':self.comparisons,
+            'source_sha':subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip(),
+            'source_checkout_dirty':bool(subprocess.check_output(['git','-C',str(ROOT),'status','--porcelain'],text=True).strip()),
+            'limitations':['Chromium headless only; not native MacBook acceptance or WCAG certification.',
+                'Scientific providers are offline fixtures; native Trash is covered separately.',
+                'Pixel comparisons require the exact reviewed Linux renderer; paths/raw IDs are masked.']}
+        (self.output/'report.json').write_text(json.dumps(value,indent=2)+'\n',encoding='utf-8')
+        (self.output/'summary.txt').write_text(('PASS' if passed else 'FAIL')+'\n'+logs,encoding='utf-8')
+        cards=''.join('<figure><figcaption>'+html.escape(x['viewport']+' — '+x['name'])+'</figcaption><a href="'+html.escape(x['path'])+'"><img alt="'+html.escape(x['name'])+'" loading="lazy" src="'+html.escape(x['path'])+'" width="640"></a></figure>' for x in self.screenshots)
+        (self.output/'index.html').write_text('<!doctype html><html lang="en"><meta charset="utf-8"><title>CorpusTrail browser acceptance</title><h1>'+('PASS' if passed else 'FAIL')+'</h1><p>Offline Chromium acceptance, not native user acceptance.</p><a href="report.json">Structured results</a><pre>'+html.escape(logs)+'</pre>'+cards+'</html>',encoding='utf-8')
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence'),default='all')
+    parser.add_argument('--viewports',nargs='+',choices=tuple(VIEWPORTS),default=list(VIEWPORTS))
+    parser.add_argument('--visual',choices=('capture','compare'),default='capture')
+    parser.add_argument('--output',type=Path,help='New output directory; existing reports are never overwritten')
+    parser.add_argument('--approve-baselines',type=Path,help='Explicitly approve a passing complete capture report after image review')
+    parser.add_argument('--reviewed',action='store_true')
+    args=parser.parse_args()
+    sys.path.insert(0,str(ROOT))
+    if args.approve_baselines:
+        from browser_tests.visual import approve
+        approve(args.approve_baselines.resolve(),BASELINES,reviewed=args.reviewed)
+        return 0
+    if args.output is None:parser.error('--output is required when running acceptance')
+    args.output.mkdir(parents=True,exist_ok=False)
+    try:
+        return execute(args)
+    except Exception as error:
+        # Missing browser/libs/baselines are failures, not successful skips.
+        message=str(error).replace(str(Path.home()),'<developer-home>').replace(str(ROOT),'<source>')
+        value={'schema':'corpustrail-browser-acceptance/v1','passed':False,'phase':'setup_or_runner',
+               'error':type(error).__name__,'message':message,'mode':args.visual,'viewports':args.viewports}
+        (args.output/'report.json').write_text(json.dumps(value,indent=2)+'\n',encoding='utf-8')
+        (args.output/'summary.txt').write_text('FAIL: '+type(error).__name__+'\n'+message+'\n',encoding='utf-8')
+        print('FAIL: '+type(error).__name__+'; see '+str(args.output/'summary.txt'))
+        return 1
+
+
+def execute(args):
+    from playwright.sync_api import sync_playwright
+    from browser_tests.acceptance import BrowserAcceptance
+    logs=io.StringIO();passed=True;started=time.monotonic()
+    with tempfile.TemporaryDirectory(prefix='ct-browser-renderer-') as cache,sync_playwright() as driver:
+        env=dict(os.environ)
+        if sys.platform=='linux':
+            env.update(FONTCONFIG_FILE=str(ROOT/'browser_tests'/'fonts.conf'),XDG_CACHE_HOME=cache)
+        browser=driver.chromium.launch(env=env)
+        try:
+            runtime=Runtime(browser,args.output,args.visual,args.suite,args.viewports)
+            BrowserAcceptance.runtime=runtime
+            methods=unittest.defaultTestLoader.getTestCaseNames(BrowserAcceptance)
+            if args.suite=='smoke':methods=[m for m in methods if 'evidence' in m or 'home' in m]
+            elif args.suite!='all':methods=[m for m in methods if args.suite in m]
+            for name in args.viewports:
+                runtime.viewport_name=name;runtime.viewport=VIEWPORTS[name]
+                tests=unittest.TestSuite(BrowserAcceptance(m) for m in methods)
+                result=unittest.TextTestRunner(stream=logs,verbosity=2).run(tests)
+                passed=passed and result.wasSuccessful()
+            runtime.report(passed,logs.getvalue())
+        finally:browser.close()
+    print(('PASS' if passed else 'FAIL')+' browser acceptance in '+str(round(time.monotonic()-started,1))+'s; report '+str(args.output/'index.html'))
+    return 0 if passed else 1
+
+
+if __name__=='__main__':raise SystemExit(main())

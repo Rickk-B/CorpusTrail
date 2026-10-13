@@ -6,6 +6,7 @@ dist/
 *.whl
 corpus_trail-*.tar.gz
 .venv/
+.venv-browser/
 *.sqlite3*
 .env
 .env.*
@@ -14,3 +15,4 @@ data/
 .ruff_cache/
 .coverage
 htmlcov/
+browser-acceptance/

@@ -394,7 +394,7 @@ class GuidedHttpTests(ProjectFixture):
             self.assertRegex(html, r'<a hidden href="' + re.escape(path) + '"')
         self.create()
         _, html, _ = self.request('GET', '/')
-        self.assertIn('Read-only project browser', html)
+        self.assertIn('Local project workspace', html)
         self.assertNotIn('Welcome to CorpusTrail', html)
         _, home, _ = self.request('GET', '/home')
         self.assertIn('Welcome to CorpusTrail', home)

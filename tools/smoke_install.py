@@ -34,6 +34,8 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
     extracted.mkdir()
     with tarfile.open(archive) as handle:
         for item in handle.getmembers():
+            if '/browser_tests/' in item.name or '/browser-acceptance/' in item.name:
+                raise RuntimeError('sdist must not contain browser baselines/reports/binaries')
             destination = (extracted / item.name).resolve()
             if not destination.is_relative_to(extracted) or not (item.isfile() or item.isdir()):
                 raise RuntimeError('unsafe source-distribution member')
@@ -89,7 +91,7 @@ def run(*, dependency_wheels=None) -> dict:
         payload = root / "candidate"
         # No ancestor/workspace copy. No ignored runtime state enters the build.
         shutil.copytree(candidate, payload, ignore=shutil.ignore_patterns(
-            ".git", "__pycache__", "*.pyc", "*.egg-info", "build", "dist", ".venv", "*.sqlite3*"))
+            ".git", "__pycache__", "*.pyc", "*.egg-info", "build", "dist", ".venv", ".venv-browser", "*.sqlite3*"))
         wheels = root / "wheels"
         wheels.mkdir()
         outside = root / "unrelated-working-directory"
@@ -98,6 +100,8 @@ def run(*, dependency_wheels=None) -> dict:
                 "--no-cache-dir", "--wheel-dir", str(wheels), str(payload)], outside, env)
         wheel, = wheels.glob("*.whl")
         with zipfile.ZipFile(wheel) as archive:
+            if any('browser_tests/' in name or 'browser-acceptance/' in name for name in archive.namelist()):
+                raise RuntimeError('wheel must not contain browser test artifacts')
             wheel_entries = sorted(archive.namelist())
         for required in ('corpustrail/local_app/assets/index.html',
                          'corpustrail/local_app/assets/home.html',

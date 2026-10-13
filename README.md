@@ -116,6 +116,7 @@ inactive project to native Trash; it never falls back to permanent deletion.
   prioritization, knowledge, ASReview and reproducibility.
 - [Offline tutorial](docs/user/TUTORIAL.md)
 - [Development checkpoint downloads](docs/developer/DEVELOPMENT_BUILDS.md)
+- [Developer browser and visual acceptance](docs/developer/BROWSER_TESTING.md)
 - [Updating, removal and storage ownership](docs/user/REMOVAL_STORAGE.md)
 - [Privacy and security](docs/user/PRIVACY_SECURITY.md)
 - [Limitations and troubleshooting](docs/user/LIMITATIONS.md)
