@@ -18,7 +18,7 @@ jobs:
       - name: Build and lint in a developer environment
         run: |
           python -m pip install -c tools/validation-constraints.txt '.[dev]' setuptools
-          python -m ruff check src tests tools
+          python -m ruff check src tests tools browser_tests
           python -m build --no-isolation
       - name: Core clean installation and offline tests
         run: |

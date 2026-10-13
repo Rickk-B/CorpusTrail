@@ -39,6 +39,21 @@ class Runtime:
         if self.viewport_name in LIMITED and name not in LIMITED[self.viewport_name]:return
         page=case.page
         page.wait_for_load_state('networkidle')
+        if sys.platform=='linux':
+            session=case.context.new_cdp_session(page)
+            try:
+                session.send('DOM.enable');session.send('CSS.enable')
+                document=session.send('DOM.getDocument')
+                page.evaluate('''() => {
+                  const p=[...document.querySelectorAll('main p')].find(e=>e.getClientRects().length&&e.textContent.trim()&&Number(getComputedStyle(e).fontWeight)<600);
+                  if(!p)throw Error('Normal text font probe unavailable');p.setAttribute('data-ct-font-probe','');
+                }''')
+                node=session.send('DOM.querySelector',{'nodeId':document['root']['nodeId'],'selector':'[data-ct-font-probe]'})
+                fonts=session.send('CSS.getPlatformFontsForNode',{'nodeId':node['nodeId']})['fonts']
+                case.assertTrue(fonts and all(f['familyName']=='DejaVu Sans' for f in fonts),'Linux test font fallback differs from controlled renderer')
+            finally:
+                page.evaluate('document.querySelector("[data-ct-font-probe]")?.removeAttribute("data-ct-font-probe")')
+                session.detach()
         if full_page:
             page.evaluate('window.scrollTo(0,0)')
             page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')

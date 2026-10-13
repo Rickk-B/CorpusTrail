@@ -80,6 +80,10 @@ now waits for explicit completed UI handlers, stabilizes full-page coordinates a
 uses held provider responses for progress. Tolerances were not loosened. Initial
 baselines were approved only from a passing complete capture after direct image
 inspection. CI has no approval/update step.
+The first hosted comparison also detected an OS/generic-family serif fallback.
+Test-only Fontconfig now strongly binds the intended family and Chromium's actual
+platform-font data is checked before capture. Production CSS and tolerances were
+not weakened; local and hosted reruns gate the final artifact.
 
 Codex directly inspected representative Welcome, catalogue, wizard/summary,
 settings, projects/closing, Trash confirmation, provider preview/approval/progress/

@@ -77,8 +77,10 @@ unavailable; no identifier enrichment/review/membership action is introduced.
 
 Playwright **1.63.0** pins Chromium and Pillow **12.0.0** performs comparisons. Linux
 CI is Ubuntu 24.04. A test-process Fontconfig file selects installed DejaVu Sans;
-production CSS and CSP are not bypassed. The manifest records the browser version,
-font SHA, architecture, locale, timezone, device scale and comparison policy. A
+production CSS and CSP are not bypassed. Strong test-process family binding and a
+Chromium platform-font probe prevent silent serif fallback even when installed
+font hashes match. The manifest records browser version, font SHA, architecture,
+locale, timezone, device scale and comparison policy. A
 different renderer fails comparison with instructions to capture separately; macOS
 never compares against Linux pixel baselines.
 
