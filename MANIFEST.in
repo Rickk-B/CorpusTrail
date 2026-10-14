@@ -21,10 +21,12 @@ include tools/audit_release.py
 include tools/verify_git_identity.py
 include tools/validation-constraints.txt
 include tools/development_artifact.py
+include tools/evidence_diagnostic.py
 recursive-include .github/workflows *.yml
 global-exclude __pycache__ *.pyc *.sqlite3 *~
 include docs/developer/BROWSER_TESTING.md
 include docs/developer/BROWSER_ACCEPTANCE_VERIFICATION.md
+include docs/developer/EVIDENCE_DIAGNOSTICS.md
 prune browser_tests
 prune browser-acceptance
 exclude tools/browser_acceptance.py tools/browser-requirements.txt
