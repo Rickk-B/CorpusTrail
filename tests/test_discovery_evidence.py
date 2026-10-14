@@ -234,6 +234,30 @@ class DiscoveryEvidenceTests(unittest.TestCase):
         self.document(pid, b'<!DOCTYPE article SYSTEM "file:///etc/passwd"><article/>')
         self.assertEqual(self.project.evidence.status(pid)["mismatch_or_invalid"], 1)
 
+    def test_http_success_with_dtd_remains_invalid_and_preserves_prior_evidence(self):
+        # Controlled policy example, NOT a reproduction of the unknown Mac response.
+        # Even a DTD with no entities is refused by the existing reviewed contract.
+        from corpustrail._internal.xml_safety import parse_xml, XmlPolicyError
+        pid = self.paper()
+        self.document(pid, JATS)
+        trusted = self.project.evidence.representations(pid, trusted_only=True)
+        body = b'<!DOCTYPE article>' + JATS
+        with self.assertRaisesRegex(XmlPolicyError, 'DTD/entity'):
+            parse_xml(body)
+        resolver = EuropePmcResolver(); resolver.network = False
+        self.project.evidence.acquire(self.project.evidence.plan(pid, created_at=AT),
+            resolvers={'europepmc': resolver}, transport=RecordedTransport([(200, body, {'Content-Type': 'application/xml'})]), clock=lambda: AT)
+        results = events(self.project, kind='acquisition_result')
+        self.assertTrue(any(e['payload'].get('http_status') == 200 and e['payload'].get('outcome') == 'success' for e in results))
+        invalid = [r for r in self.project.evidence.representations(pid) if r['payload']['artifact_validity'] == 'invalid']
+        self.assertEqual(len(invalid), 1)
+        self.assertEqual(invalid[0]['payload']['identity_identifiers'], [])
+        self.assertEqual(invalid[0]['payload']['error'], 'ContractError')
+        self.assertFalse(invalid[0]['payload']['trusted'])
+        self.assertEqual(self.project.evidence.representations(pid, trusted_only=True), trusted)
+        self.assertEqual(self.project.reviews.history(pid), [])
+        self.assertEqual(self.project.reviews.membership(pid)['state'], 'not_reviewed')
+
     def test_document_idempotency_and_absence_do_not_create_review(self):
         pid = self.paper()
         one = self.document(pid, JATS)
