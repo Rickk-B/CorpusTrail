@@ -40,6 +40,16 @@ CHECKPOINT3_PATHS = {'src/corpustrail/application/discovery.py', 'src/corpustrai
                     'src/corpustrail/local_app/assets/discovery.html', 'src/corpustrail/local_app/assets/discovery.js'}
 CHECKPOINT4_PATHS = {'src/corpustrail/application/evidence.py', 'src/corpustrail/evidence/service.py',
                     'src/corpustrail/local_app/assets/evidence.js'}
+# Frozen reviewed implementation, not approval for arbitrary scientific changes.
+# A future core edit needs a new explicitly reviewed receipt and tests.
+XML_COMPATIBILITY_COMMIT = 'f234cad157fb4de4739aaff1bc11ddf441352edf'
+XML_COMPATIBILITY_HASHES = {
+    'src/corpustrail/_internal/xml_safety.py': '23704b9d56723ed244d30b0fc16a1a66e01a28a571cdd875d120fb8a594b7eae',
+    'src/corpustrail/evidence/native_parsers.py': 'd2059d99df7d16eb6e4e712398ecb6fc58ea547bc0e1f9ae7beb38588cc93943',
+    'src/corpustrail/evidence/service.py': '70c7fc643af9ebcb1613f577ba7a627af9c22c838125475ef09ba6a2d6770305',
+    'src/corpustrail/application/evidence.py': '76e5e29c81a77b7a66b3c8f0b7a4922d8592b550a7262c4013e047cb862854a7',
+    'src/corpustrail/resources/origins.json': '4a7ef89a4c81a208f005dde35548817bb531091fbe628db1a1e32a2399a5f4a8'}
+XML_COMPATIBILITY_EXTRA_PATHS = set(XML_COMPATIBILITY_HASHES) - CHECKPOINT4_PATHS
 
 
 def git(root, *args):
@@ -69,12 +79,24 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         if subprocess.run(['git', '-C', str(root), 'merge-base', '--is-ancestor', accepted_checkpoint1, expected]).returncode:
             raise ValueError('Checkpoint 2 source must descend from accepted Checkpoint 1')
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
-        if changed - (CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS):
+        xml_compatibility = bool(changed & XML_COMPATIBILITY_EXTRA_PATHS)
+        allowed = CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS
+        if xml_compatibility:
+            if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',XML_COMPATIBILITY_COMMIT,expected]).returncode:
+                raise ValueError('XML compatibility must descend from its reviewed implementation')
+            for name, expected_hash in XML_COMPATIBILITY_HASHES.items():
+                path = root/name
+                if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash:
+                    raise ValueError('XML compatibility source differs from the frozen reviewed implementation')
+            allowed |= XML_COMPATIBILITY_EXTRA_PATHS
+        if changed - allowed:
             raise ValueError('Checkpoint 2 may only change the approved guided application boundary')
         for path, marker in (('src/corpustrail/discovery/service.py', '    # Checkpoint 3 read projections.'),
                              ('src/corpustrail/evidence/service.py', '    # Checkpoint 4 read projections.'),
                              ('src/corpustrail/providers/metadata.py', '\ndef request_preview(')):
             if path in changed:
+                if xml_compatibility and path == 'src/corpustrail/evidence/service.py':
+                    continue  # Whole-file digest above, not a broad prefix/AST exception.
                 baseline = git(root, 'show', accepted_checkpoint1 + ':' + path)
                 current = (root/path).read_text(encoding='utf-8').split(marker)[0].strip()
                 if current != baseline:
@@ -120,7 +142,13 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                 'application_paths_changed_since_accepted_checkpoint1': sorted(changed),
                 'scientific_source_unchanged': not bool(changed & scientific),
                 'scientific_service_source_unchanged': not bool(changed & scientific),
-                'scientific_execution_source_unchanged': True,
+                'scientific_execution_source_unchanged': not xml_compatibility,
+                'discovery_scientific_execution_source_unchanged': True,
+                'xml_compatibility': {'schema':'corpustrail-xml-compatibility-code-review/v1',
+                    'implementation_commit_sha':XML_COMPATIBILITY_COMMIT,
+                    'policy':'bounded-inert-jats/v2',
+                    'source_sha256':XML_COMPATIBILITY_HASHES,
+                    'notice':'Reviewed implementation lineage; not artifact build identity or researcher acceptance.'} if xml_compatibility else None,
                 'discovery_workflow_supported': checkpoint3,
                 'evidence_workflow_supported': checkpoint4,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '

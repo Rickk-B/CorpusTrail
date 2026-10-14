@@ -198,6 +198,38 @@ class DevelopmentArtifactTests(unittest.TestCase):
             TOOL['check_implementation'](self.root, self.implementation, TOOL['git'](self.root, 'rev-parse', 'HEAD'),
                 distribution=distribution, accepted_checkpoint1=accepted)
 
+    def test_xml_review_hashes_match_the_current_scientific_source(self):
+        for name,expected in TOOL['XML_COMPATIBILITY_HASHES'].items():
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+
+    def test_xml_review_is_exact_scoped_and_reports_changed_execution_honestly(self):
+        service = self.root/'src/corpustrail/evidence/service.py'
+        service.parent.mkdir(parents=True)
+        service.write_text('class EvidenceService:\n    pass\n',encoding='utf-8')
+        self.commit()
+        accepted = TOOL['git'](self.root,'rev-parse','HEAD')
+        implementation = accepted
+        hashes = {}
+        for name in TOOL['XML_COMPATIBILITY_HASHES']:
+            path = self.root/name;path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_text('fixture_reviewed = True\n',encoding='utf-8')
+            hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.commit()
+        reviewed = TOOL['git'](self.root,'rev-parse','HEAD')
+        globals_ = TOOL['check_implementation'].__globals__
+        with patch.dict(globals_,{'XML_COMPATIBILITY_COMMIT':reviewed,'XML_COMPATIBILITY_HASHES':hashes}):
+            receipt = TOOL['check_implementation'](self.root,implementation,reviewed,
+                distribution=accepted,accepted_checkpoint1=accepted)
+            self.assertFalse(receipt['scientific_execution_source_unchanged'])
+            self.assertTrue(receipt['discovery_scientific_execution_source_unchanged'])
+            self.assertEqual(receipt['xml_compatibility']['implementation_commit_sha'],reviewed)
+            # A later unreviewed XML edit cannot piggyback on that implementation.
+            path = self.root/'src/corpustrail/_internal/xml_safety.py'
+            path.write_text('unsafe_override = True\n',encoding='utf-8');self.commit()
+            with self.assertRaisesRegex(ValueError,'frozen reviewed'):
+                TOOL['check_implementation'](self.root,implementation,TOOL['git'](self.root,'rev-parse','HEAD'),
+                    distribution=accepted,accepted_checkpoint1=accepted)
+
 
 if __name__ == '__main__':
     unittest.main()

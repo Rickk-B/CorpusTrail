@@ -75,3 +75,12 @@ Python documents the relevant [Expat controls and callbacks](https://docs.python
 and [XML security limitations](https://docs.python.org/3.11/library/xml.html#xml-vulnerabilities).
 The [NLM JATS tag sets](https://jats.nlm.nih.gov/) identify the scientific vocabulary;
 allowlisting their identifiers does not validate a document against those DTDs.
+
+## Development artifact scope receipt
+
+The artifact tool retains the old scientific-execution restrictions for discovery
+and all unrelated modules. XML compatibility is bound to the exact five source
+digests in implementation `f234cad157fb4de4739aaff1bc11ddf441352edf`, plus ancestor
+validation. A later unreviewed edit fails closed. The receipt explicitly reports
+changed XML execution, rather than claiming it remained unchanged. Implementation
+lineage is distinct from the final wheel's source/build SHA and researcher acceptance.
