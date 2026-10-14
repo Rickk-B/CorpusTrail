@@ -92,15 +92,16 @@ function summarize() {
     ['Project', current.name], ['Topic description', current.description], ['Broad-corpus definition', current.scope || 'No separate definition configured'],
     ['Discovery providers', current.providers.map(p => entryData.capabilities.providers.find(a => a.id === p.adapter)?.label || p.id).join(', ') || 'None'],
     ['Evidence resolvers', current.resolvers.map(id => entryData.capabilities.resolvers.find(r => r.id === id)?.label || id).join(', ') || 'None'],
-    ['Search concepts', current.search.map(c => c.label).join(', ') || 'None'], ['Configuration author / reviewer pseudonym', current.reviewer],
+    ['Search concepts', current.search.map(c => c.label).join(', ') || 'None'], ['Configuration author', current.reviewer],
     ['Authorized corpus reviewers', current.authorized_reviewers.join(', ') || 'None — review observations do not grant authority'],
     ['Storage location', editing ? settingsData.location : entryData.projects_root + '/' + get('folder').value]]) {
       list.append(make('dt', label), make('dd', value));
     }
     box.append(list);
   }
-  const authorityChanged = editing ? JSON.stringify(current.authorized_reviewers) !== JSON.stringify(settingsData.fields.authorized_reviewers) : current.authorized_reviewers.length > 0;
+  const authorityChanged = editing && JSON.stringify(current.authorized_reviewers) !== JSON.stringify(settingsData.fields.authorized_reviewers);
   get('authority-confirmation').hidden = !authorityChanged;
+  get('creation-confirmation').hidden = editing;
   get('session-confirmation').hidden = !editing || !changed.length || !settingsData.has_frozen_review_sessions;
   get('scope-confirmation').hidden = !editing || !changed.includes('scope');
   if (editing) {
@@ -292,7 +293,9 @@ get('project-form').addEventListener('submit', async event => {
   busy = true; get('save').disabled = true; requestId ||= crypto.randomUUID();
   for (const group of document.querySelectorAll('[data-step]')) group.disabled = true;
   try {
-    const body = {request_id: requestId, fields: fields(), confirm_authority: get('confirm-authority').checked};
+    // Creation confirms the explicit radio choice and displayed summary. Settings
+    // changes retain their separate authority confirmation. Neither grants defaults.
+    const body = {request_id: requestId, fields: fields(), confirm_authority: editing ? get('confirm-authority').checked : get('grant-authority').checked};
     let result;
     if (editing) result = await request('project-settings/save', {...body, project_handle: settingsData.project_handle,
       revision: settingsData.revision, confirm_session_change: get('confirm-sessions').checked});

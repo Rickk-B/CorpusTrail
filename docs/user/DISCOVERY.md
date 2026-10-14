@@ -20,8 +20,10 @@ this page, reading history or preparing a preview.
    and cursor policy. Advanced details preserve initial URL, runtime-cursor rule,
    adapter identity/code hash, configuration revision and provider plan identities.
    Future response cursor values cannot be known before running.
-5. Explicitly authorize the displayed external queries and exact-identity/source
-   organization, then **Approve Search Plan**. Approval itself sends nothing.
+5. Review the disclosed external queries and selected databases, and exact-identity/
+   source-provenance organization. **Approve Search Plan** explicitly authorizes
+   both operations together for this exact plan. Approval itself sends nothing and
+   makes no corpus-membership decisions; both authorizations remain recorded.
 6. Click **Run Discovery**. Only the approved frozen plan is executed. Editing
    invalidates that preview/approval; configuration changes require a new preview.
    Queries/settings go to the selected services, with your credential header if

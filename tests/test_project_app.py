@@ -109,7 +109,7 @@ class GuidedProjectTests(ProjectFixture):
         self.assertEqual(Project.open(project.root).config, project.config)
         self.assertEqual(result['project_handle'], self.controller.active_handle)
 
-    def test_bootstrap_authority_requires_two_explicit_choices(self):
+    def test_bootstrap_authority_requires_selected_identity_and_explicit_confirmation(self):
         fields = form(); fields['authorized_reviewers'] = ['researcher']
         with self.assertRaises(ProjectCommandError): self.create(fields=fields)
         self.assertFalse(self.root.exists())
@@ -571,6 +571,8 @@ async function client(pathname) {
   await c.submit(); assert.equal(c.location.target,'/dashboard#created');
   const creates=requests.filter(r=>r.path.endsWith('/create'));
   assert.equal(creates.length,2);assert.equal(creates[0].options.body,creates[1].options.body);
+  const creation=JSON.parse(creates[0].options.body);
+  assert.deepEqual(creation.fields.authorized_reviewers,[]);assert.equal(creation.confirm_authority,false);
   const s=await client('/settings');
   assert.equal(s.elements.name.value,'Five-paper researcher test');
   assert(s.steps.every(group=>!group.hidden));

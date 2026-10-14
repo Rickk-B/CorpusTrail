@@ -66,7 +66,8 @@ Scenarios cover Welcome, six-step creation/validation/summary, settings edit/dis
 unchanged-save/history/reopen, active-card close, exact Trash confirmation/cancel and
 a real other-process busy lease. The browser disposal adapter permits confirmation
 only and raises if disposal executes. Native macOS Trash remains a separate existing
-test. Discovery covers all four providers, exact preview, both mandatory consents,
+test. Discovery covers all four providers, exact preview, both mandatory consents
+explicitly disclosed and recorded through one deliberate approval action,
 separate approval/start, running/results/history/refresh, exact deduplication and a
 partial repeated search. Evidence covers actual stored abstract attribution, explicit
 known-PMCID acquisition, verified plaintext, provenance, mismatch rejection, earlier

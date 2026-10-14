@@ -64,15 +64,20 @@
           <div id="resolver-options"></div><p class="muted">Evidence resolvers are separate from discovery providers. No evidence acquisition or connectivity test occurs during setup.</p>
         </fieldset>
         <fieldset data-step="4" aria-labelledby="section-4"><h2 id="section-4" class="section-heading" tabindex="-1">Reviewer configuration</h2>
-          <label>Reviewer pseudonym<input id="reviewer" required maxlength="100" autocomplete="off"></label>
-          <p class="muted">This pseudonym records who created or changed configuration. It does not grant authority. Existing review sessions continue to use their explicitly selected reviewer identity. A pseudonym-only edit does not create a configuration revision.</p>
-          <div id="initial-authority"><label class="choice"><input id="grant-authority" type="checkbox">Explicitly authorize this pseudonym to publish corpus-membership decisions under the existing review policy</label></div>
+          <label>Configuration author<input id="reviewer" required maxlength="100" autocomplete="off" aria-describedby="author-help"></label>
+          <p id="author-help" class="muted">Use a pseudonym to record configuration authorship, not a default reviewer for future sessions. Entering it grants no authority and creates no review session. A pseudonym-only edit does not create a configuration revision.</p>
+          <div id="initial-authority" role="radiogroup" aria-labelledby="authority-heading">
+            <h3 id="authority-heading">Corpus-membership authority</h3>
+            <label class="authority-choice"><input id="no-authority" type="radio" name="initial-authority" value="none" checked><span>No publication authority<small>This identity is not authorized to publish corpus-membership decisions.</small></span></label>
+            <label class="authority-choice"><input id="grant-authority" type="radio" name="initial-authority" value="authorize"><span>Authorize corpus decisions<small>I explicitly authorize this identity to publish corpus-membership decisions under the project's review policy.</small></span></label>
+          </div>
           <div id="existing-authority" hidden><label>Authorized corpus reviewers (one pseudonym per line)<textarea id="authorized-reviewers" rows="3" maxlength="12000"></textarea></label></div>
           <p>Recording a human review observation and publishing an authoritative corpus decision are different actions. Saving these settings never reviews a paper or changes corpus membership.</p>
           <h2>Review settings</h2><p id="review-policy">Broad-topic corpus review. Existing authority, scope and frozen-session safeguards remain enforced.</p>
         </fieldset>
         <fieldset data-step="5" aria-labelledby="section-5"><h2 id="section-5" class="section-heading" tabindex="-1">Review settings before creating</h2>
           <div id="summary"></div>
+          <p id="creation-confirmation">Create Project confirms the displayed settings, including your explicit authority choice. It creates no review session or corpus decision.</p>
           <label id="scope-confirmation" class="choice" hidden><input id="confirm-scope" type="checkbox">I confirm the broad-corpus definition change. Previous reviews retain their original scope; existing scientific scope restrictions still apply.</label>
           <label id="authority-confirmation" class="choice" hidden><input id="confirm-authority" type="checkbox">I explicitly confirm the displayed corpus-reviewer authority configuration.</label>
           <label id="session-confirmation" class="choice" hidden><input id="confirm-sessions" type="checkbox">I understand that saving changes makes existing frozen review sessions stale. Historical packets, reviews and saved work remain preserved; continuation requires a new session.</label>

@@ -77,6 +77,7 @@ function statusNodes(paper) {
 async function dashboard() {
   const data = await api('dashboard');
   byId('dashboard').hidden = false;
+  text('dashboard-discovery', data.papers ? 'Discover More Publications' : 'Start Literature Discovery');
   text('project-name', data.project.name); text('description', data.project.description);
   const separate = data.project.definition_origin === 'review_scope';
   const distinct = separate && data.project.broad_corpus_definition !== data.project.description;

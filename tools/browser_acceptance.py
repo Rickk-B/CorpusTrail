@@ -18,8 +18,8 @@ import zipfile
 ROOT=Path(__file__).resolve().parents[1]
 VIEWPORTS={'desktop':{'width':1440,'height':900},'laptop':{'width':1280,'height':800},'narrow':{'width':390,'height':844}}
 BASELINES=ROOT/'browser_tests'/'baselines'/'linux-chromium'
-LIMITED={'laptop':{'catalogue','discovery-preview','evidence-availability'},
-         'narrow':{'welcome','projects','wizard','settings','catalogue','trash-confirmation','discovery-preview','discovery-approval','evidence-availability','evidence-result'}}
+LIMITED={'laptop':{'welcome','wizard-reviewer','wizard-summary','empty-dashboard','catalogue','discovery-preview','discovery-approval','evidence-availability','evidence-result','evidence-mismatch','missing-pmcid'},
+         'narrow':{'welcome','projects','wizard','wizard-reviewer','wizard-summary','empty-dashboard','settings','catalogue','trash-confirmation','discovery-preview','discovery-approval','evidence-availability','evidence-result','evidence-mismatch','missing-pmcid'}}
 
 
 class Runtime:

@@ -111,9 +111,11 @@ Choose **New Project**, then follow six steps:
    Optional credential configuration accepts an environment-variable name only.
 4. Select evidence resolvers separately. Europe PMC currently requires an already
    known PMCID; this wizard does not add DOI/PMID enrichment.
-5. Enter a reviewer pseudonym. By default nobody is authorized to publish corpus
-   decisions. Optional initial authority needs an explicit choice and a final
-   confirmation; creation is not an implicit administrator grant.
+5. Enter a configuration-author pseudonym (not a default reviewer for future
+   sessions). **No publication authority** is selected by default. To grant initial
+   corpus-decision authority, deliberately choose **Authorize corpus decisions**.
+   The final summary shows that choice; **Create Project** confirms it. Creation
+   is not an implicit administrator grant and creates no review session/decision.
 6. Review the summary and press **Create Project**. This is the first action that
    creates files. The new dashboard confirms success; its paper counts start empty.
 

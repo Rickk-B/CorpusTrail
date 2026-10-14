@@ -331,6 +331,8 @@ class ReadModelTests(AppFixture):
         self.assertNotIn('Save & Next', html)
         self.assertIn('PROJECT_BROWSER_STATUS', html)
         self.assertIn('Browsing does not change your project', html)
+        self.assertIn('DISCOVERY_NAV_HIDDEN id="dashboard-discovery" href="/discovery"', html)
+        self.assertIn("data.papers ? 'Discover More Publications' : 'Start Literature Discovery'", script)
 
     def test_progressive_disclosure_accessibility_and_single_evidence_summary(self):
         html = resources.files('corpustrail.local_app').joinpath('assets/index.html').read_text(encoding='utf-8')

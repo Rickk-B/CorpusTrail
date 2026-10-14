@@ -25,10 +25,11 @@
       <p>Only these queries and settings will be sent to the selected scholarly providers. Documents, review labels and corpus-membership decisions are not sent. Third-party service terms apply.</p>
       <section id="approval-area" class="discovery-approval" aria-labelledby="approval-heading" hidden>
         <h3 id="approval-heading">Approve search plan</h3>
-        <p class="muted">Review the exact settings above before approving. Running discovery remains a separate action.</p>
-        <label class="discovery-consent" for="transfer"><input id="transfer" type="checkbox"><span>I authorize this exact search to contact the displayed databases.</span></label>
-        <label class="discovery-consent" for="identity"><input id="identity" type="checkbox"><span>I approve organizing retrieved records using exact identifiers and source provenance. This does not accept papers into the corpus.</span></label>
-        <div class="approval-actions"><button id="approve" type="button">Approve Search Plan</button></div>
+        <p id="approval-disclosure">By choosing Approve Search Plan, I authorize this exact search to contact the following databases:</p>
+        <p id="approval-providers"></p>
+        <p id="organization-disclosure">I also authorize organizing retrieved records using exact publication identifiers and source provenance. No corpus-membership decisions will be made.</p>
+        <p id="execution-disclosure" class="muted">Review the exact settings above. Approval records both authorizations; only the separate Run Discovery action starts external requests.</p>
+        <div class="approval-actions"><button id="approve" type="button" aria-describedby="approval-disclosure approval-providers organization-disclosure execution-disclosure">Approve Search Plan</button></div>
       </section>
       <div class="pager"><button id="edit" type="button" hidden>Edit Search</button><button id="run" type="button" hidden>Run Discovery</button><button id="repeat" type="button">Prepare a new search from these settings</button></div>
       <p id="plan-notice" class="muted"></p>

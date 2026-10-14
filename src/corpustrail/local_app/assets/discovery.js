@@ -47,6 +47,7 @@ function renderPlan(value) {
     const option=make('option',provider.label);option.value=provider.provider;get('provenance-provider').append(option);
   }
   get('plan-details').textContent=JSON.stringify(value.plan,null,2);
+  get('approval-providers').textContent=value.plan.providers.map(provider=>provider.label).join(', ');
   get('plan-notice').textContent=messages[value.status]+'. '+(value.execution_available?'':'This plan cannot start; prepare a new preview if settings changed. ')+value.notice;
   get('approval-area').hidden=!(value.status==='prepared'&&previewNonce&&value.execution_available);
   get('run').hidden=!(value.status==='approved'&&value.execution_available);
@@ -88,10 +89,12 @@ function poll() {
 }
 get('search-form').onsubmit=event=>{event.preventDefault();action(async()=>{
   stopPolling();const result=await api('prepare',{request_id:crypto.randomUUID(),...searchFields()});previewNonce=result.preview_nonce;
-  get('transfer').checked=false;get('identity').checked=false;renderPlan(result);await historyPage();message('Exact plan saved locally. No database has been contacted.');
+  renderPlan(result);await historyPage();message('Exact plan saved locally. No database has been contacted.');
 });};
 get('approve').onclick=()=>action(async()=>{
-  if(!get('transfer').checked||!get('identity').checked)throw Error('Approve the displayed transfer and exact identity organization explicitly.');
+  // This deliberate action authorizes BOTH disclosed operations for this preview.
+  // The backend still requires both flags, the one-time nonce and exact plan hash.
+  if(!view||view.status!=='prepared'||!previewNonce||get('approval-area').hidden)throw Error('Review a current exact plan before explicitly approving both operations.');
   renderPlan(await api('approve',{handle:view.handle,request_id:crypto.randomUUID(),preview_nonce:previewNonce,confirm_external:true,approve_identities:true}));
   previewNonce=null;message('Plan approved. Run Discovery is a separate explicit action.');await historyPage();
 });

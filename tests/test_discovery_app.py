@@ -208,7 +208,13 @@ class DiscoveryWorkflowTests(DiscoveryFixture):
                 preview_nonce=p['preview_nonce'],confirm_external=consent,approve_identities=organization)
         with self.assertRaises(ProjectCommandError):self.manager.approve(self.project,handle=p['handle'],request_id='forged-preview-command',
                 preview_nonce='forged',confirm_external=True,approve_identities=True)
-        self.approve(p);self.manager.invalidate(self.project,handle=p['handle'])
+        self.approve(p)
+        approval = next(e for e in files.history(self.project,p['handle']) if e['kind']=='approved')
+        self.assertIs(approval['payload']['confirm_external'],True)
+        self.assertIs(approval['payload']['approve_identities'],True)
+        self.assertEqual(approval['payload']['plan_sha256'],'sha256:'+p['handle'])
+        self.assertEqual(self.transport.calls,[])
+        self.manager.invalidate(self.project,handle=p['handle'])
         with self.assertRaises(ProjectCommandError):self.manager.start(self.project,handle=p['handle'],request_id='invalidated-start')
         p=self.prepare(request_id='another-preparation');self.approve(p,request_id='another-approval')
         config=self.project.config
@@ -376,13 +382,14 @@ class DiscoveryHttpTests(DiscoveryFixture):
                 if self.current:self.labels[self.current]+=text
         markup=Markup();markup.feed(html)
         by_id={attrs['id']:(tag,attrs) for tag,attrs in markup.tags if 'id' in attrs}
-        for identifier in ('transfer','identity'):
-            self.assertEqual(by_id[identifier][0],'input')
-            self.assertEqual(by_id[identifier][1]['type'],'checkbox')
-            self.assertTrue(markup.labels[identifier])
-        self.assertIn('exact search',markup.labels['transfer'])
-        self.assertIn('source provenance',markup.labels['identity'])
-        self.assertIn('does not accept papers',markup.labels['identity'])
+        for identifier in by_id['approve'][1]['aria-describedby'].split():
+            self.assertIn(identifier,by_id)
+        self.assertIn('I authorize this exact search',html)
+        self.assertIn('I also authorize organizing retrieved records',html)
+        self.assertIn('No corpus-membership decisions will be made',html)
+        self.assertIn('only the separate Run Discovery action',html)
+        self.assertNotIn('id="transfer"',html)
+        self.assertNotIn('id="identity"',html)
         self.assertIn(by_id['approval-area'][1]['aria-labelledby'],by_id)
         for identifier in ('approve','run'):
             self.assertEqual(by_id[identifier][1]['type'],'button')
@@ -390,7 +397,7 @@ class DiscoveryHttpTests(DiscoveryFixture):
         self.assertNotIn('open',by_id['plan-advanced'][1])
         self.assertIn(('summary',{}),markup.tags)
         css=assets.joinpath('app.css').read_text(encoding='utf-8')
-        self.assertIn('.discovery-consent',css);self.assertIn('.plan-summary',css)
+        self.assertIn('.discovery-approval',css);self.assertIn('.plan-summary',css)
         self.assertIn('@media (max-width: 640px)',css)
         self.assertIn('focus-visible',css);self.assertNotIn('https://',css)
 
@@ -472,10 +479,10 @@ async function preview(){elements['search-form'].onsubmit({preventDefault(){}});
  assert.equal(elements['plan-advanced'].open,false);elements['plan-advanced'].open=true;
  assert.equal(elements['plan-providers'].children.length,2);assert(!elements['approval-area'].hidden);
  assert.equal(requests.filter(r=>r.path.endsWith('/start')).length,0);
- await elements.approve.onclick();assert.match(elements.message.textContent,/explicitly/);
- elements.transfer.checked=true;await elements.approve.onclick();assert.match(elements.message.textContent,/explicitly/);
- elements.transfer.checked=false;elements.identity.checked=true;await elements.approve.onclick();assert.match(elements.message.textContent,/explicitly/);
- elements.transfer.checked=true;elements.identity.checked=true;await elements.approve.onclick();
+ assert.equal(elements['approval-providers'].textContent,'OpenAlex, Crossref');
+ await elements.approve.onclick();
+ const approved=JSON.parse(requests.find(r=>r.path.endsWith('/approve')).options.body);
+ assert.equal(approved.confirm_external,true);assert.equal(approved.approve_identities,true);
  assert(!elements.run.hidden);assert.equal(requests.filter(r=>r.path.endsWith('/start')).length,0);
  assert.equal(elements['plan-advanced'].open,true);
  await elements.run.onclick();await until(()=>vm.runInContext('view.status === "completed"',context)&&elements['result-papers'].children.length===5);
@@ -485,7 +492,7 @@ async function preview(){elements['search-form'].onsubmit({preventDefault(){}});
  elements['provenance-provider'].value='openalex';await elements['show-provenance'].onclick();assert.match(elements.provenance.textContent,/discovery_plan/);
  const starts=requests.filter(r=>r.path.endsWith('/start')).length;await elements.repeat.onclick();
  assert(!elements['search-setup'].hidden);assert.equal(requests.filter(r=>r.path.endsWith('/start')).length,starts);
- await preview();assert.equal(elements['plan-advanced'].open,false);elements.transfer.checked=true;elements.identity.checked=true;await elements.approve.onclick();await elements.run.onclick();
+ await preview();assert.equal(elements['plan-advanced'].open,false);await elements.approve.onclick();await elements.run.onclick();
  await until(()=>vm.runInContext('view.status === "completed" && view.summary.previously_known_publications === 5',context));
  vm.runInContext('stopPolling()',context);console.log('Packaged Discovery UI exact-preview, consent, explicit run, provenance and repeat passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
