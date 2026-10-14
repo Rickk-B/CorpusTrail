@@ -28,6 +28,7 @@ ABSTRACT = 'Invented scientific abstract. <script>Scientific text is data, not e
 SCOPE = 'Broad-topic collection of invented porous materials; not question-specific screening.'
 # Reuse the authoritative verification fixture used by Checkpoint 4 unit tests.
 XML = b'<article><front><article-meta><article-id pub-id-type="doi">10.1234/evidence.1</article-id><article-id pub-id-type="pmc">PMC123</article-id><abstract><p>Invented acquired abstract.</p></abstract></article-meta></front><body><sec><title>Methods</title><p>Invented structured scientific fixture text.</p></sec></body></article>'
+INERT_JATS_DOCTYPE = b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.3 20210610//EN" "JATS-archivearticle1-3.dtd">'
 
 
 def fingerprint(root):
@@ -53,6 +54,7 @@ class FixtureTransport:
         self.gate = None
         self.entered = threading.Event()
         self.mismatch = False
+        self.invalid = False
         self.fail_crossref = False
 
     def request(self, url, **kwargs):
@@ -62,7 +64,10 @@ class FixtureTransport:
             raise AssertionError('Controlled provider gate timed out')
         parsed = urlsplit(url)
         if url == 'https://www.ebi.ac.uk/europepmc/webservices/rest/PMC123/fullTextXML':
-            body = XML.replace(b'PMC123', b'PMC999').replace(b'evidence.1', b'wrong.9') if self.mismatch else XML
+            content = XML.replace(b'PMC123', b'PMC999').replace(b'evidence.1', b'wrong.9') if self.mismatch else XML
+            body = INERT_JATS_DOCTYPE + content
+            if self.invalid:
+                body = b'<!DOCTYPE article [<!ENTITY hidden "untrusted expansion">]>' + XML
             return HttpResponse(200, {}, body, url)
         if parsed.hostname == 'api.openalex.org' and parsed.path == '/works':
             value = {'results': [

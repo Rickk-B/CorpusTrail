@@ -54,6 +54,14 @@ states. **Advanced evidence details** exposes complete paginated scientific reco
 request identities, source URLs, hashes and diagnostics. It is operational provenance,
 not a method-blind review. Older CLI acquisition records remain visible too.
 
+Supported JATS documents may declare a recognized article DTD, but CorpusTrail
+never downloads or processes that DTD. Internal declarations, external entities
+and documents requiring DTD-defined entities remain unsupported. Safe XML parsing
+still precedes exact publication-identity and document-body checks. Original bytes
+and hashes remain preserved; advanced records identify the parsing policy and any
+temporary parse-buffer transformation. Updating the software does not reclassify
+previously rejected evidence or change historical review packets.
+
 ## Refresh, interruptions and explicit retry
 
 Browser refresh never repeats retrieval. Open the recorded operation from its
