@@ -9,7 +9,7 @@ from typing import Protocol
 from corpustrail._internal.pipeline import append, artifact, events, preserve
 from corpustrail._internal.values import ContractError, identifier, now, text, timestamp
 from corpustrail.identity import Identifier
-from corpustrail._internal.xml_safety import parse_xml, XmlPolicyError
+from corpustrail._internal.xml_safety import parse_xml, XmlPolicyError, POLICY_VERSION
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,7 @@ class EvidenceResolver(Protocol):
 
 class EuropePmcResolver:
     name = "europepmc"
-    version = "jats/v1"
+    version = "jats/v2"
     network = True
     hosts = ("www.ebi.ac.uk",)
 
@@ -62,9 +62,9 @@ def _front_elements(root, name):
             for node in meta if node.tag.rsplit("}", 1)[-1] == name]
 
 
-def _document_ids(body):
+def _document_ids(body, *, include_validation=False):
     try:
-        root = parse_xml(body)
+        root, validation = parse_xml(body, with_provenance=True)
     except XmlPolicyError as exc:
         raise ContractError(str(exc)) from exc
     if root.tag.rsplit("}", 1)[-1] != "article":
@@ -78,7 +78,7 @@ def _document_ids(body):
             if scheme == "pmcid" and raw.isdigit():
                 raw = "PMC" + raw
             values.append(Identifier(scheme, raw).normalized())
-    return tuple(values)
+    return (tuple(values), validation) if include_validation else tuple(values)
 
 
 class EvidenceService:
@@ -177,9 +177,10 @@ class EvidenceService:
         sha = preserve(self.project, body, media_type, created_at)
         known = {(x["scheme"], x["value"]) for x in metadata["identifiers"]}
         validity, exact, error = "pending_identity", (), None
+        validation = {}
         if representation in {"jats_xml", "publisher_xml"}:
             try:
-                exact = _document_ids(body)
+                exact, validation = _document_ids(body, include_validation=True)
                 if any(s in {key for key, _ in known} and (s, v) not in known for s, v in exact):
                     validity = "mismatch"
                 elif known.intersection(exact):
@@ -192,6 +193,9 @@ class EvidenceService:
             "version_kind": version_kind, "resolution_id": resolution_id,
             "artifact_validity": validity, "identity_identifiers": exact, "error": error,
             "trusted": validity == "verified", "authority": "non_authoritative"}
+        if representation in {"jats_xml", "publisher_xml"}:
+            payload.update(xml_policy=POLICY_VERSION, verification_version='exact-article-identifiers/v2')
+            payload.update(validation)
         rep_id = append(self.project, "representation", paper_id, payload, paper_id=paper_id, source_sha256=sha)
         if validity == "verified" and representation in {"jats_xml", "publisher_xml"}:
             from .native_parsers import NativeJatsParser, NativePublisherXmlParser

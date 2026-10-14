@@ -27,6 +27,7 @@ global-exclude __pycache__ *.pyc *.sqlite3 *~
 include docs/developer/BROWSER_TESTING.md
 include docs/developer/BROWSER_ACCEPTANCE_VERIFICATION.md
 include docs/developer/EVIDENCE_DIAGNOSTICS.md
+include docs/developer/JATS_COMPATIBILITY.md
 prune browser_tests
 prune browser-acceptance
 exclude tools/browser_acceptance.py tools/browser-requirements.txt

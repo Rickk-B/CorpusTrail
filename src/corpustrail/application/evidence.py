@@ -9,6 +9,7 @@ import threading
 import time
 
 from corpustrail._internal.values import ContractError, content_hash, digest_bytes, now, canonical
+from corpustrail._internal.xml_safety import POLICY_VERSION
 from corpustrail.evidence import EuropePmcResolver, ResolutionRequest
 from corpustrail.identity import Identifier
 from corpustrail.models.contracts import safe_data
@@ -23,7 +24,11 @@ SCHEMA = 'corpustrail-evidence-workflow/v1'
 
 
 def _adapter_hash():
-    return digest_bytes(resources.files('corpustrail.evidence').joinpath('service.py').read_bytes())
+    # Freeze all scientific XML boundaries; parser updates invalidate eligibility.
+    return content_hash({name:digest_bytes(resources.files(package).joinpath(name).read_bytes())
+        for package,name in (('corpustrail.evidence','service.py'),
+                             ('corpustrail.evidence','native_parsers.py'),
+                             ('corpustrail._internal','xml_safety.py'))})
 
 
 class EvidenceController:
@@ -120,6 +125,7 @@ class EvidenceController:
                     'resolution_id': request.request_id, 'eligibility_hash': eligibility_hash,
                     'command_hash': content_hash(command), 'confirm_external': True,
                     'adapter_code_sha256': _adapter_hash(), 'resolver_version': self.resolver_factory().version}
+                value['xml_policy'] = POLICY_VERSION
                 files.publish(path, value)
             if self._closed: raise ProjectCommandError('This launcher is stopping. No new retrieval was started.', status=409)
             leases = []

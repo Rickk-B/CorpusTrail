@@ -105,7 +105,7 @@ def _walk_xml_section(renderer: _Renderer, node, parent_path: list[str]) -> None
 
 class NativeJatsParser:
     name = "native_jats"
-    version = "corpustrail-native-jats/v2"
+    version = "corpustrail-native-jats/v3"
 
     def parse(self, document_path: Path) -> ParserOutput:
         try:
@@ -119,7 +119,7 @@ class NativeJatsParser:
 
 class NativePublisherXmlParser:
     name = "native_publisher_xml"
-    version = "corpustrail-native-publisher-xml/v2"
+    version = "corpustrail-native-publisher-xml/v3"
 
     def parse(self, document_path: Path) -> ParserOutput:
         try:

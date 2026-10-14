@@ -1,5 +1,5 @@
 {
-  "schema": "corpustrail-code-origins/v2",
+  "schema": "corpustrail-code-origins/v3",
   "adaptation_base_commit": "4457d811c917e12bc04d872a3a0607a02c8ea9cf",
   "xml_adaptation": {
     "historical_source_sha256": "sha256:45180a4e1fc91d90bf7d258c8dda4c2280eac29f2a703d05e92746f1dca7a05e",
@@ -11,6 +11,14 @@
   "immutable_origin_receipts": {
     "docs/phase2b_migration_origins.json": "sha256:4bcaf752a8fdecc9d888473ae86dcc8fd8e8e2984623a00bac1e3b77acf94414",
     "docs/phase2c_migration_origins.json": "sha256:ff45d7c33ce8366c78c5ad56db9a8b6c3a3c4f893fecc8ec1a77bbd3c5b6fdaf"
+  },
+  "xml_compatibility_adaptation": {
+    "base_commit": "2fcacca50b2311778916de554a8e0eedc1a2e04c",
+    "previous_destination_sha256": "sha256:d3ff0dede08a1f6f23c19307e71c96b01b0f2a75342555e95680acdb6c295e6e",
+    "destination": "evidence/native_parsers.py",
+    "destination_sha256": "sha256:d2059d99df7d16eb6e4e712398ecb6fc58ea547bc0e1f9ae7beb38588cc93943",
+    "policy": "bounded-inert-jats/v2",
+    "change": "Native JATS/publisher parser v3 identifies the shared inert-JATS security boundary. Historical XML adaptation and migration receipts remain preserved."
   },
   "scientific_data_included": false,
   "license_decision": "pending_owner_approval"
