@@ -69,6 +69,10 @@ class EvidenceDiagnosticTests(unittest.TestCase):
         self.assertEqual(wrapped['structure']['root_kind'], 'article-set')
         self.assertGreater(wrapped['structure']['article_body_text_characters_any_depth'], 0)
         self.assertEqual(wrapped['content_validation']['reason'], 'not_an_article')
+        compressed = diagnostic.analyze_bytes(b'\x1f\x8bPRIVATE_BINARY_SENTINEL')
+        self.assertEqual(compressed['byte_signature_hint'], 'gzip')
+        self.assertFalse(compressed['content_validation']['passed'])
+        self.assertNotIn('PRIVATE_BINARY_SENTINEL', json.dumps(compressed))
 
     def test_original_hash_verified_response_inspection_is_read_only(self):
         with tempfile.TemporaryDirectory(prefix='ct-diagnostic-disposable-') as temp:

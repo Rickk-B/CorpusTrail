@@ -42,6 +42,9 @@ No internal files, IDs or XML need to be located manually. The script:
   structural counts and public supplied-PMCID matching. It never exports article
   text, titles, arbitrary identifiers, source URLs, personal paths or credentials.
 - Reports Python, OS, Expat and installed distribution versions for reproducibility.
+- Classifies only fixed byte signatures (gzip/ZIP/PDF/BOM), never decoding compressed
+  data, rewriting input or exporting byte snippets. Parser error codes/locations are
+  numeric rather than arbitrary exception text.
 - Uses SQLite `mode=ro` and `query_only`, makes no network requests or database
   writes, and never acquires, retries, repairs, migrates or updates anything.
 

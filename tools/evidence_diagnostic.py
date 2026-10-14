@@ -133,7 +133,13 @@ def inventory(raw, expected):
 def analyze_bytes(raw, *, public_identifiers=()):
     """Only explicitly public expected IDs can appear in the sanitized output."""
     expected = {Identifier(s, v).normalized() for s, v in public_identifiers}
+    hint = 'unclassified'
+    for prefix, label in ((b'\x1f\x8b', 'gzip'), (b'PK\x03\x04', 'zip'), (b'%PDF', 'pdf'),
+                          (b'\xff\xfe\x00\x00', 'utf32_le_bom'), (b'\x00\x00\xfe\xff', 'utf32_be_bom'),
+                          (b'\xff\xfe', 'utf16_le_bom'), (b'\xfe\xff', 'utf16_be_bom'), (b'\xef\xbb\xbf', 'utf8_bom')):
+        if raw.startswith(prefix): hint = label; break
     result = {'response_bytes': len(raw), 'response_sha256': hashlib.sha256(raw).hexdigest(),
+              'byte_signature_hint': hint,  # Signature only; no decoding/decompression or trust claim.
               'xml_policy': POLICY_VERSION, 'structure': inventory(raw, expected)}
     try:
         parse_xml(raw)
