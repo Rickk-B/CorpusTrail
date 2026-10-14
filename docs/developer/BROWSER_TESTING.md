@@ -73,6 +73,10 @@ partial repeated search. Evidence covers actual stored abstract attribution, exp
 known-PMCID acquisition, verified plaintext, provenance, mismatch rejection, earlier
 valid evidence preservation and refresh without replay. Missing-PMCID retrieval is
 unavailable; no identifier enrichment/review/membership action is introduced.
+The evidence scenario also restarts the actual HTTP server/controllers, reopens the
+same disposable project, and verifies persisted history/text without new requests
+or scientific-file changes. This is graceful restart testing, not crash-resume.
+For original-response inspection, see [read-only diagnostics](EVIDENCE_DIAGNOSTICS.md).
 
 ## Visual baselines and review
 

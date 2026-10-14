@@ -35,7 +35,7 @@ class Runtime:
                 raise ValueError('Renderer differs from reviewed Linux baseline. Use capture for inspection; never silently update or compare another OS/browser/font.')
         for folder in ('screenshots','failures','traces','diagnostics'):(output/folder).mkdir(parents=True)
 
-    def snapshot(self,case,name,full_page=True,subject=None):
+    def snapshot(self,case,name,full_page=True,subject=None,anchor=None):
         if self.viewport_name in LIMITED and name not in LIMITED[self.viewport_name]:return
         page=case.page
         page.wait_for_load_state('networkidle')
@@ -68,6 +68,12 @@ class Runtime:
           window.__ctScreenshotNodes=nodes;return nodes.length;
         }''')
         path=self.output/'screenshots'/(self.viewport_name+'-'+name+'.png')
+        if anchor:
+            page.locator(anchor).evaluate('''element => {
+                const padding=parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)||0;
+                window.scrollTo(0,element.getBoundingClientRect().top+window.scrollY-padding);
+            }''')
+            page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
         masks=page.locator('#root-location,#intended-location,#trash-location,#configuration-location,#configuration-definition,#project-list .project-location,#summary dl dd:last-child,#evidence-raw,#plan-details,#document-position,#technical-identifiers input').filter(visible=True)
         try:
             if subject:

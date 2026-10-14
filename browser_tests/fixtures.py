@@ -58,7 +58,7 @@ class FixtureTransport:
     def request(self, url, **kwargs):
         self.calls.append(url)
         self.entered.set()
-        if self.gate and not self.gate.wait(15):
+        if self.gate and not self.gate.wait(30):
             raise AssertionError('Controlled provider gate timed out')
         parsed = urlsplit(url)
         if url == 'https://www.ebi.ac.uk/europepmc/webservices/rest/PMC123/fullTextXML':
@@ -154,10 +154,13 @@ class ApplicationFixture:
             'fixture_reviewer',AT,(EvidenceBasis('metadata',source['source_sha256'],source['source_uri'],artifact_validity='verified'),),
             authority_state='non_authoritative')
         self.project.reviews.apply(self.project.reviews.plan(observation),recorded_at=AT)
+        self.transport = FixtureTransport()
+        self._start_server()
+
+    def _start_server(self):
         self.controller = ProjectController(projects_root=self.root)
         self.stack.callback(self.controller.close)
         self.controller._removal_service = ProjectRemoval(self.controller, ConfirmationOnlyTrash())
-        self.transport = FixtureTransport()
         self.discovery = DiscoveryController(self.controller, transport_factory=lambda: self.transport)
         self.evidence = EvidenceController(self.controller, transport_factory=lambda: self.transport)
         self.server = make_server(port=0, controller=self.controller, discovery=self.discovery, evidence=self.evidence)
@@ -174,13 +177,41 @@ class ApplicationFixture:
         self.thread.start()
         self.origin = 'http://127.0.0.1:'+str(self.server.server_port)
 
+    def restart(self):
+        """Stop real HTTP/controllers, reopen the same disposable scientific files.
+
+        This is a graceful restart acceptance check, not crash-resume support.
+        The original transport/call ledger and network isolation stay in force.
+        """
+        with self.discovery._mutex: discovery_workers = list(self.discovery._workers.values())
+        with self.evidence._mutex: evidence_workers = list(self.evidence._workers.values())
+        for worker in discovery_workers:
+            worker[0].join(10)
+            if worker[0].is_alive():
+                raise AssertionError('Cannot restart fixture during an active discovery operation')
+        for worker in evidence_workers:
+            worker.join(10)
+            if worker.is_alive():
+                raise AssertionError('Cannot restart fixture during an active evidence operation')
+        self.server.shutdown()
+        self.thread.join(10)
+        self.server.server_close()
+        self.discovery.close()
+        self.evidence.close()
+        self.controller.close()
+        self._start_server()
+
     def close(self):
         try:
             if self.transport.gate:
                 self.transport.gate.set()
-            for worker in self.discovery._workers.values():
+            self.discovery.close()
+            self.evidence.close()
+            with self.discovery._mutex: discovery_workers = list(self.discovery._workers.values())
+            with self.evidence._mutex: evidence_workers = list(self.evidence._workers.values())
+            for worker in discovery_workers:
                 worker[0].join(20)
-            for worker in self.evidence._workers.values():
+            for worker in evidence_workers:
                 worker.join(20)
             self.server.shutdown()
             self.thread.join(10)

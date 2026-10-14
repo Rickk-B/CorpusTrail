@@ -63,8 +63,8 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button', name='Open Project', exact=True).click()
         expect(self.page.locator('#project-name')).to_have_text('Synthetic materials')
 
-    def snapshot(self, name, full_page=True,subject=None):
-        self.runtime.snapshot(self, name, full_page=full_page,subject=subject)
+    def snapshot(self, name, full_page=True,subject=None,anchor=None):
+        self.runtime.snapshot(self, name, full_page=full_page,subject=subject,anchor=anchor)
 
     def layout(self):
         result=self.page.evaluate('''() => {
@@ -272,7 +272,7 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#job-status')).to_contain_text('Running')
         expect(self.page.locator('#repeat')).to_be_enabled()
         self.page.locator('#job-section').scroll_into_view_if_needed()
-        self.snapshot('discovery-progress',full_page=False)
+        self.snapshot('discovery-progress',full_page=False,anchor='#job-section')
         self.fixture.transport.gate.set()
         expect(self.page.locator('#job-status')).to_contain_text('4/4 providers finished',timeout=15000)
         expect(self.page.locator('#job-status')).to_contain_text('Completed bounded search')
@@ -344,3 +344,16 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(self.fixture.project.reviews.membership(self.fixture.papers[0])['state'],'not_reviewed')
         self.page.get_by_role('button',name='Read verified structured text').click()
         expect(self.page.locator('#document-text')).to_contain_text('Invented structured scientific fixture text')
+        before_restart=fingerprint(self.fixture.root)
+        self.fixture.restart()
+        self.open_project();self.visit('/papers')
+        self.page.get_by_role('link',name=TITLE,exact=True).click()
+        expect(self.page.locator('#evidence-operations button')).to_have_count(2)
+        expect(self.page.locator('#evidence-history')).to_contain_text('Exact document identity verified')
+        expect(self.page.locator('#evidence-history')).to_contain_text('Document identity mismatch — not trusted')
+        self.page.get_by_role('button',name='Read verified structured text').click()
+        expect(self.page.locator('#document-text')).to_contain_text('Invented structured scientific fixture text')
+        self.assertEqual(len(self.fixture.transport.calls),2)
+        self.assertEqual(before_restart,fingerprint(self.fixture.root))
+        self.assertEqual(self.fixture.project.reviews.history(self.fixture.papers[0]),[])
+        self.assertEqual(self.fixture.project.reviews.membership(self.fixture.papers[0])['state'],'not_reviewed')
