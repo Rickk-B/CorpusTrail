@@ -28,6 +28,9 @@ XML_ERRORS = {
     'XML DTD/entity declarations and external references are refused': 'dtd_or_entity_refused',
     'XML exceeds depth/node limit': 'depth_or_node_limit',
     'XML exceeds character limit': 'text_limit',
+    'XML exceeds attribute limit': 'attribute_limit',
+    'XML exceeds expanded-name limit': 'expanded_name_limit',
+    'XML exceeds namespace limit': 'namespace_limit',
     'invalid or unsupported XML': 'malformed_or_unsupported_xml',
 }
 
@@ -198,6 +201,8 @@ def inspect_project(project_root, pmcid):
             if len(raw) != row['byte_size'] or digest_bytes(raw) != sha:
                 raise ContractError('artifact integrity differs')
             attempt = {'stored_artifact_validity': 'invalid', 'stored_trusted': payload.get('trusted') is True,
+                'stored_xml_policy': payload.get('xml_policy') if payload.get('xml_policy') in
+                    {'bounded-no-dtd/v1', 'bounded-inert-jats/v2'} else None,
                 'observed_content_type': 'not preserved by original acquisition records',
                 **analyze_bytes(raw, public_identifiers=(('pmcid', pmcid),))}
             network = next((r for r in records if r['kind'] == 'acquisition_result'

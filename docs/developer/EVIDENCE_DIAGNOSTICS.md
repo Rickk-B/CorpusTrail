@@ -66,9 +66,11 @@ disabled; entity declarations, external/skipped entity references and resource-l
 excess abort inventory. No loader/network callback exists, no tree is constructed,
 and input bytes are never stripped or rewritten. Well-formed-without-external-loading
 is not DTD/schema validity or scientific verification. Incomplete/refused inventory
-is reported honestly. Full trust still uses the unchanged `bounded-no-dtd/v1`
-scientific boundary, which refuses every DTD. Matching diagnostic IDs/body counts
-cannot make rejected content trusted.
+is reported honestly. The installed scientific policy remains authoritative:
+`bounded-no-dtd/v1` refused every DTD; the later narrowly reviewed
+[`bounded-inert-jats/v2` boundary](XML_POLICY.md) supports only inert allowlisted
+JATS declarations. Reports distinguish stored validity/policy from current parser
+diagnostics. Matching diagnostic IDs/body counts cannot make rejected content trusted.
 
 ## Automated acceptance
 
@@ -93,7 +95,7 @@ MacBook diagnosis. No scientific pipeline correction is justified without concre
 evidence. Changes to XML/trust policy require separate approval. Checkpoint 5 is
 not part of this work; Checkpoint 4 is not automatically accepted by a test report.
 
-## Validation record (2026-10-14)
+## Earlier read-only acceptance (2026-10-14; source 2fcacca)
 
 Local Linux/WSL2 / Python 3.12 / pinned Chromium: all 12 browser scenarios and 46
 existing visual comparisons passed, including restart/history/no-replay evidence
@@ -117,9 +119,13 @@ tests verify read-only SQLite connections, project file fingerprints, hash corru
 entity/encoding/resource refusals, no text export and redacted failures. Evidence
 application (16) and XML policy (8) regressions passed. Ruff/JavaScript checks passed.
 
-No live scholarly request has been made by this acceptance work: explicit permission
-for the single current-response probe has been requested, not presumed. The original
-MacBook bytes remain inaccessible. Its root-cause classification therefore remains
-insufficient information; a DTD is not assumed to be the cause. The read-only helper
-is available if original-byte evidence is genuinely necessary after independent
-reproduction. A researcher is not asked to repeat graphical testing or interpret XML.
+That read-only acceptance made no live request. A separately authorized follow-up
+on 2026-10-14 made exactly one GET: HTTP 200, application/xml, 417,134 bytes,
+SHA-256 `0a9f6b9202435e3074865506ba516c5c9456f55945125341e2a4adbfcf5ecdec`.
+The current response's external DOCTYPE caused the unchanged v1 policy rejection
+before identity verification. This reproduced the reported behavior, not the
+historical MacBook bytes. The full response was discarded with its disposable
+project; only sanitized diagnostics remained. The later [compatibility review](JATS_COMPATIBILITY.md)
+uses synthetic fixtures, with no automatic new live request or historical
+reclassification. The original MacBook cause still requires original-byte evidence
+for certainty. A researcher is not asked to repeat graphical testing or interpret XML.

@@ -20,7 +20,8 @@ from corpustrail.application.project_use import acquire_project_use, ProjectBusy
 from corpustrail.application.reads import ProjectReads
 from corpustrail.curation import ReviewEvent, EvidenceBasis
 from corpustrail.identity import BibliographicRecord, Identifier, SourceReference
-from corpustrail._internal.values import canonical, digest_bytes, ContractError
+from corpustrail._internal.values import canonical, digest_bytes, ContractError, content_hash
+from corpustrail._internal.xml_safety import POLICY_VERSION
 from corpustrail._internal.pipeline import events
 from corpustrail.local_app import make_server
 from corpustrail.project import Project, ProjectConfig, EvidencePolicy, ReviewPolicy
@@ -99,6 +100,13 @@ class EvidenceWorkflowTests(EvidenceFixture):
     def test_verified_acquisition_provenance_reader_and_command_replay(self):
         value=self.start();result=self.wait(value['handle'])
         self.assertEqual(result['status'],'completed');self.assertEqual(result['network_outcome'],'success')
+        frozen,_ = self.manager._plan(self.project,value['handle'])
+        self.assertEqual(frozen['xml_policy'],POLICY_VERSION)
+        code_inputs = {name:digest_bytes(resources.files(package).joinpath(name).read_bytes())
+            for package,name in (('corpustrail.evidence','service.py'),
+                                 ('corpustrail.evidence','native_parsers.py'),
+                                 ('corpustrail._internal','xml_safety.py'))}
+        self.assertEqual(frozen['adapter_code_sha256'],content_hash(code_inputs))
         self.assertEqual(len(self.transport.calls),1)
         self.assertTrue(self.transport.calls[0][0].endswith('PMC123/fullTextXML'))
         reps=self.project.evidence.representations(self.pid,trusted_only=True)
