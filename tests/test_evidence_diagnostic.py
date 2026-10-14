@@ -76,7 +76,9 @@ class EvidenceDiagnosticTests(unittest.TestCase):
 
     def test_original_hash_verified_response_inspection_is_read_only(self):
         with tempfile.TemporaryDirectory(prefix='ct-diagnostic-disposable-') as temp:
-            base = Path(temp)
+            # macOS temporary paths use the /var alias. Canonicalize our own
+            # disposable fixture; keep the production symlink refusal intact.
+            base = Path(temp).resolve()
             with patch('corpustrail.application.project_use.lock_directory', return_value=base/'locks'):
                 project = Project.create(base/'project', ProjectConfig('diagnostic', 'Disposable diagnostics', 'Synthetic topic',
                     evidence=EvidencePolicy(('europepmc',))), created_by='fixture', created_at=AT)
