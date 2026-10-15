@@ -45,7 +45,12 @@ class GuidedReviewService:
     def __init__(self, project):
         self.project = project
 
-    def population(self, selection):
+    def population(self, selection, *, db=None):
+        if isinstance(selection, str) and selection.startswith('population-version:'):
+            if db is None:
+                with connection(self.project.database_path) as current:
+                    return self.project.populations.review_ids(current, selection)
+            return self.project.populations.review_ids(db, selection)
         ids = self.project.identities.papers()
         if selection == 'awaiting':
             ids = [pid for pid in ids if self.project.reviews.membership(pid)['state'] in {'not_reviewed','unresolved'}]
@@ -63,15 +68,22 @@ class GuidedReviewService:
         with connection(self.project.database_path,write=True) as db:
             if db.execute('SELECT 1 FROM ct_review_sessions WHERE session_id=?',(session,)).fetchone():
                 _load(db,session)
+                self.project.populations.review_link(db, session)
                 result = _replay(db,session,command)
                 if result: return result
                 raise ContractError('session creation differs from its original command')
             if latest_config(db)[0]!=config_event_id: raise ContractError('project configuration changed')
-            ids = self.population(selection)
+            ids = self.population(selection, db=db)
             if content_hash(ids)!=population_sha256: raise ContractError('candidate population changed; refresh the review setup')
             SessionService(self.project)._prepare(db,session,reviewer_id=reviewer_id,paper_ids=ids,mode=mode,guided=True)
+            if selection.startswith('population-version:'):
+                population_link = self.project.populations.bind_review(db, selection, session)
+            else:
+                population_link = None
             _,state,revision,_ = _load(db,session)
             result = {'action':'create','status':'active'}
+            if population_link is not None:
+                result['candidate_population'] = population_link
             revision = _append(db,session,state,revision,'created',deepcopy(state),command=command,result=result)
             return {'schema':SCHEMA,'session_id':session,'revision':revision,'result':result}
 
@@ -98,6 +110,7 @@ class GuidedReviewService:
         command = {'id':command_id,'sha256':content_hash({'action':action,'value':value,'revision':expected_revision})}
         with connection(self.project.database_path,write=True) as db:
             packet,state,revision,config = _load(db,session)
+            self.project.populations.review_link(db, session)
             if packet['schema']!=GUIDED_SCHEMA: raise ContractError('legacy sessions retain their original recording contract')
             replay = _replay(db,session,command)
             if replay: return replay

@@ -67,6 +67,7 @@ class ReviewController:
                 lifecycle=state.get('lifecycle','legacy'),stale=latest_config(db)[0]!=config,
                 can_publish=packet['reviewer_id'] in project.config.review.authorized_reviewers,
                 evidence=_paper(packet,result['paper_id']).get('evidence_summary',{}))
+            result['candidate_population'] = project.populations.review_link(db, session)
             if not legacy:
                 result.update(summary=GuidedReviewService(project).summary(packet,state,db),
                     completion=bool(state['completion']),published=bool(state['publication']),

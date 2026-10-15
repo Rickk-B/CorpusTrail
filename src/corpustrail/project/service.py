@@ -54,7 +54,9 @@ class Project:
         config = ProjectConfig.from_dict(json.loads(body))
         project = cls(target, config)
         with connection(project.database_path) as db:
-            validate_database(db, body, config.project_id)
+            # Accepted Checkpoints 1–5 remain openable without a write/upgrade.
+            # Population operations alone require the explicit additive upgrade.
+            validate_database(db, body, config.project_id, compatible_prefix=37)
         project.config  # Validate latest configuration, without creating files.
         return project
 
@@ -118,6 +120,11 @@ class Project:
     def identities(self):
         from corpustrail.identity import IdentityService
         return IdentityService(self)
+
+    @property
+    def populations(self):
+        from corpustrail.populations import PopulationService
+        return PopulationService(self)
 
     @property
     def reviews(self):

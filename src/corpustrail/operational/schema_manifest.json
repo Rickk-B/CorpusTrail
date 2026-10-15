@@ -224,6 +224,12 @@
       "version": 37,
       "sha256": "sha256:68b375e38ae7870ab8efa7c0caefd6d55cddf1312d43a4236f63ae10139c9e9b",
       "origin_path": null
+    },
+    {
+      "name": "038_candidate_populations.sql",
+      "version": 38,
+      "sha256": "sha256:2994a7ebbb615febd6137ab29c9d97e3012b38dd5003a668769ebf979e7c1242",
+      "origin_path": null
     }
   ]
 }

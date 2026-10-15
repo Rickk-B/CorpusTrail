@@ -112,7 +112,7 @@ def latest_config(db):
     return row["event_id"], json.loads(row["payload_json"])["config"]
 
 
-def validate_database(db, bootstrap: bytes, project_id: str, *, allow_prefix=False) -> None:
+def validate_database(db, bootstrap: bytes, project_id: str, *, allow_prefix=False, compatible_prefix=None) -> None:
     try:
         marker = db.execute("SELECT * FROM ct_project_identity").fetchone()
         if marker is None or marker["schema_family"] != FAMILY or marker["project_id"] != project_id:
@@ -123,7 +123,10 @@ def validate_database(db, bootstrap: bytes, project_id: str, *, allow_prefix=Fal
             "SELECT version,name,code_sha256 FROM schema_migrations ORDER BY version")]
         expected = [{"version": x[0]["version"], "name": x[0]["name"],
                      "code_sha256": x[0]["sha256"]} for x in migrations()]
-        if rows != (expected[:len(rows)] if allow_prefix and len(rows) >= 32 else expected):
+        compatible = compatible_prefix is not None and len(rows) == compatible_prefix and rows == expected[:compatible_prefix]
+        if compatible and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name LIKE 'ct_population_%'").fetchone():
+            raise ContractError('population tables require their complete registered schema history')
+        if not compatible and rows != (expected[:len(rows)] if allow_prefix and len(rows) >= 32 else expected):
             raise ContractError("database schema history differs; no implicit migration")
         previous = None
         for row in db.execute("SELECT * FROM ct_project_config_events ORDER BY sequence"):
