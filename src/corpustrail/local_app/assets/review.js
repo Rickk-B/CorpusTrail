@@ -7,6 +7,7 @@ const names = {included:'Include', excluded:'Exclude', insufficient_evidence:'In
   not_reviewed:'Awaiting a corpus decision', unresolved:'Unresolved',
   metadata:'Bibliographic metadata', abstract:'Abstract', sections:'Verified structured text — selected sections', full_document:'Verified structured text — full document', none:'No evidence reviewed'};
 let setup, state, dirty = false, busy = false, timer, queue = Promise.resolve(), uncertain = null, pendingCreate = null, summaryOffset = null, previewVisible = false;
+let savedPopulationOffset=null,savedPopulationCutoff=null;
 const say = value => { el('review-message').textContent = value; };
 const node = (tag, text) => { const n = document.createElement(tag); n.textContent = text; return n; };
 function enqueue(work) { const next = queue.catch(() => {}).then(work); queue = next.catch(() => {}); return next; }
@@ -90,6 +91,7 @@ async function overview() {
     setup.populations[0].count?'Choose a reviewing identity and a fixed publication set.':'No publications to review yet. Use Discovery or return to Corpus.';
   const select=el('review-population');select.replaceChildren(new Option('Choose a population',''));
   setup.populations.forEach(p=>{ const option=new Option(p.label+' ('+p.count+')',p.selection);option.disabled=!p.count;select.add(option); });
+  await savedPopulations();
   el('reviewer-options').replaceChildren(...setup.authorized_reviewers.map(x=>new Option(x,x)));
   el('review-sessions').replaceChildren();
   await sessions(setup); el('review-more-sessions').dataset.offset=setup.next_offset??'';
@@ -113,6 +115,7 @@ async function load(handle,{preview=false}={}) {
   el('review-paper').hidden=false;
   el('review-progress').textContent='Paper '+data.number+' of '+data.total+' · '+data.recorded_count+' with saved observations';
   el('review-identity').textContent='Reviewer: '+data.reviewer+' · '+(data.can_publish?'Configured corpus-publication authority':'No corpus-publication authority');
+  el('review-population-version').textContent=data.candidate_population?'Frozen candidate population · Version '+data.candidate_population.version+'. Exact version identity is available in session provenance.':'Session-local frozen candidate set; no saved population version was selected.';
   el('review-mode-notice').textContent=data.mode==='method-blind'?'Method-blind snapshot: discovery methods and earlier judgments are omitted. Corpus and other operational pages are not blinded.':'Operational review: frozen source attribution is available below.';
   el('review-definition').textContent=data.question;el('review-stale').hidden=!data.stale;
   el('review-paper-title').textContent=data.title||'Title not available';
@@ -137,7 +140,7 @@ async function load(handle,{preview=false}={}) {
   el('review-completion-heading').textContent=completed?'Review completed — read only':'Review completion';
   el('review-readonly-help').hidden=!completed;
   el('review-completion-status').textContent=data.published?'Saved observations are preserved. Authoritative corpus updates have been published separately.':completed?'Saved observations are preserved. Unassessed papers remain undecided. Completing this session did not change corpus membership.':'Finish Review completes this session and preserves saved observations. Unassessed papers and incomplete or changed-unsaved drafts remain undecided. Corpus membership will not change.';
-  el('review-technical').textContent=JSON.stringify({session:handle,revision:data.revision,population_sha256:data.population_sha256,evidence_snapshot_sha256:data.evidence_snapshot_sha256},null,2);
+  el('review-technical').textContent=JSON.stringify({session:handle,revision:data.revision,population_sha256:data.population_sha256,evidence_snapshot_sha256:data.evidence_snapshot_sha256,candidate_population:data.candidate_population},null,2);
   history.replaceState(null,'','/review#'+handle);controls();
   if (completed&&!data.legacy) await summary();
 }
@@ -199,6 +202,21 @@ el('review-open-document').onclick=async()=>{try{if(!state.document_opened)await
 el('review-document-next').onclick=()=>documentSegment(Number(el('review-document-next').dataset.offset)).catch(failure);
 el('review-overview-button').onclick=()=>flush().then(overview).catch(failure);
 el('review-more-sessions').onclick=async()=>{try{const data=await api('configuration?offset='+el('review-more-sessions').dataset.offset);await sessions(data);el('review-more-sessions').dataset.offset=data.next_offset??'';el('review-more-sessions').hidden=data.next_offset===null;}catch(e){failure(e);}};
+function addSavedPopulation(version){
+  if(setup.populations.some(p=>p.selection===version.version_id))return;
+  const p={selection:version.version_id,label:version.name+' · Frozen version '+version.version,count:version.member_count,sha256:version.members_sha256};
+  setup.populations.push(p);const option=new Option(p.label+' ('+p.count+')',p.selection);option.disabled=!p.count;el('review-population').add(option);
+}
+async function populationRead(path){
+  const response=await fetch('/api/v1/populations/'+path,{headers:{'X-CorpusTrail-Session':token},cache:'no-store'});
+  const value=await response.json();if(!response.ok)throw Error(value.error.message);return value;
+}
+async function savedPopulations(more=false){
+  const data=await populationRead('versions'+(more?'?offset='+savedPopulationOffset+'&cutoff='+savedPopulationCutoff:''));
+  data.items.forEach(addSavedPopulation);savedPopulationOffset=data.next_offset;savedPopulationCutoff=data.cutoff;
+  el('review-more-populations').hidden=savedPopulationOffset===null;
+}
+el('review-more-populations').onclick=()=>savedPopulations(true).catch(failure);
 el('review-recover').onclick=async()=>{
   const previous=state.paper_id,retained=draft();clearTimeout(timer);
   try {
@@ -223,4 +241,9 @@ document.querySelectorAll('nav a,header a,#review-summary a').forEach(link=>link
   if (!dirty) return;event.preventDefault();try{await flush();location.assign(link.href);}catch(e){failure(e);}
 }));
 window.addEventListener('beforeunload',event=>{if(dirty||busy){event.preventDefault();event.returnValue='Unsaved review input';}});
-(async()=>{const handle=location.hash.slice(1);if(/^[0-9a-f]{64}$/.test(handle))await load(handle);else await overview();})().catch(failure);
+(async()=>{const handle=location.hash.slice(1);if(/^[0-9a-f]{64}$/.test(handle))await load(handle);else{
+  await overview();if(/^population-[0-9a-f]{64}$/.test(handle)){
+    const version=await populationRead('versions/'+handle.slice(11));addSavedPopulation(version);
+    el('review-population').value=version.version_id;say('Frozen population selected. Choose your reviewing identity and start explicitly.');
+  }
+}})().catch(failure);

@@ -74,6 +74,10 @@ fieldset:disabled { opacity: .65; }
 #review-summary-papers h3 { margin: .5rem 0; }
 #review-summary-papers p { margin: .4rem 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .review-actions { margin: 1rem 0; }
+#population-form fieldset { margin: 1rem 0; }
+#population-form details { margin: .85rem 0; }
+#population-versions article, #population-paper-choices label { overflow-wrap: anywhere; }
+#population-form input:not([type=checkbox]), #population-search { box-sizing: border-box; width: 100%; min-width: 0; }
 .danger-secondary { margin-left: .6rem; color: #813c31; background: white; }
 .danger { color: white; background: #813c31; }
 .project-card-heading, .project-actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }

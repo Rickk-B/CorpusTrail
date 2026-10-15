@@ -22,7 +22,8 @@ from corpustrail.application.project_use import leased_server_factory
 
 ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; charset=utf-8',
           'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8',
-          'evidence.js': 'text/javascript; charset=utf-8', 'review.js':'text/javascript; charset=utf-8'}
+          'evidence.js': 'text/javascript; charset=utf-8', 'review.js':'text/javascript; charset=utf-8',
+          'populations.js': 'text/javascript; charset=utf-8'}
 
 
 def _query(value, allowed):
@@ -56,6 +57,8 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
         evidence = EvidenceController(controller)
     from corpustrail.application.review import ReviewController
     review = ReviewController() if controller is not None else None
+    from corpustrail.application.populations import PopulationController
+    populations = PopulationController() if controller is not None else None
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
@@ -98,7 +101,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/review'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/review','/populations'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
                     active = controller.active_handle is not None if controller is not None else project is not None
@@ -108,11 +111,14 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                         return self.error(409, 'project_required', 'Open a project before using Discovery.')
                     if path == '/review' and (not active or review is None):
                         return self.error(409,'project_required','Open a project before using Guided Review.')
-                    page = 'home.html' if home else 'projects.html' if setup else 'review.html' if path=='/review' else 'discovery.html' if path == '/discovery' else 'index.html'
+                    if path == '/populations' and (not active or populations is None):
+                        return self.error(409,'project_required','Open a project before using candidate populations.')
+                    page = 'home.html' if home else 'projects.html' if setup else 'populations.html' if path=='/populations' else 'review.html' if path=='/review' else 'discovery.html' if path == '/discovery' else 'index.html'
                     html = assets.joinpath(page).read_text(encoding='utf-8')
                     html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active else 'hidden')
                     html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
                     html = html.replace('REVIEW_NAV_HIDDEN', '' if active and review is not None else 'hidden')
+                    html = html.replace('POPULATIONS_NAV_HIDDEN', '' if active and populations is not None else 'hidden')
                     html = html.replace('EVIDENCE_WORKFLOW_HIDDEN', '' if active and evidence is not None else 'hidden')
                     html = html.replace('PROJECT_BROWSER_STATUS', 'Local project workspace' if evidence is not None else 'Read-only project browser')
                     return self.send(200, html, 'text/html; charset=utf-8')
@@ -135,6 +141,23 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     query = _query(route.query, {'handle'})
                     result = controller.settings(query.get('handle'))
                     return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
+                if populations is not None and path.startswith('/api/v1/populations/'):
+                    from corpustrail.application.populations import version_handle
+                    with controller.use() as current:
+                        if path == '/api/v1/populations/configuration':
+                            query = _query(route.query, {'offset','limit','cutoff'})
+                            result = populations.configuration(current, **{k:_number(v) for k,v in query.items()})
+                        elif path == '/api/v1/populations/versions':
+                            query = _query(route.query, {'offset','limit','cutoff'})
+                            result = current.populations.versions(**{k:_number(v) for k,v in query.items()})
+                        else:
+                            match = re.fullmatch(r'/api/v1/populations/versions/([0-9a-f]{64})(?:/(members|lineage|issues))?', path)
+                            if not match: return self.error(404,'not_found','Population version not found.')
+                            handle, section = match.groups()
+                            query = _query(route.query, {'offset','limit'} if section else set())
+                            vid = version_handle(handle)
+                            result = getattr(current.populations, section)(vid, **{k:_number(v) for k,v in query.items()}) if section else current.populations.inspect(vid)
+                        return self.send(200,json.dumps(result,ensure_ascii=False,allow_nan=False))
                 if review is not None and path.startswith('/api/v1/review/'):
                     with controller.use() as current:
                         query=_query(route.query,{'offset','limit'})
@@ -244,6 +267,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             routes.update('/api/v1/discovery/'+name for name in ('prepare', 'approve', 'start', 'invalidate', 'cancel'))
             routes.add('/api/v1/evidence/start')
             routes.update('/api/v1/review/'+name for name in ('create','command'))
+            routes.update('/api/v1/populations/'+name for name in ('preview','create','upgrade','verify'))
             if controller is None or self.path not in routes:
                 return self.readonly()
             self.close_connection = True
@@ -256,6 +280,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             is_discovery = self.path.startswith('/api/v1/discovery/')
             is_evidence = self.path=='/api/v1/evidence/start'
             is_review = self.path.startswith('/api/v1/review/')
+            is_population = self.path.startswith('/api/v1/populations/')
             try:
                 lengths = self.headers.get_all('Content-Length')
                 if (self.headers.get_all('Content-Type') != ['application/json']
@@ -278,10 +303,13 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 from corpustrail.application.discovery import SCHEMA as DISCOVERY_SCHEMA
                 from corpustrail.application.evidence import SCHEMA as EVIDENCE_SCHEMA
                 from corpustrail.curation.guided import SCHEMA as REVIEW_SCHEMA
-                expected_schema = REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                from corpustrail.application.populations import SCHEMA as POPULATION_SCHEMA
+                expected_schema = POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
                 if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if is_review:
+                if is_population:
+                    with controller.use() as current: result=populations.command(current,self.path.rsplit('/',1)[1],body)
+                elif is_review:
                     with controller.use() as current: result=review.command(current,self.path.rsplit('/',1)[1],body)
                 elif is_evidence:
                     if set(body)!={'paper','request_id','eligibility_hash','confirm_external'}: raise ValueError('unsupported evidence fields')
