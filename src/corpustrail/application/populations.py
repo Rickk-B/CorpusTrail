@@ -2,7 +2,7 @@
 from pathlib import Path
 import re
 
-from corpustrail._internal.database import connection
+from corpustrail._internal.database import connection, latest_config
 from corpustrail._internal.pipeline import events_in_connection
 from corpustrail._internal.values import ContractError
 from corpustrail.populations.contracts import command_id, page
@@ -23,6 +23,7 @@ class PopulationController:
     def configuration(self, project, *, offset=0, limit=20, cutoff=None):
         page(offset, limit)
         with connection(project.database_path) as db:
+            revision, config = latest_config(db)
             if cutoff is None:
                 cutoff = db.execute('SELECT COALESCE(MAX(sequence),0) FROM ct_pipeline_events').fetchone()[0]
             if type(cutoff) is not int or cutoff < 0:
@@ -38,15 +39,20 @@ class PopulationController:
                 sources.append({'kind': 'discovery', 'run_id': row[0], 'provider': plan['provider'],
                     'query': plan['query'], 'created_at': plan['created_at']})
         return {'schema': SCHEMA, 'available': project.populations.ready(), 'discovery_sources': sources,
+            'project_id': config['project_id'], 'config_event_id': revision,
             'cutoff': cutoff, 'next_offset': offset + limit if len(rows) > limit else None,
             'production_imports_available': False}
 
     def command(self, project, action, body):
         try:
             if action == 'upgrade':
-                if set(body) != {'request_id', 'confirm_backup'} or body['confirm_backup'] is not True:
+                if set(body) != {'request_id', 'confirm_backup', 'project_id', 'config_event_id'} or body['confirm_backup'] is not True:
                     raise ContractError('explicitly confirm the backed-up population storage upgrade')
                 command_id(body['request_id'])
+                with connection(project.database_path) as db:
+                    revision, config = latest_config(db)
+                if body['project_id'] != config['project_id'] or body['config_event_id'] != revision:
+                    raise ContractError('project selection or configuration changed; reopen Populations before upgrading')
                 if project.populations.ready():
                     return {'schema': SCHEMA, 'available': True, 'already_enabled': True}
                 no_links(project.root)

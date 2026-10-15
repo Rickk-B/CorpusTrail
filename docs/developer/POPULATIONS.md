@@ -44,6 +44,9 @@ POST `/api/v1/populations/preview`, `/create`, `/verify`, `/upgrade` are strict
 allowlisted JSON commands under existing Host/Origin/CSRF/session/body-size,
 confinement and lease checks. Import-interface sources cannot be submitted over
 HTTP. No file-read/upload/URL-fetch endpoint is added. Metadata is rendered as text.
+Upgrade requests must repeat the project ID and configuration event returned by
+the displayed configuration; stale project selections/revisions are refused before
+backup or migration. A stale tab cannot upgrade another active project.
 
 Acceptance: `test_populations.py`, `test_population_app.py`, and
 `tools/browser_acceptance.py --suite population` use actual services, offline

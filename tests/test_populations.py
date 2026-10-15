@@ -305,7 +305,12 @@ class PopulationTests(unittest.TestCase):
         self.assertFalse(legacy.populations.ready());self.assertEqual(before,fingerprint(legacy_root))
         with self.assertRaises(ContractError):legacy.populations.preview(**self.fields())
         with self.assertRaises(ContractError):PopulationController().command(legacy,'upgrade',{'request_id':uuid.uuid4().hex,'confirm_backup':False})
-        req = {'request_id':uuid.uuid4().hex,'confirm_backup':True}
+        req = {'request_id':uuid.uuid4().hex,'confirm_backup':True,'project_id':legacy.config.project_id,
+               'config_event_id':legacy.configuration_history()[-1]['event_id']}
+        for mismatch in ({'project_id':'another-project'},{'config_event_id':'stale'}):
+            with self.assertRaisesRegex(ContractError,'project selection or configuration changed'):
+                PopulationController().command(legacy,'upgrade',{**req,**mismatch})
+            self.assertEqual(before,fingerprint(legacy_root))
         result = PopulationController().command(legacy,'upgrade',req)
         self.assertTrue(result['backup_created']);self.assertTrue(Project.open(legacy_root).populations.ready())
         backup = legacy_root/legacy.config.data_directory/'population-upgrades'/(req['request_id']+'.sqlite3')

@@ -53,6 +53,19 @@ class PopulationHttpTests(unittest.TestCase):
         self.assertEqual(self.call('GET','/api/v1/populations/create')[0],404)
         self.assertEqual(fingerprint(self.project.root),before)
 
+    def test_upgrade_is_bound_to_the_displayed_project_and_configuration(self):
+        from test_populations import fingerprint
+        status,_,body=self.call('GET','/api/v1/populations/configuration')
+        self.assertEqual(status,200);config=json.loads(body)
+        self.assertEqual(config['project_id'],self.project.config.project_id)
+        before=fingerprint(self.project.root)
+        request={'schema':SCHEMA,'request_id':uuid.uuid4().hex,'confirm_backup':True,
+            'project_id':config['project_id'],'config_event_id':config['config_event_id']}
+        for mismatch in ({'project_id':'another-project'},{'config_event_id':'stale'}):
+            status,_,body=self.call('POST','/api/v1/populations/upgrade',{**request,**mismatch})
+            self.assertEqual(status,409);self.assertIn('project selection or configuration changed',body)
+            self.assertEqual(before,fingerprint(self.project.root))
+
     def test_preview_is_readonly_and_create_is_replay_safe(self):
         from test_populations import fingerprint
         before = fingerprint(self.project.root)

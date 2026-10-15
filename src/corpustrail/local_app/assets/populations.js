@@ -9,6 +9,7 @@ let candidateRequest=null,approvedPreview=null,parentVersion=null,selectedVersio
 let sourceOffset=null,sourceCutoff=null,versionOffset=null,versionCutoff=null,paperCursor=null;
 const sources=new Map(),papers=new Set(),savedVersions=new Map();
 let memberOffset=null,lineageOffset=null,issueOffset=null,provenanceLoaded=false;
+let upgradeContext=null;
 async function api(path,body=null){
   const headers={'X-CorpusTrail-Session':populationToken};
   if(body)Object.assign(headers,{'Content-Type':'application/json','X-CorpusTrail-CSRF':populationToken});
@@ -36,6 +37,7 @@ function counts(container,data){
 async function configuration(more=false){
   const query=more?'?offset='+sourceOffset+'&cutoff='+sourceCutoff:'';
   const data=await api('populations/configuration'+query);
+  if(!more)upgradeContext={project_id:data.project_id,config_event_id:data.config_event_id};
   field('population-upgrade').hidden=data.available;field('population-setup').hidden=!data.available;
   if(!more)field('population-discovery-sources').replaceChildren();
   for(const source of data.discovery_sources)choice(field('population-discovery-sources'),source.provider+' · '+source.query+' · '+source.created_at,
@@ -142,7 +144,7 @@ field('population-provenance').addEventListener('toggle',async()=>{
   try{await lineagePage('lineage',0);await lineagePage('issues',0);provenanceLoaded=true;}catch(error){failure(error);}
 });
 field('population-verify').onclick=async()=>{if(busy)return;lock(true);try{await api('populations/verify',{handle:selectedVersion.split(':')[1]});field('population-verify-result').textContent='Stored population integrity verified. This is not a corpus-membership or evidence-trust decision.';}catch(error){failure(error);}finally{lock(false);}};
-field('population-enable').onclick=async()=>{if(busy)return;lock(true);try{await api('populations/upgrade',{request_id:crypto.randomUUID().replaceAll('-',''),confirm_backup:true});await configuration();await versions();message('Population storage enabled with a project-local backup. Existing research records are preserved.');}catch(error){failure(error);}finally{lock(false);}};
+field('population-enable').onclick=async()=>{if(busy)return;lock(true);try{await api('populations/upgrade',{request_id:crypto.randomUUID().replaceAll('-',''),confirm_backup:true,...upgradeContext});await configuration();await versions();message('Population storage enabled with a project-local backup. Existing research records are preserved.');}catch(error){failure(error);}finally{lock(false);}};
 field('population-refresh').onclick=()=>{invalidate();versions().catch(failure);};
 field('population-more-versions').onclick=()=>versions(true).catch(failure);
 field('population-more-sources').onclick=()=>configuration(true).catch(failure);
