@@ -12,6 +12,8 @@ from corpustrail._internal.pipeline import artifact
 from corpustrail._internal.values import ContractError, canonical, content_hash, identifier, now, text, timestamp
 from .service import EvidenceBasis, ReviewEvent, ReviewPlan, _history
 
+GUIDED_SCHEMA = 'corpustrail-review-session/v2'
+
 
 def _load(db, session_id):
     row = db.execute('SELECT * FROM ct_review_sessions WHERE session_id=?', (session_id,)).fetchone()
@@ -20,9 +22,15 @@ def _load(db, session_id):
     packet = json.loads(row['payload_json'])
     if content_hash(packet) != row['content_sha256'] or packet['session_id'] != session_id:
         raise ContractError('session population hash mismatch')
+    guided = packet['schema'] == GUIDED_SCHEMA
+    if packet['schema'] not in {'corpustrail-review-session/v1', GUIDED_SCHEMA}:
+        raise ContractError('unsupported session contract')
     state = {'index': 0, 'order': [x['paper_id'] for x in packet['papers']], 'ordering': 'original',
              'ranking_run_id': None, 'drafts': {}, 'opened': [], 'committed': {},
              'heads': deepcopy(packet['history_hashes'])}
+    if guided:
+        state.update(saved_drafts={}, skipped={}, lifecycle='active', completion=None,
+                     publication_plan=None, publication=None)
     revision = None
     for event in db.execute('SELECT * FROM ct_review_session_events WHERE session_id=? ORDER BY sequence', (session_id,)):
         payload = json.loads(event['payload_json'])
@@ -34,11 +42,13 @@ def _load(db, session_id):
             state = payload['state']
         else:
             for key,value in payload['delta'].items():
-                if key in {'drafts','committed','heads'}:
+                if key in {'drafts','committed','heads'} or guided and key in {'saved_drafts','skipped'}:
                     state[key].update(value)
                 elif key == 'opened_add':
                     state['opened'].extend(x for x in value if x not in state['opened'])
                 elif key in {'index','order','ordering','ranking_run_id'}:
+                    state[key] = value
+                elif guided and key in {'lifecycle','completion','publication_plan','publication'}:
                     state[key] = value
                 else:
                     raise ContractError('unsupported session delta field')
@@ -48,12 +58,12 @@ def _load(db, session_id):
     return packet, deepcopy(state), revision, row['config_event_id']
 
 
-def _append(db, session_id, state, previous, kind, prior_state):
+def _append(db, session_id, state, previous, kind, prior_state, *, command=None, result=None):
     delta={}
     for key,value in state.items():
         if value == prior_state[key]:
             continue
-        if key in {'drafts','committed','heads'}:
+        if key in {'drafts','committed','heads','saved_drafts','skipped'}:
             delta[key]={k:v for k,v in value.items() if k not in prior_state[key] or prior_state[key][k]!=v}
         elif key == 'opened':
             delta['opened_add']=[x for x in value if x not in prior_state[key]]
@@ -61,6 +71,8 @@ def _append(db, session_id, state, previous, kind, prior_state):
             delta[key]=value
     payload = {'schema':'corpustrail-review-session-event/v1','session_id': session_id,
                'previous_event_id': previous, 'kind': kind, 'created_at': now(), 'delta': delta}
+    if command is not None:
+        payload.update(schema='corpustrail-guided-review-event/v1', command=command, result=result)
     event_id = identifier('session-event', payload)
     db.execute('INSERT INTO ct_review_session_events '
                '(event_id,session_id,previous_event_id,payload_json,content_sha256) VALUES (?,?,?,?,?)',
@@ -130,7 +142,7 @@ class SessionService:
         return self.view(session_id)
 
     def _prepare(self, db, session_id, *, reviewer_id, paper_ids=None, mode='method-blind',
-                authority_state='non_authoritative', created_at=None):
+                authority_state='non_authoritative', created_at=None, guided=False):
         text(session_id, 'session ID')
         text(reviewer_id, 'reviewer pseudonymous ID')
         if mode not in {'method-blind', 'operational'} or authority_state not in {'non_authoritative', 'human_authorized'}:
@@ -138,6 +150,8 @@ class SessionService:
         created_at = created_at or now()
         timestamp(created_at)
         config = self.project.config
+        if guided and (authority_state != 'non_authoritative' or not config.review.scope):
+            raise ContractError('guided review requires explicit corpus scope and non-authoritative observations')
         if authority_state == 'human_authorized' and reviewer_id not in config.review.authorized_reviewers:
             raise ContractError('reviewer is not authorized by project policy')
         ids = list(paper_ids if paper_ids is not None else self.project.identities.papers())
@@ -189,6 +203,11 @@ class SessionService:
                 'identifiers': [x for x in metadata['identifiers'] if x['scheme'] in {'doi','pmid','pmcid'}],
                 'bases': bases, 'document': document,
                 'pending_documents': sum(x['payload']['artifact_validity']=='pending_identity' for x in representations)})
+            if guided:
+                papers[-1]['evidence_summary'] = {
+                    'invalid_or_mismatched':sum(x['payload']['artifact_validity'] in {'invalid','mismatch'} for x in representations),
+                    'abstract_origin':'verified_document' if metadata['fields']['abstract'] and
+                        metadata['field_provenance'].get('abstract') not in observations else 'bibliographic_metadata'}
             histories[paper_id] = content_hash(self.project.reviews.history(paper_id))
             current[paper_id] = self.project.reviews.membership(paper_id)['current_event_id']
         config_id, raw = latest_config(db)
@@ -199,6 +218,10 @@ class SessionService:
             'authority_state': authority_state, 'policy_id': config.review.policy_id, 'created_at': created_at,
             'question': 'Does this paper belong in the broad scientific topic corpus: '+config.name+'?',
             'papers': papers, 'history_hashes': histories, 'current_events': current}
+        if guided:
+            packet.update(schema=GUIDED_SCHEMA, question=config.review.scope,
+                population_sha256=content_hash(ids), evidence_snapshot_sha256=content_hash(papers),
+                lifecycle_policy='deferred-human-publication/v1')
         for pid in ids:
             if content_hash(_history(db, pid)) != histories[pid]:
                 raise ContractError('review history changed during preparation')
@@ -240,6 +263,8 @@ class SessionService:
         """CAS guards autosave/resume; explicit commit is the only authority write."""
         with connection(self.project.database_path, write=True) as db:
             packet, state, revision, config_id = _load(db, session_id)
+            if packet['schema'] == GUIDED_SCHEMA:
+                raise ContractError('guided sessions require the versioned guided review commands')
             prior_state=deepcopy(state)
             if revision != expected_revision:
                 raise ContractError('stale session revision; reload before saving')
