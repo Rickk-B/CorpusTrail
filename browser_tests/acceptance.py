@@ -469,7 +469,10 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.locator('#review-finish').click()
         expect(self.page.locator('#review-authority-status')).to_contain_text('not authorized')
         expect(self.page.locator('#review-prepare-publication')).to_be_hidden()
-        self.snapshot('review-unauthorized');self.layout()
+        # Capture the real content bounds, not Chromium's transient old scroll
+        # extent after the taller assessment panel has collapsed. Nothing in
+        # main is hidden/masked for this screenshot; page overflow is still checked.
+        self.snapshot('review-unauthorized',subject='main');self.layout()
         token=self.page.locator('meta[name="corpustrail-session"]').get_attribute('content')
         handle=self.page.url.split('#')[1]
         headers={'X-CorpusTrail-Session':token,'X-CorpusTrail-CSRF':token,'Origin':self.fixture.origin}
@@ -484,6 +487,8 @@ class BrowserAcceptance(unittest.TestCase):
         empty=Project.create(self.fixture.root/'empty',ProjectConfig('empty-review','Empty review project','Invented empty fixture',review=ReviewPolicy(scope=SCOPE)),created_by='fixture')
         self.visit('/projects')
         self.page.locator('#project-list article').filter(has=self.page.get_by_role('heading',name='Empty review project',exact=True)).get_by_role('button',name='Open Project').click()
+        expect(self.page).to_have_url(self.fixture.origin+'/dashboard')
+        expect(self.page.locator('#project-name')).to_have_text('Empty review project')
         self.visit('/review');expect(self.page.locator('#review-empty')).to_contain_text('No publications')
         self.snapshot('review-empty');self.layout()
         self.assertEqual(empty.identities.papers(),[])

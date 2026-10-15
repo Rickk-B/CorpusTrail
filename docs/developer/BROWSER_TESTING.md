@@ -101,6 +101,12 @@ font hashes match. The manifest records browser version, font SHA, architecture,
 locale, timezone, device scale and comparison policy. A
 different renderer fails comparison with instructions to capture separately; macOS
 never compares against Linux pixel baselines.
+Tests wait for the actual dashboard URL/content after asynchronous project opening
+before starting another navigation. The completed unauthorized-review snapshot
+uses the full `main` content bounds: Chromium's earlier scroll extent can outlive
+a collapsed assessment panel and otherwise add variable blank screenshot canvas.
+Reviewer, counts, decisions and authority controls stay visible; page-level
+overflow/label checks still run. Pixel tolerances are not relaxed for this case.
 
 Viewports: desktop **1440×900**, laptop **1280×800**, narrow **390×844**, scale 1.
 Representative full-page and viewport images cover project setup, catalogue/detail,

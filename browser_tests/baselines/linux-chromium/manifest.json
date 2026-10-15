@@ -56,7 +56,7 @@
     "desktop-review-summary.png": "0ac0c79f824dd2ae4a7a0753e41270c2b36e90267527e076feeda962a62893ec",
     "desktop-review-completed.png": "72e430963a9db15a15f53ccfd90eaa3f26becd229206d0d7c59efbd6c8ca317e",
     "desktop-review-publication.png": "f2f4a3d2d056b96a5a55fd9b4bd06c84ca408e93256846f92fc773bc4303f4ba",
-    "desktop-review-unauthorized.png": "e48a354fdcac819e9f1e02274071ee2a6108386ba31e68cb06acd70c29c6f89a",
+    "desktop-review-unauthorized.png": "fc8ecb9ddd523efd5988b3700b44f23f00cc55f2da57cee5dda2abd8ed899fbe",
     "desktop-review-empty.png": "db5ca41ce2f4c2f544b16e2fd171bf4cb93de3377f09efbbbfda477a89110bf3",
     "laptop-discovery-preview.png": "cd3f43b8658c8b3bf8a1857c40b7fac6e3dc0835a10a0b999c31165734eed5e3",
     "laptop-discovery-approval.png": "970c7627e80322a74aa043fa8e80bfaa8601210800b5a672667772736593e4f1",
@@ -79,7 +79,7 @@
     "laptop-review-summary.png": "73693fb522b90601f89d9cc7630896e4555def74fa2ed1063a588165d552b1ab",
     "laptop-review-completed.png": "ad7d7b5a38601e9c7d3ba4e248a198425544909358effda7b69a49fdc405c2c8",
     "laptop-review-publication.png": "5557321bb1ae0f0e2e151ba8f9593cafe925ff234e2aeae32d3a3cc177133eeb",
-    "laptop-review-unauthorized.png": "8fe6afdb7590026cfe3c106553fbe998ed92bae441290ed920dca988d50bacbc",
+    "laptop-review-unauthorized.png": "e7ef58027e1e99861cdeeb8e2378ed6c8015379dd9cd0413d24190fb95886c23",
     "laptop-review-empty.png": "bb6d4274057cfbeb39d2354d8df8f7051b5a1c52d9f6f8c03c116a002588c2f0",
     "narrow-discovery-preview.png": "1583b216368c5d5ab2334a016d0babcf9f9c3ab3eb08eb34bef05f36a08d0ebe",
     "narrow-discovery-approval.png": "e13e571c0970ece10f874bde45f8ea0bb2ee1fa6d52f2d6346859068e75eb4ed",
@@ -106,7 +106,7 @@
     "narrow-review-summary.png": "3494b3334e613fe660bc3862f860f2ed5b98004444e4e9675ebf8fb242f223a4",
     "narrow-review-completed.png": "cfe36af9f61319cc69d146389ab223cf761aae44d56f4b73e5addf39a6a457db",
     "narrow-review-publication.png": "95697cad2964bc97c8f383f8f1ee403ce238d60f52a63dffd3f093ca8938055d",
-    "narrow-review-unauthorized.png": "f275b7cb3d11bf0c0a8b44566743c73ea21d5aa6466d7dd83a1e735e1a9d5dab",
+    "narrow-review-unauthorized.png": "f7d57da8c429fe16e37097a931cd85f5eefcdaeb31f9f38d85be1d1c233a6cdc",
     "narrow-review-empty.png": "3d99c36aa1555012772cd5e14da41ea9be89d72a03d94b5cac9d58f44c9da767"
   },
   "review": "Explicitly approved after direct image inspection; not automatic test updates."
