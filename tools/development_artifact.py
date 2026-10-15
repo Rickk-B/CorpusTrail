@@ -22,6 +22,7 @@ FRONTEND = {'corpustrail/local_app/assets/index.html',
             'corpustrail/local_app/assets/app.css', 'corpustrail/local_app/assets/app.js'}
 FRONTEND.update({'corpustrail/local_app/assets/discovery.html', 'corpustrail/local_app/assets/discovery.js'})
 FRONTEND.add('corpustrail/local_app/assets/evidence.js')
+FRONTEND.update({'corpustrail/local_app/assets/review.html', 'corpustrail/local_app/assets/review.js'})
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
 # Checkpoint 2 delegates writes to unchanged scientific/configuration services.
@@ -50,6 +51,14 @@ XML_COMPATIBILITY_HASHES = {
     'src/corpustrail/application/evidence.py': '76e5e29c81a77b7a66b3c8f0b7a4922d8592b550a7262c4013e047cb862854a7',
     'src/corpustrail/resources/origins.json': '0bf601fb89fd7b1d85d8e57e64d308a18696558e38db91369e9b8ec613f50829'}
 XML_COMPATIBILITY_EXTRA_PATHS = set(XML_COMPATIBILITY_HASHES) - CHECKPOINT4_PATHS
+# New scientific lifecycle is an explicitly versioned, frozen boundary; not a
+# broad allowance for changing historical review authority or evidence policy.
+GUIDED_REVIEW_COMMIT = '05437f6d23c0c56855183b29903bf87f3a9cfff3'
+GUIDED_REVIEW_HASHES = {
+    'src/corpustrail/curation/sessions.py': '2e5f350763e353b1ef7cb567df83fb9f3b655df6275421faf2d7d0c804f8908e',
+    'src/corpustrail/curation/guided.py': '4868325dbb8e5e456d525d68346cc0b968d4c6439929697b5cf8c3a991e462f8',
+    'src/corpustrail/application/review.py': 'b8f56e7d64735563c284a5c1d8d02a2a4d83321fdce8e84b001ad2037e9dceff'}
+GUIDED_REVIEW_ASSETS = {'src/corpustrail/local_app/assets/review.html', 'src/corpustrail/local_app/assets/review.js'}
 
 
 def git(root, *args):
@@ -81,6 +90,15 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
         xml_compatibility = bool(changed & XML_COMPATIBILITY_EXTRA_PATHS)
         allowed = CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS
+        guided_review = bool(changed & set(GUIDED_REVIEW_HASHES))
+        if guided_review:
+            if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',GUIDED_REVIEW_COMMIT,expected]).returncode:
+                raise ValueError('Guided review must descend from its reviewed implementation')
+            for name, expected_hash in GUIDED_REVIEW_HASHES.items():
+                path=root/name
+                if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash:
+                    raise ValueError('Guided review source differs from the frozen reviewed implementation')
+            allowed |= set(GUIDED_REVIEW_HASHES) | GUIDED_REVIEW_ASSETS
         if xml_compatibility:
             if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',XML_COMPATIBILITY_COMMIT,expected]).returncode:
                 raise ValueError('XML compatibility must descend from its reviewed implementation')
@@ -135,14 +153,14 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         checkpoint3 = (root/'src/corpustrail/application/discovery.py').is_file()
         checkpoint4 = (root/'src/corpustrail/application/evidence.py').is_file()
         scientific = {'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py', 'src/corpustrail/evidence/service.py'}
-        return {**previous, 'name': 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
+        return {**previous, 'name': 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
                 'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
                 'application_source_unchanged': not bool(changed),
                 'configuration_writes_supported': True,
                 'application_paths_changed_since_accepted_checkpoint1': sorted(changed),
-                'scientific_source_unchanged': not bool(changed & scientific),
-                'scientific_service_source_unchanged': not bool(changed & scientific),
-                'scientific_execution_source_unchanged': not xml_compatibility,
+                'scientific_source_unchanged': not bool(changed & scientific) and not guided_review,
+                'scientific_service_source_unchanged': not bool(changed & scientific) and not guided_review,
+                'scientific_execution_source_unchanged': not xml_compatibility and not guided_review,
                 'discovery_scientific_execution_source_unchanged': True,
                 'xml_compatibility': {'schema':'corpustrail-xml-compatibility-code-review/v1',
                     'implementation_commit_sha':XML_COMPATIBILITY_COMMIT,
@@ -152,6 +170,15 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     'notice':'Reviewed implementation lineage; not artifact build identity or researcher acceptance.'} if xml_compatibility else None,
                 'discovery_workflow_supported': checkpoint3,
                 'evidence_workflow_supported': checkpoint4,
+                'guided_review_workflow_supported': guided_review,
+                'guided_review': {'schema':'corpustrail-guided-review-code-review/v1',
+                    'implementation_commit_sha':GUIDED_REVIEW_COMMIT,
+                    'session_schema':'corpustrail-review-session/v2',
+                    'policy':'deferred-human-publication/v1',
+                    'source_sha256':GUIDED_REVIEW_HASHES,
+                    'legacy_authority_unchanged':True,
+                    'schema_migrations':False,
+                    'notice':'Versioned guided lifecycle; build identity is source.commit_sha, not this historical implementation receipt.'} if guided_review else None,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
                           'The source/build SHA identifies this development artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):

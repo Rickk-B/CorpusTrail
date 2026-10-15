@@ -103,8 +103,9 @@ class FixtureTransport:
 
 
 class ApplicationFixture:
-    def __init__(self):
+    def __init__(self, *, project_id=None):
         self.stack = ExitStack()
+        self.project_id=project_id or 'browser-'+uuid.uuid4().hex
         try:
             self._setup()
         except BaseException:
@@ -139,7 +140,7 @@ class ApplicationFixture:
                 raise AssertionError('Nonloopback network forbidden')
             return original(sock, address)
         self.stack.enter_context(patch.object(socket.socket, 'connect', connect))
-        self.project = Project.create(self.root/'materials', ProjectConfig('browser-'+uuid.uuid4().hex, 'Synthetic materials',
+        self.project = Project.create(self.root/'materials', ProjectConfig(self.project_id, 'Synthetic materials',
             'Invented publications for browser acceptance.',
             providers=tuple(ProviderConfig(x, x) for x in ('openalex', 'crossref', 'europepmc', 'semantic_scholar')),
             search=(SearchConcept('porous', 'porous materials'),),

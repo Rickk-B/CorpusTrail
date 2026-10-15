@@ -202,6 +202,35 @@ class DevelopmentArtifactTests(unittest.TestCase):
         for name,expected in TOOL['XML_COMPATIBILITY_HASHES'].items():
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
 
+    def test_guided_review_hashes_match_the_current_scientific_source(self):
+        for name,expected in TOOL['GUIDED_REVIEW_HASHES'].items():
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+
+    def test_guided_review_boundary_is_frozen_and_requires_reviewed_lineage(self):
+        accepted=self.implementation
+        hashes={}
+        for name in TOOL['GUIDED_REVIEW_HASHES']:
+            path=self.root/name;path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_text('reviewed_guided_fixture = True\n',encoding='utf-8')
+            hashes[name]=hashlib.sha256(path.read_bytes()).hexdigest()
+        self.commit();reviewed=TOOL['git'](self.root,'rev-parse','HEAD')
+        globals_=TOOL['check_implementation'].__globals__
+        with patch.dict(globals_,{'GUIDED_REVIEW_COMMIT':reviewed,'GUIDED_REVIEW_HASHES':hashes}):
+            receipt=TOOL['check_implementation'](self.root,accepted,reviewed,
+                distribution=accepted,accepted_checkpoint1=accepted)
+            self.assertTrue(receipt['guided_review_workflow_supported'])
+            self.assertFalse(receipt['scientific_execution_source_unchanged'])
+            self.assertEqual(receipt['guided_review']['source_sha256'],hashes)
+            with patch.dict(globals_,{'GUIDED_REVIEW_COMMIT':'0'*40}):
+                with self.assertRaisesRegex(ValueError,'reviewed implementation'):
+                    TOOL['check_implementation'](self.root,accepted,reviewed,distribution=accepted,accepted_checkpoint1=accepted)
+            for name in hashes:
+                path=self.root/name;path.write_text('unreviewed_override = True\n',encoding='utf-8');self.commit()
+                with self.subTest(path=name),self.assertRaisesRegex(ValueError,'frozen reviewed'):
+                    TOOL['check_implementation'](self.root,accepted,TOOL['git'](self.root,'rev-parse','HEAD'),
+                        distribution=accepted,accepted_checkpoint1=accepted)
+                path.write_text('reviewed_guided_fixture = True\n',encoding='utf-8');self.commit()
+
     def test_xml_review_is_exact_scoped_and_reports_changed_execution_honestly(self):
         service = self.root/'src/corpustrail/evidence/service.py'
         service.parent.mkdir(parents=True)

@@ -29,6 +29,7 @@ python -m playwright install-deps chromium
 python tools/browser_acceptance.py --suite smoke --viewports laptop --output /tmp/ct-browser-smoke
 python tools/browser_acceptance.py --suite evidence --viewports desktop --output /tmp/ct-browser-evidence
 python tools/browser_acceptance.py --suite discovery --viewports desktop --output /tmp/ct-browser-discovery
+python tools/browser_acceptance.py --suite review --viewports desktop --output /tmp/ct-browser-review
 python tools/browser_acceptance.py --output /tmp/ct-browser-full
 python tools/browser_acceptance.py --visual compare --output /tmp/ct-browser-compare
 python -m unittest browser_tests.test_infrastructure -v
@@ -53,6 +54,10 @@ Existing Project/identity/configuration/discovery/evidence services and ordinary
 Host/Origin/session/CSRF/CSP checks run unchanged. Application startup binds before
 navigation and the browser waits for readiness. Worker threads, servers, browsers
 and process leases are closed in cleanup, including assertion failures.
+Guided-review visual fixtures use a fixed synthetic project identifier so their
+canonical-ID order is reproducible. Their temporary project roots and external
+lock directories remain unique per case/run, including concurrent runs; no project
+state or lease anchor is shared. Other fixtures retain generated identifiers.
 
 Only the provider transport is injected. OpenAlex, Crossref, Europe PMC and Semantic
 Scholar responses use their actual normalizers, exact identity pipeline, persisted
@@ -72,7 +77,15 @@ separate approval/start, running/results/history/refresh, exact deduplication an
 partial repeated search. Evidence covers actual stored abstract attribution, explicit
 known-PMCID acquisition, verified plaintext, provenance, mismatch rejection, earlier
 valid evidence preservation and refresh without replay. Missing-PMCID retrieval is
-unavailable; no identifier enrichment/review/membership action is introduced.
+unavailable; no identifier enrichment is introduced.
+Guided Review exercises real frozen sessions, autosaved drafts, skip/resume,
+five canonical publications, missing evidence, verified text, non-authoritative
+Save & Next, injected transport failure/input retention, double-click protection,
+graceful restart, completion without membership, separately confirmed atomic
+publication and backend refusal for an unauthorized identity. A newly collected
+publication stays outside the frozen set. Review services/API successes are never
+mocked. Empty projects create no phantom sessions. All three viewports are covered;
+the macOS smoke selection also includes these scenarios.
 The evidence scenario also restarts the actual HTTP server/controllers, reopens the
 same disposable project, and verifies persisted history/text without new requests
 or scientific-file changes. This is graceful restart testing, not crash-resume.

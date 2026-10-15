@@ -15,7 +15,9 @@ class BrowserAcceptance(unittest.TestCase):
     runtime = None  # Explicit runner-owned browser/report; never auto-discovered.
 
     def setUp(self):
-        self.fixture = ApplicationFixture()
+        # Review order uses canonical IDs. Stabilize only synthetic visual IDs;
+        # every run still has a private root, lock directory and browser context.
+        self.fixture = ApplicationFixture(project_id='browser-guided-fixture' if 'review' in self._testMethodName else None)
         self.addCleanup(self.fixture.close)
         self.context = self.runtime.browser.new_context(viewport=self.runtime.viewport,
             device_scale_factor=1, locale='en-US', timezone_id='UTC', color_scheme='light',
@@ -27,6 +29,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.diagnostics = []
         self.tokens = set()
         self.expected_http_errors = set()
+        self.expected_transport_failure = False
         self.local_requests=0
         self.external_requests=0
         def route(request_route):
@@ -40,8 +43,10 @@ class BrowserAcceptance(unittest.TestCase):
                 request_route.continue_()
         self.context.route('**/*', route)
         self.page.on('pageerror', lambda error: self.diagnostics.append('JavaScript: '+str(error)))
-        self.page.on('console', lambda msg: self.diagnostics.append('Console: '+msg.text) if msg.type=='error' else None)
-        self.page.on('requestfailed', lambda req: self.diagnostics.append('Failed local request: '+req.method+' '+req.url.split('?')[0]))
+        self.page.on('console', lambda msg: self.diagnostics.append('Console: '+msg.text)
+            if msg.type=='error' and not (self.expected_transport_failure and 'net::ERR_FAILED' in msg.text) else None)
+        self.page.on('requestfailed', lambda req: self.diagnostics.append('Failed local request: '+req.method+' '+req.url.split('?')[0])
+            if not (self.expected_transport_failure and req.url.endswith('/api/v1/review/command')) else None)
         self.page.on('response', lambda response: self.diagnostics.append('HTTP '+str(response.status)+' '+response.url.split('?')[0])
             if response.status>=400 and response.status not in self.expected_http_errors else None)
         self.visit('/')
@@ -340,6 +345,149 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(before,fingerprint(self.fixture.root))
         self.assertEqual(self.fixture.project.reviews.history(self.fixture.papers[0]),[])
         self.assertEqual(self.fixture.project.reviews.membership(self.fixture.papers[0])['state'],'not_reviewed')
+
+    def start_guided_review(self,reviewer='fixture_reviewer'):
+        self.visit('/review')
+        expect(self.page.locator('#reviewer')).to_have_value('')
+        expect(self.page.locator('#review-population')).to_have_value('')
+        self.snapshot('review-session-selection');self.layout()
+        self.page.locator('#reviewer').fill(reviewer)
+        self.page.locator('#review-population').select_option('all')
+        self.page.get_by_role('button',name='Start Guided Review',exact=True).click()
+        expect(self.page.locator('#review-workspace')).to_be_visible()
+        expect(self.page.locator('#review-definition')).to_have_text(SCOPE)
+
+    def test_review_guided_save_finish_publish_and_resume(self):
+        from dataclasses import replace
+        from .fixtures import XML
+        project=self.fixture.project
+        project.configure(replace(project.config,config_version=project.config.config_version+1,
+            review=replace(project.config.review,authorized_reviewers=('fixture_reviewer',))),
+            expected_event_id=project.configuration_history()[-1]['event_id'],created_by='fixture')
+        project.evidence.preserve_document(self.fixture.papers[0],XML,representation='jats_xml',media_type='application/xml',
+            source_uri='fixture://verified-review-evidence',legitimate_basis='synthetic_fixture',resolver='fixture',resolver_version='v1')
+        initial={p:project.reviews.history(p) for p in self.fixture.papers}
+        self.open_project();self.start_guided_review()
+        self.snapshot('review-active');self.layout()
+        outcomes=['included','excluded','insufficient_evidence','included','excluded']
+        captured_missing=False
+        for i,outcome in enumerate(outcomes):
+            expect(self.page.locator('#review-progress')).to_contain_text('Paper '+str(i+1)+' of 5')
+            title=self.page.locator('#review-paper-title').inner_text()
+            if title==TITLE:
+                expect(self.page.locator('#review-abstract')).to_have_text(ABSTRACT)
+                self.page.get_by_role('button',name='Read verified structured text',exact=True).click()
+                expect(self.page.locator('#review-document')).to_contain_text('Invented structured scientific fixture text')
+                expect(self.page.locator('#review-extent')).to_have_value('')
+                self.snapshot('review-verified-text')
+            elif 'Long scientific title' in title:self.snapshot('review-long-title')
+            else:
+                expect(self.page.locator('#review-evidence-status')).to_contain_text('No abstract available')
+                if not captured_missing:
+                    self.snapshot('review-missing-evidence');captured_missing=True
+            self.page.locator('input[name="assessment"][value="'+outcome+'"]').check()
+            self.page.locator('#review-extent').select_option('metadata')
+            self.page.locator('#review-rationale').fill('Invented human assessment '+str(i+1))
+            expect(self.page.locator('#review-save-state')).to_contain_text('Draft saved')
+            if i==0:
+                self.snapshot('review-assessment')
+                # A transport interruption, not a mocked scientific/API success.
+                self.expected_transport_failure=True
+                self.page.route('**/api/v1/review/command',lambda route: route.abort('failed'))
+                self.page.locator('#review-save-next').click()
+                expect(self.page.locator('#review-message')).to_contain_text('current input is retained')
+                expect(self.page.locator('#review-progress')).to_contain_text('Paper 1 of 5')
+                expect(self.page.locator('#review-rationale')).to_have_value('Invented human assessment 1')
+                self.assertEqual({p:project.reviews.history(p) for p in self.fixture.papers},initial)
+                self.page.unroute('**/api/v1/review/command');self.expected_transport_failure=False
+            self.page.locator('#review-save-next').evaluate('button=>{button.click();button.click();}')
+            expect(self.page.locator('#review-message')).to_contain_text('Human observation saved')
+            expect(self.page.locator('#review-recover')).to_be_hidden()
+            expect(self.page.locator('#review-progress')).to_contain_text(str(i+1)+' with saved observations')
+        self.assertEqual(sum(len(project.reviews.history(p))-len(initial[p]) for p in self.fixture.papers),5)
+        self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
+        handle=self.page.url.split('#')[1]
+        self.page.reload(wait_until='networkidle')
+        expect(self.page.locator('#review-progress')).to_contain_text('5 with saved observations')
+        before=fingerprint(self.fixture.root);self.fixture.restart();self.open_project();self.visit('/review')
+        self.page.get_by_role('button',name='Open review session',exact=True).click()
+        expect(self.page.locator('#review-progress')).to_contain_text('5 with saved observations')
+        self.assertEqual(before,fingerprint(self.fixture.root))
+        self.page.locator('#review-show-summary').click()
+        expect(self.page.locator('#review-summary')).to_be_visible();self.snapshot('review-summary')
+        self.page.get_by_role('button',name='Finish Review — preserve undecided papers',exact=True).click()
+        expect(self.page.locator('#review-completion-status')).to_contain_text('Review completed')
+        self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
+        self.snapshot('review-completed')
+        self.page.get_by_role('button',name='Preview corpus updates',exact=True).click()
+        expect(self.page.locator('#review-publication')).to_be_visible();self.snapshot('review-publication');self.layout()
+        self.page.get_by_role('button',name='Confirm corpus updates',exact=True).click()
+        expect(self.page.locator('#review-message')).to_contain_text('confirmed decisions updated')
+        states=[project.reviews.membership(p)['state'] for p in self.fixture.papers]
+        self.assertEqual(states.count('included'),2);self.assertEqual(states.count('excluded'),2)
+        self.assertEqual(states.count('insufficient_evidence'),1)
+        self.assertEqual(self.fixture.transport.calls,[])
+        self.visit('/dashboard');expect(self.page.locator('#summaries')).to_contain_text('In corpus: 2')
+        self.assertTrue(handle)
+
+    def test_review_skip_frozen_population_and_draft_resume(self):
+        from corpustrail.identity import BibliographicRecord,Identifier,SourceReference
+        import hashlib
+        project=self.fixture.project
+        before={p:project.reviews.history(p) for p in self.fixture.papers}
+        self.open_project();self.start_guided_review()
+        # A newly collected canonical publication must not enter this snapshot.
+        raw=b'new canonical fixture outside frozen review'
+        source=SourceReference('fixture://later-collection','later','sha256:'+hashlib.sha256(raw).hexdigest(),
+            len(raw),'fixture_discovery','2026-01-01T00:00:00+00:00',identity_status='verified')
+        project.identities.apply(project.identities.plan(BibliographicRecord('Later collected publication',
+            identifiers=(Identifier('doi','10.1234/later.6'),)),source),approve_new_identity=True,approve_aliases=True)
+        self.page.locator('#review-rationale').fill('Incomplete draft retained without a judgment')
+        expect(self.page.locator('#review-save-state')).to_contain_text('Draft saved')
+        self.page.get_by_role('button',name='Skip for now',exact=True).click()
+        expect(self.page.locator('#review-progress')).to_contain_text('Paper 2 of 5')
+        self.page.get_by_role('button',name='Previous',exact=True).click()
+        expect(self.page.locator('#review-rationale')).to_have_value('Incomplete draft retained without a judgment')
+        self.page.reload(wait_until='networkidle')
+        expect(self.page.locator('#review-rationale')).to_have_value('Incomplete draft retained without a judgment')
+        expect(self.page.locator('#review-progress')).to_contain_text('0 with saved observations')
+        self.assertEqual(before,{p:project.reviews.history(p) for p in self.fixture.papers})
+        self.page.locator('#review-show-summary').click();self.page.locator('#review-finish').click()
+        expect(self.page.locator('#review-summary-counts')).to_contain_text('5')
+        expect(self.page.locator('#review-summary-counts')).to_contain_text('Incomplete drafts')
+        self.assertEqual(before,{p:project.reviews.history(p) for p in self.fixture.papers})
+        self.assertEqual(self.fixture.transport.calls,[]);self.layout()
+
+    def test_review_unauthorized_and_empty_project(self):
+        self.open_project();self.start_guided_review(reviewer='configuration_author')
+        self.page.locator('input[name="assessment"][value="included"]').check()
+        self.page.locator('#review-extent').select_option('metadata')
+        self.page.locator('#review-rationale').fill('Invented non-authoritative observation')
+        self.page.locator('#review-save-next').click()
+        expect(self.page.locator('#review-message')).to_contain_text('Human observation saved')
+        self.page.locator('#review-show-summary').click()
+        self.page.locator('#review-finish').click()
+        expect(self.page.locator('#review-authority-status')).to_contain_text('not authorized')
+        expect(self.page.locator('#review-prepare-publication')).to_be_hidden()
+        self.snapshot('review-unauthorized');self.layout()
+        token=self.page.locator('meta[name="corpustrail-session"]').get_attribute('content')
+        handle=self.page.url.split('#')[1]
+        headers={'X-CorpusTrail-Session':token,'X-CorpusTrail-CSRF':token,'Origin':self.fixture.origin}
+        current=self.context.request.get(self.fixture.origin+'/api/v1/review/sessions/'+handle,headers=headers).json()
+        import uuid
+        refused=self.context.request.post(self.fixture.origin+'/api/v1/review/command',headers=headers,
+            data={'schema':'corpustrail-guided-review/v1','handle':handle,'command_id':uuid.uuid4().hex,
+                  'expected_revision':current['revision'],'action':'prepare_publication','value':None})
+        self.assertEqual(refused.status,409)
+        self.assertTrue(all(self.fixture.project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
+        from corpustrail.project import Project,ProjectConfig,ReviewPolicy
+        empty=Project.create(self.fixture.root/'empty',ProjectConfig('empty-review','Empty review project','Invented empty fixture',review=ReviewPolicy(scope=SCOPE)),created_by='fixture')
+        self.visit('/projects')
+        self.page.locator('#project-list article').filter(has=self.page.get_by_role('heading',name='Empty review project',exact=True)).get_by_role('button',name='Open Project').click()
+        self.visit('/review');expect(self.page.locator('#review-empty')).to_contain_text('No publications')
+        self.snapshot('review-empty');self.layout()
+        self.assertEqual(empty.identities.papers(),[])
+        self.assertEqual(self.fixture.transport.calls,[])
 
     def test_evidence_verification_mismatch_and_refresh(self):
         self.open_project();self.visit('/papers')

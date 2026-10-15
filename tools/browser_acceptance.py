@@ -22,6 +22,9 @@ LIMITED={'laptop':{'welcome','wizard-reviewer','wizard-summary','empty-dashboard
          'narrow':{'welcome','projects','wizard','wizard-reviewer','wizard-summary','empty-dashboard','settings','catalogue','trash-confirmation','discovery-preview','discovery-approval','evidence-availability','evidence-result','evidence-mismatch','missing-pmcid'}}
 for names in LIMITED.values():
     names.add('evidence-footnotes')
+    names.update({'review-session-selection','review-active','review-verified-text','review-long-title',
+        'review-missing-evidence','review-assessment','review-summary','review-completed','review-publication',
+        'review-unauthorized','review-empty'})
 
 
 class Runtime:
@@ -150,7 +153,7 @@ class Runtime:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence'),default='all')
+    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review'),default='all')
     parser.add_argument('--viewports',nargs='+',choices=tuple(VIEWPORTS),default=list(VIEWPORTS))
     parser.add_argument('--visual',choices=('capture','compare'),default='capture')
     parser.add_argument('--output',type=Path,help='New output directory; existing reports are never overwritten')
@@ -190,7 +193,7 @@ def execute(args):
             runtime=Runtime(browser,args.output,args.visual,args.suite,args.viewports)
             BrowserAcceptance.runtime=runtime
             methods=unittest.defaultTestLoader.getTestCaseNames(BrowserAcceptance)
-            if args.suite=='smoke':methods=[m for m in methods if 'evidence' in m or 'home' in m]
+            if args.suite=='smoke':methods=[m for m in methods if 'evidence' in m or 'home' in m or 'review' in m]
             elif args.suite!='all':methods=[m for m in methods if args.suite in m]
             for name in args.viewports:
                 runtime.viewport_name=name;runtime.viewport=VIEWPORTS[name]
