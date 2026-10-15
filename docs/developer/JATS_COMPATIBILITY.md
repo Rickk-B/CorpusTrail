@@ -84,3 +84,10 @@ digests in implementation `f234cad157fb4de4739aaff1bc11ddf441352edf`, plus ances
 validation. A later unreviewed edit fails closed. The receipt explicitly reports
 changed XML execution, rather than claiming it remained unchanged. Implementation
 lineage is distinct from the final wheel's source/build SHA and researcher acceptance.
+
+The separately approved [text-preservation correction](JATS_TEXT_PRESERVATION.md)
+advances that frozen receipt to implementation
+`6b964bc660676935bff249b462ab242b837202d1`. Only native renderer and additive
+code-origin digests change; XML policy, scientific identity service and evidence
+controller digests remain identical. The latest receipt records v4 renderer
+identities and still refuses any later edit to any of its five guarded files.

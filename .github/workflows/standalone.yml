@@ -62,6 +62,7 @@ jobs:
           python -I -m unittest discover -s tests -p test_evidence_diagnostic.py -v
           python -I -m unittest discover -s tests -p test_xml_safety.py -v
           python -I -m unittest discover -s tests -p test_jats_compatibility.py -v
+          python -I -m unittest discover -s tests -p test_jats_text_preservation.py -v
           python -c "import platform; print(platform.platform(), platform.machine())"
       - name: Install only the approved macOS native bindings
         if: runner.os == 'macOS'

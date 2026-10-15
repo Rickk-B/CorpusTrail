@@ -20,6 +20,8 @@ VIEWPORTS={'desktop':{'width':1440,'height':900},'laptop':{'width':1280,'height'
 BASELINES=ROOT/'browser_tests'/'baselines'/'linux-chromium'
 LIMITED={'laptop':{'welcome','wizard-reviewer','wizard-summary','empty-dashboard','catalogue','discovery-preview','discovery-approval','evidence-availability','evidence-result','evidence-mismatch','missing-pmcid'},
          'narrow':{'welcome','projects','wizard','wizard-reviewer','wizard-summary','empty-dashboard','settings','catalogue','trash-confirmation','discovery-preview','discovery-approval','evidence-availability','evidence-result','evidence-mismatch','missing-pmcid'}}
+for names in LIMITED.values():
+    names.add('evidence-footnotes')
 
 
 class Runtime:

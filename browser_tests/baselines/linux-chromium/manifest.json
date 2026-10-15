@@ -71,7 +71,10 @@
     "narrow-empty-dashboard.png": "e309177cef6364cf48ef5ecb68616d1127cd031e74de67abe4e4225785ee9d70",
     "narrow-settings.png": "257700b1705e8f7e99476fdc368ddb4d3144b7fb0bc7d6f59348e19f90d040ab",
     "narrow-projects.png": "211a4d359aa4e0c31f9fe1e021050d60b72647cf71975552783f36210ecc6611",
-    "narrow-trash-confirmation.png": "155c6150be4bc482d59cdb48e8d51046520a89e4f41f1e5c740f977c0633d982"
+    "narrow-trash-confirmation.png": "155c6150be4bc482d59cdb48e8d51046520a89e4f41f1e5c740f977c0633d982",
+    "desktop-evidence-footnotes.png": "d7ad2bab77fe4ca77a144f48ed519f38e518364114b7c3de68bdade4573bb404",
+    "laptop-evidence-footnotes.png": "d7ad2bab77fe4ca77a144f48ed519f38e518364114b7c3de68bdade4573bb404",
+    "narrow-evidence-footnotes.png": "6ce2d3cf9381b745fe3fcc1c69b84f23022bea8cea94d3152f140bb52a907830"
   },
   "review": "Explicitly approved after direct image inspection; not automatic test updates."
 }

@@ -8,7 +8,7 @@ import threading
 import unittest
 
 from playwright.sync_api import expect
-from .fixtures import ApplicationFixture, ABSTRACT, SCOPE, TITLE, fingerprint
+from .fixtures import ApplicationFixture, ABSTRACT, SCOPE, TITLE, FOOTNOTE, fingerprint
 
 
 class BrowserAcceptance(unittest.TestCase):
@@ -308,6 +308,38 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.reload(wait_until='networkidle')
         expect(self.page.locator('#history button')).to_have_count(2)
         self.assertEqual(len(self.fixture.transport.calls),8)
+
+    def test_evidence_table_footnotes_persist(self):
+        self.open_project();self.visit('/papers')
+        self.page.get_by_role('link',name=TITLE,exact=True).click()
+        self.fixture.transport.footnotes=True
+        self.assertEqual(self.fixture.transport.calls,[])
+        self.page.get_by_role('button',name='Retrieve structured text from Europe PMC',exact=True).click()
+        expect(self.page.locator('#evidence-history')).to_contain_text('Exact document identity verified',timeout=15000)
+        def read_notes():
+            self.page.get_by_role('button',name='Read verified structured text').click()
+            expect(self.page.locator('#document-text')).to_contain_text(FOOTNOTE.strip())
+            reader=self.page.locator('#document-text').inner_text()
+            self.assertEqual(reader.count('Second distinct footnote paragraph.'),1)
+            self.assertEqual(reader.count('Independent footnote.'),1)
+            self.assertIn('a\n\n'+FOOTNOTE.strip()+'\n\nSecond distinct footnote paragraph.\n\nb\n\nIndependent footnote.',reader)
+            self.layout()
+        read_notes()
+        self.snapshot('evidence-footnotes',subject='#document-text')
+        reachable=self.page.locator('#document-text').evaluate('''element => {
+          element.scrollTop=element.scrollHeight;
+          return element.scrollTop+element.clientHeight>=element.scrollHeight-1;
+        }''')
+        self.assertTrue(reachable,'Long footnotes must remain reachable by reader scrolling')
+        self.page.reload(wait_until='networkidle');read_notes()
+        before=fingerprint(self.fixture.root)
+        self.fixture.restart();self.open_project();self.visit('/papers')
+        self.page.get_by_role('link',name=TITLE,exact=True).click();read_notes()
+        expect(self.page.locator('#evidence-operations button')).to_have_count(1)
+        self.assertEqual(len(self.fixture.transport.calls),1)
+        self.assertEqual(before,fingerprint(self.fixture.root))
+        self.assertEqual(self.fixture.project.reviews.history(self.fixture.papers[0]),[])
+        self.assertEqual(self.fixture.project.reviews.membership(self.fixture.papers[0])['state'],'not_reviewed')
 
     def test_evidence_verification_mismatch_and_refresh(self):
         self.open_project();self.visit('/papers')

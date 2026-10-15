@@ -54,3 +54,18 @@ distinct tables, parent/child ordering, exact offsets/reconstruction, and histor
 preservation. Browser fixtures exercise a long note through actual acquisition,
 reader, refresh and application restart in all three viewports. Native macOS
 visual acceptance is separate from Linux headless Chromium checks.
+
+## Captured-response replay
+
+Local replay of the hash-verified capture through the corrected installed wheel,
+real application controllers and Chromium preserved all five notes exactly once
+in source order. All 111 body-descendant paragraphs, 41 headings, 12 captions,
+12 labels and 236 table cells were represented in the normalized derived text.
+Its 115,477 characters reconstructed exactly from section offsets and all eight
+browser reader segments. Verified source XML stayed byte-identical; history/text
+survived refresh and a graceful server/controller restart without a second
+resolver call. No review observation or membership decision was created.
+
+This is Linux/WSL2 captured-response integration, not a new live request, crash
+resume promise or native MacBook acceptance. The original MacBook response has
+not been examined. No real article is included in public fixtures or artifacts.

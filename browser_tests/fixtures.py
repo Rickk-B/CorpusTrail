@@ -29,6 +29,7 @@ SCOPE = 'Broad-topic collection of invented porous materials; not question-speci
 # Reuse the authoritative verification fixture used by Checkpoint 4 unit tests.
 XML = b'<article><front><article-meta><article-id pub-id-type="doi">10.1234/evidence.1</article-id><article-id pub-id-type="pmc">PMC123</article-id><abstract><p>Invented acquired abstract.</p></abstract></article-meta></front><body><sec><title>Methods</title><p>Invented structured scientific fixture text.</p></sec></body></article>'
 INERT_JATS_DOCTYPE = b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.3 20210610//EN" "JATS-archivearticle1-3.dtd">'
+FOOTNOTE = 'Invented table footnote: calibrated measurements retain uncertainty, labels and scientific context. ' * 8
 
 
 def fingerprint(root):
@@ -56,6 +57,7 @@ class FixtureTransport:
         self.mismatch = False
         self.invalid = False
         self.fail_crossref = False
+        self.footnotes = False
 
     def request(self, url, **kwargs):
         self.calls.append(url)
@@ -65,6 +67,12 @@ class FixtureTransport:
         parsed = urlsplit(url)
         if url == 'https://www.ebi.ac.uk/europepmc/webservices/rest/PMC123/fullTextXML':
             content = XML.replace(b'PMC123', b'PMC999').replace(b'evidence.1', b'wrong.9') if self.mismatch else XML
+            if self.footnotes:
+                note = ('<table-wrap><caption><p>Invented table caption.</p></caption>'
+                    '<table><tr><td>7</td></tr></table><table-wrap-foot><fn><label>a</label>'
+                    '<p>'+FOOTNOTE+'</p><p>Second distinct footnote paragraph.</p></fn>'
+                    '<fn><label>b</label><p>Independent footnote.</p></fn></table-wrap-foot></table-wrap>')
+                content = content.replace(b'</sec>', note.encode()+b'</sec>')
             body = INERT_JATS_DOCTYPE + content
             if self.invalid:
                 body = b'<!DOCTYPE article [<!ENTITY hidden "untrusted expansion">]>' + XML

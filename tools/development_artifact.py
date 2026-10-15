@@ -42,13 +42,13 @@ CHECKPOINT4_PATHS = {'src/corpustrail/application/evidence.py', 'src/corpustrail
                     'src/corpustrail/local_app/assets/evidence.js'}
 # Frozen reviewed implementation, not approval for arbitrary scientific changes.
 # A future core edit needs a new explicitly reviewed receipt and tests.
-XML_COMPATIBILITY_COMMIT = 'f234cad157fb4de4739aaff1bc11ddf441352edf'
+XML_COMPATIBILITY_COMMIT = '6b964bc660676935bff249b462ab242b837202d1'
 XML_COMPATIBILITY_HASHES = {
     'src/corpustrail/_internal/xml_safety.py': '23704b9d56723ed244d30b0fc16a1a66e01a28a571cdd875d120fb8a594b7eae',
-    'src/corpustrail/evidence/native_parsers.py': 'd2059d99df7d16eb6e4e712398ecb6fc58ea547bc0e1f9ae7beb38588cc93943',
+    'src/corpustrail/evidence/native_parsers.py': '3440d2b07df9cf7935f5a6099ad9a6b281cf0b7cbfa3894792ee36f2ef3d284e',
     'src/corpustrail/evidence/service.py': '70c7fc643af9ebcb1613f577ba7a627af9c22c838125475ef09ba6a2d6770305',
     'src/corpustrail/application/evidence.py': '76e5e29c81a77b7a66b3c8f0b7a4922d8592b550a7262c4013e047cb862854a7',
-    'src/corpustrail/resources/origins.json': '4a7ef89a4c81a208f005dde35548817bb531091fbe628db1a1e32a2399a5f4a8'}
+    'src/corpustrail/resources/origins.json': '0bf601fb89fd7b1d85d8e57e64d308a18696558e38db91369e9b8ec613f50829'}
 XML_COMPATIBILITY_EXTRA_PATHS = set(XML_COMPATIBILITY_HASHES) - CHECKPOINT4_PATHS
 
 
@@ -147,6 +147,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                 'xml_compatibility': {'schema':'corpustrail-xml-compatibility-code-review/v1',
                     'implementation_commit_sha':XML_COMPATIBILITY_COMMIT,
                     'policy':'bounded-inert-jats/v2',
+                    'renderer_versions':['corpustrail-native-jats/v4','corpustrail-native-publisher-xml/v4'],
                     'source_sha256':XML_COMPATIBILITY_HASHES,
                     'notice':'Reviewed implementation lineage; not artifact build identity or researcher acceptance.'} if xml_compatibility else None,
                 'discovery_workflow_supported': checkpoint3,

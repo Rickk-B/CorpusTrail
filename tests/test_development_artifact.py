@@ -224,11 +224,13 @@ class DevelopmentArtifactTests(unittest.TestCase):
             self.assertTrue(receipt['discovery_scientific_execution_source_unchanged'])
             self.assertEqual(receipt['xml_compatibility']['implementation_commit_sha'],reviewed)
             # A later unreviewed XML edit cannot piggyback on that implementation.
-            path = self.root/'src/corpustrail/_internal/xml_safety.py'
-            path.write_text('unsafe_override = True\n',encoding='utf-8');self.commit()
-            with self.assertRaisesRegex(ValueError,'frozen reviewed'):
-                TOOL['check_implementation'](self.root,implementation,TOOL['git'](self.root,'rev-parse','HEAD'),
-                    distribution=accepted,accepted_checkpoint1=accepted)
+            for name in hashes:
+                path = self.root/name
+                path.write_text('unsafe_override = True\n',encoding='utf-8');self.commit()
+                with self.subTest(path=name), self.assertRaisesRegex(ValueError,'frozen reviewed'):
+                    TOOL['check_implementation'](self.root,implementation,TOOL['git'](self.root,'rev-parse','HEAD'),
+                        distribution=accepted,accepted_checkpoint1=accepted)
+                path.write_text('fixture_reviewed = True\n',encoding='utf-8');self.commit()
 
 
 if __name__ == '__main__':
