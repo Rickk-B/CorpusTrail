@@ -20,6 +20,14 @@
     "policy": "bounded-inert-jats/v2",
     "change": "Native JATS/publisher parser v3 identifies the shared inert-JATS security boundary. Historical XML adaptation and migration receipts remain preserved."
   },
+  "jats_text_preservation_adaptation": {
+    "base_commit": "872510090d38c20c5cc6af5b5aab3dbe88d5e698",
+    "previous_destination_sha256": "sha256:d2059d99df7d16eb6e4e712398ecb6fc58ea547bc0e1f9ae7beb38588cc93943",
+    "destination": "evidence/native_parsers.py",
+    "destination_sha256": "sha256:3440d2b07df9cf7935f5a6099ad9a6b281cf0b7cbfa3894792ee36f2ef3d284e",
+    "parser_versions": ["corpustrail-native-jats/v4", "corpustrail-native-publisher-xml/v4"],
+    "change": "Preserve table/figure/section footnotes, explicit explanatory paragraphs and body block order with existing text segments. XML policy, exact identity and trust remain unchanged. Historical receipts and derived evidence remain preserved."
+  },
   "scientific_data_included": false,
   "license_decision": "pending_owner_approval"
 }

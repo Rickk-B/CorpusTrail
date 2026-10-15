@@ -154,7 +154,7 @@ class JatsCompatibilityTests(unittest.TestCase):
             self.assertTrue(all(r['payload']['verification_version'] == 'exact-article-identifiers/v2' for r in reps))
             body = next(r for r in reps if r['payload']['representation']=='structured_text')['payload']
             self.assertEqual(body['evidence_depth'], 'document_body')
-            self.assertEqual(body['parser_version'], 'corpustrail-native-jats/v3')
+            self.assertEqual(body['parser_version'], 'corpustrail-native-jats/v4')
             self.assertEqual(project.reviews.history(pid), [])
             self.assertEqual(project.reviews.membership(pid)['state'], 'not_reviewed')
 

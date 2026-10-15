@@ -130,7 +130,9 @@ class IsolationTests(unittest.TestCase):
         self.assertEqual(adaptation['historical_source_sha256'], entry['sha256'])
         compatibility = current['xml_compatibility_adaptation']
         self.assertEqual(compatibility['previous_destination_sha256'], adaptation['destination_sha256'])
-        self.assertEqual('sha256:' + hashlib.sha256(body).hexdigest(), compatibility['destination_sha256'])
+        rendering = current['jats_text_preservation_adaptation']
+        self.assertEqual(rendering['previous_destination_sha256'], compatibility['destination_sha256'])
+        self.assertEqual('sha256:' + hashlib.sha256(body).hexdigest(), rendering['destination_sha256'])
 
     def test_prioritizer_migration_retains_original_generic_algorithm_bytes(self):
         candidate = Path(__file__).resolve().parents[1]

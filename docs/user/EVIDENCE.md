@@ -40,6 +40,9 @@ provided, no credential is collected in the browser and no paywall bypass exists
   text. Use **Read verified structured text** and **Read next text segment**. This
   renders plain scientific text, never active XML/HTML, scripts or external images.
   Structure/section provenance remains preserved. It is not a general PDF reader.
+  New native-parser v4 results include supported table footnotes and labels.
+  This remains a structured-text projection, not a complete facsimile of every
+  JATS element. Earlier stored text is not silently re-rendered by an update.
 - **Front matter only:** title/abstract may be preserved, but this is not verified
   document-body availability. A recovered abstract can still be read normally.
 - **Identity mismatch:** returned identifiers conflict; the document is not trusted.

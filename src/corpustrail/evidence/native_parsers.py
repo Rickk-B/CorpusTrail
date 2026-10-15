@@ -72,40 +72,69 @@ def _direct_children(node, names: set[str]):
     return [child for child in node if _local(child.tag) in names]
 
 
-def _walk_xml_section(renderer: _Renderer, node, parent_path: list[str]) -> None:
-    title_node = next((child for child in node if _local(child.tag) == "title"), None)
-    title = _text(title_node) if title_node is not None else "Untitled section"
-    path = parent_path + [title]
-    blocks = [title]
-    nested = []
+def _note_blocks(node) -> list[str]:
+    """Keep separate labelled notes/paragraphs; never re-render their descendants."""
+    if _local(node.tag) == "fn" and not _direct_children(node, {"p"}):
+        return [_text(node)]
+    blocks = []
     for child in node:
         kind = _local(child.tag)
-        if kind == "sec":
-            nested.append(child)
-        elif kind == "p":
+        if kind in {"label", "title", "p"}:
             blocks.append(_text(child))
-        elif kind == "list":
-            blocks.extend(
-                "• " + _text(item) for item in child.iter() if _local(item.tag) == "list-item"
-            )
-        elif kind in {"fig", "table-wrap", "boxed-text"}:
-            caption = _first_descendant(child, {"caption"})
+        elif kind in {"fn", "fn-group"}:
+            blocks.extend(_note_blocks(child))
+    return blocks
+
+
+def _article_blocks(node) -> list[str]:
+    """The supported body vocabulary, shared by sections and direct body blocks."""
+    kind = _local(node.tag)
+    if kind == "p":
+        return [_text(node)]
+    if kind == "list":
+        return ["• " + _text(item) for item in node.iter() if _local(item.tag) == "list-item"]
+    if kind in {"fn", "fn-group", "table-wrap-foot"}:
+        return _note_blocks(node)
+    blocks = []
+    if kind in {"fig", "table-wrap", "boxed-text"}:
+        if not _direct_children(node, {"caption"}):
+            caption = _first_descendant(node, {"caption"})
             if caption is not None:
                 blocks.append(_text(caption))
-            if kind == "table-wrap":
+        for child in node:
+            child_kind = _local(child.tag)
+            if child_kind in {"label", "caption", "p"}:
+                blocks.append(_text(child))
+            elif child_kind in {"table", "alternatives"} and kind == "table-wrap":
                 for row in child.iter():
                     if _local(row.tag) == "tr":
                         cells = [_text(cell) for cell in row if _local(cell.tag) in {"td", "th"}]
                         if any(cells):
                             blocks.append(" | ".join(cells))
+            elif child_kind in {"table-wrap-foot", "fn", "fn-group"}:
+                blocks.extend(_note_blocks(child))
+    return blocks
+
+
+def _walk_xml_section(renderer: _Renderer, node, parent_path: list[str]) -> None:
+    title_node = next((child for child in node if _local(child.tag) == "title"), None)
+    title = _text(title_node) if title_node is not None else "Untitled section"
+    path = parent_path + [title]
+    blocks = [title]
+    for child in node:
+        kind = _local(child.tag)
+        if kind == "sec":
+            renderer.section(path, blocks)
+            blocks = []
+            _walk_xml_section(renderer, child, path)
+        else:
+            blocks.extend(_article_blocks(child))
     renderer.section(path, blocks)
-    for child in nested:
-        _walk_xml_section(renderer, child, path)
 
 
 class NativeJatsParser:
     name = "native_jats"
-    version = "corpustrail-native-jats/v3"
+    version = "corpustrail-native-jats/v4"
 
     def parse(self, document_path: Path) -> ParserOutput:
         try:
@@ -119,7 +148,7 @@ class NativeJatsParser:
 
 class NativePublisherXmlParser:
     name = "native_publisher_xml"
-    version = "corpustrail-native-publisher-xml/v3"
+    version = "corpustrail-native-publisher-xml/v4"
 
     def parse(self, document_path: Path) -> ParserOutput:
         try:
@@ -142,12 +171,15 @@ def _render_article_xml(root, *, source_format: str) -> ParserOutput:
         renderer.section(["Abstract"], abstract_blocks)
     body = _first_descendant(root, {"body"})
     if body is not None:
-        direct_sections = _direct_children(body, {"sec"})
-        direct_paragraphs = _direct_children(body, {"p"})
-        if direct_paragraphs:
-            renderer.section(["Body"], [_text(node) for node in direct_paragraphs])
-        for section in direct_sections:
-            _walk_xml_section(renderer, section, [])
+        blocks = []
+        for child in body:
+            if _local(child.tag) == "sec":
+                renderer.section(["Body"], blocks)
+                blocks = []
+                _walk_xml_section(renderer, child, [])
+            else:
+                blocks.extend(_article_blocks(child))
+        renderer.section(["Body"], blocks)
     return renderer.finish(source_format=source_format)
 
 

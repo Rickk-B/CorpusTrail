@@ -135,6 +135,15 @@ class EvidenceWorkflowTests(EvidenceFixture):
         self.assertEqual(valid,self.project.evidence.representations(self.pid,trusted_only=True))
         self.assertEqual(self.project.evidence.status(self.pid)['verified_structured_text'],1)
 
+    def test_renderer_update_invalidates_previous_eligibility_without_writes(self):
+        with patch('corpustrail.application.evidence._adapter_hash',return_value='sha256:'+'0'*64):
+            previous=self.manager.availability(self.project,self.paper)['eligibility_hash']
+        before=fingerprint(self.project.root)
+        with self.assertRaises(ProjectCommandError):
+            self.start(eligibility_hash=previous)
+        self.assertEqual(self.transport.calls,[])
+        self.assertEqual(before,fingerprint(self.project.root))
+
     def test_unavailable_empty_malformed_timeout_rate_limit_bounded_retry(self):
         for i,responses in enumerate(([(404,b'',{})],[(200,b'',{})],[(200,b'<article>',{})],
             [TimeoutError('private diagnostic'),TimeoutError('private diagnostic')],
