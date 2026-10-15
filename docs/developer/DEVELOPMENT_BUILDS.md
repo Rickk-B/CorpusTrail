@@ -15,8 +15,9 @@ scientific service source must not be mistaken for a read-only application.
 
 ## Checkpoint 6 population provenance
 
-The current receipt additionally freezes the population foundation at
-`32fbf15a54568ea356e70e9de05eb26708fa85ab`, including exact hashes for migration
+The current receipt additionally freezes the population foundation and its
+project/revision-bound upgrade safeguard at
+`9ab5ebfad2091cbe65b95cae00ce8bb10df51f1e`, including exact hashes for migration
 038, its manifest and the narrow Guided Review/project compatibility integration.
 `checkpoint.populations` identifies the population contract/policy, schema-37
 read compatibility, explicit backed-up upgrade and absence of production importers.

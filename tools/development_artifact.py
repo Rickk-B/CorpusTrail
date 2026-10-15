@@ -62,12 +62,12 @@ GUIDED_REVIEW_HASHES = {
 GUIDED_REVIEW_ASSETS = {'src/corpustrail/local_app/assets/review.html', 'src/corpustrail/local_app/assets/review.js'}
 # Checkpoint 6's additive schema and narrow existing-service integration are
 # frozen separately. Historical authority, XML and renderer boundaries remain.
-POPULATION_COMMIT = '32fbf15a54568ea356e70e9de05eb26708fa85ab'
+POPULATION_COMMIT = '9ab5ebfad2091cbe65b95cae00ce8bb10df51f1e'
 POPULATION_HASHES = {
     'src/corpustrail/populations/__init__.py': '145dd5bda53d53ebe63688b0367991fb946bd637386a2581e27d4f62cca1c9b3',
     'src/corpustrail/populations/contracts.py': '496158f1c4c37ffff510d598cfff07956147c9da38762e8629216ff91008da4f',
     'src/corpustrail/populations/service.py': '218a0c2d89d72e3bb30d97de4fc78d2ab2a4f8a9a9399532f4d8e145f57fd99b',
-    'src/corpustrail/application/populations.py': '5147b903c37c839ea6b0b102919157b8cb914797544392554d51cc931bc98fb1',
+    'src/corpustrail/application/populations.py': 'ff0ec2ee2500cfe576f756fdae8d2045c2fd585325d0a008dda7d48970296837',
     'src/corpustrail/application/review.py': 'cd233adcb261abbff7c1c47387236450172ae2d34f71dab3f1e969e4f3ee4f27',
     'src/corpustrail/curation/guided.py': 'ae396145df9e27a9472ac7074495b8639555a2c0e98dd71aac0f7acbae7e625f',
     'src/corpustrail/_internal/database.py': '475407a624bd658b137edefd6fe6840a29abc71ce4b912ae8e31a96a1077479f',
