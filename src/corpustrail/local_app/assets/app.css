@@ -71,6 +71,8 @@ fieldset:disabled { opacity: .65; }
 #review-abstract { max-height: 26rem; overflow: auto; }
 #review-summary-papers { padding-left: 1.3rem; overflow-wrap: anywhere; }
 #review-summary-papers li { margin: .65rem 0; }
+#review-summary-papers h3 { margin: .5rem 0; }
+#review-summary-papers p { margin: .4rem 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .review-actions { margin: 1rem 0; }
 .danger-secondary { margin-left: .6rem; color: #813c31; background: white; }
 .danger { color: white; background: #813c31; }

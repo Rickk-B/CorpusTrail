@@ -62,6 +62,17 @@ process still blocks exclusive Trash. Browser closure cannot truncate an accepte
 transaction. The UI autosaves drafts, serializes commands, retains failed input,
 prevents double-click submissions and retries uncertain requests using the same ID.
 
+The refinement changes presentation only: disabled native extent placeholder;
+friendly labels for the existing `sections`/`full_document` values; completed
+sessions open the existing summary DTO rather than disabled assessment forms.
+Finish redirects only after a `completed` receipt to a dashboard fragment binding
+the session handle. The dashboard validates that handle/status through the existing
+protected read API before showing feedback. There is no redirect-side command.
+Publication confirmation is visible only following explicit preview preparation
+in that page, not merely because a stored plan hash exists. Back/refresh hide it;
+the existing nonce, revision, atomicity and authorization contracts are unchanged.
+No review service, DTO, schema, migration or scientific source hash changes.
+
 Read-only APIs never mutate scientific files. The browser keeps only temporary
 form state, never authoritative scientific state in localStorage. Scientific unit
 tests cover rollback, full-history CAS, real independent-process saves, source

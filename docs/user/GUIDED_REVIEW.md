@@ -36,6 +36,11 @@ page and will require a new session to enter a frozen snapshot.
 Choose **Include**, **Exclude** or **Insufficient evidence**, the evidence actually
 reviewed, and a brief rationale. The existing scientific model requires a rationale.
 Metadata-only review is permitted. Missing evidence is never automatic exclusion.
+**Choose review extent** is a disabled placeholder, not an assessment or default.
+**Verified structured text — selected sections** and **Verified structured text —
+full document** are offered only when trusted body text was frozen into this
+session. Open that text before explicitly choosing the extent you actually read.
+Availability and display never attest that reading occurred.
 
 Edits autosave as drafts in the local project, not as scientific observations.
 **Save & Next** records a non-authoritative human observation and advances only
@@ -53,15 +58,28 @@ to that different paper.
 ## Finish, then optionally publish
 
 The summary separates saved judgments, incomplete/changed drafts and undecided
-papers. **Finish Review — preserve undecided papers** completes the session and
+papers. **View Review Summary** inspects these counts without finishing.
+**Finish Review** completes the session and
 freezes its selected saved observations. Skipped, unassessed and changed-unsaved
 drafts remain undecided; they are not converted to insufficient-evidence judgments.
 Completion does not publish corpus membership. Completed sessions are read-only;
-start a new session for corrections.
+start a new session for corrections. Only after completion is acknowledged does
+the application return to the project dashboard, with a completion message and
+**View Review Summary** link. Failed completion leaves the session and input in
+place. Completed sessions open directly as **Review completed — read only**, with
+saved rationale, reviewed extent and expandable observation provenance, not
+disabled editable forms. Use **Back to Review Overview** or **Back to Project
+Dashboard** to leave the summary. There is no repeated Finish action.
 
 Only an identity already authorized by the project's review policy can choose
 **Preview corpus updates**. Inspect the decisions, acting reviewer, policy and
-definition. **Confirm corpus updates** separately publishes the selected saved
+definition. The preview replaces its own button with **Confirm corpus updates**
+and **Back to Review Summary**. Returning or refreshing does not confirm anything;
+an explicitly opened preview is needed before the confirmation is displayed.
+The preview identifies included/excluded/insufficient-evidence judgments and
+undecided papers that will not be published. Confirmation covers all selected
+saved judgments across the paginated summary, not just the visible page.
+**Confirm corpus updates** separately publishes the selected saved
 judgments, including insufficient evidence, in one atomic operation. Its provenance
 links every authoritative decision to its source observation. No partial batch is
 published if validation fails. Other historical decisions are preserved.

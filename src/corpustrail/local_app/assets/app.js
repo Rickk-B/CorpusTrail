@@ -105,6 +105,15 @@ async function dashboard() {
   text('providers', 'Discovery providers: ' + (data.providers.map(serviceName).join(', ') || 'None configured'));
   text('resolvers', 'Evidence resolvers: ' + (data.resolvers.map(serviceName).join(', ') || 'None configured'));
   if (location.hash === '#created') text('message', 'Project created successfully. No searches, evidence acquisition or paper reviews have been performed.');
+  const completed=location.hash?.match(/^#review-completed-([0-9a-f]{64})$/);
+  if (completed) {
+    const review=await api('review/sessions/'+completed[1]);
+    if (!review.legacy&&review.lifecycle==='completed') {
+      byId('dashboard-review-completion').hidden=false;
+      text('dashboard-review-result','Saved observations are preserved. Unassessed papers remain undecided. Finishing did not change corpus membership.'+(review.published?' Corpus updates were subsequently published through a separate confirmation.':''));
+      byId('dashboard-review-summary').href='/review#'+completed[1];
+    }
+  }
 }
 let pageState;
 let listGeneration = 0;

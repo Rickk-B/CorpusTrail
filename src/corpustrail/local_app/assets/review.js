@@ -5,8 +5,8 @@ const token = document.querySelector('meta[name="corpustrail-session"]').content
 const schema = 'corpustrail-guided-review/v1';
 const names = {included:'Include', excluded:'Exclude', insufficient_evidence:'Insufficient evidence', undecided:'Undecided',
   not_reviewed:'Awaiting a corpus decision', unresolved:'Unresolved',
-  metadata:'Bibliographic metadata', abstract:'Abstract', sections:'Selected document sections', full_document:'Full document', none:'No evidence reviewed'};
-let setup, state, dirty = false, busy = false, timer, queue = Promise.resolve(), uncertain = null, pendingCreate = null, summaryOffset = null;
+  metadata:'Bibliographic metadata', abstract:'Abstract', sections:'Verified structured text — selected sections', full_document:'Verified structured text — full document', none:'No evidence reviewed'};
+let setup, state, dirty = false, busy = false, timer, queue = Promise.resolve(), uncertain = null, pendingCreate = null, summaryOffset = null, previewVisible = false;
 const say = value => { el('review-message').textContent = value; };
 const node = (tag, text) => { const n = document.createElement(tag); n.textContent = text; return n; };
 function enqueue(work) { const next = queue.catch(() => {}).then(work); queue = next.catch(() => {}); return next; }
@@ -70,13 +70,16 @@ async function perform(action,value=null) {
   busy=true;controls();
   try {
     await flush();
-    await enqueue(() => command(action, action==='save_next'?draft():value));
-    await load(state.handle);
+    const result=await enqueue(() => command(action, action==='save_next'?draft():value));
+    if (action==='finish') {
+      if (result.result.status!=='completed') throw new Error('Completion was not confirmed. Reload the saved session.');
+      // Completion is acknowledged before navigation; no automatic publication.
+      busy=false;dirty=false;location.assign('/dashboard#review-completed-'+state.handle);return;
+    }
+    await load(state.handle,{preview:action==='prepare_publication'});
     if (action==='save_next') say('Human observation saved. Corpus membership has not changed.');
     if (action==='skip') say('Skipped for now. No scientific judgment or corpus decision was created.');
-    if (action==='finish') { say('Your review has been saved. Corpus membership has not changed.'); await summary(); }
-    if (action==='prepare_publication') await summary();
-    if (action==='publish') { say('These confirmed decisions updated broad-corpus membership.'); await summary(); }
+    if (action==='publish') say('These confirmed decisions updated broad-corpus membership.');
   } catch(error) { failure(error); } finally { busy=false;controls(); }
 }
 async function overview() {
@@ -98,12 +101,13 @@ async function sessions(data) {
   for (const session of data.sessions) {
     const card=node('article','');card.append(node('h3',session.reviewer+' · '+(session.published?'Published':session.status)),
       node('p',session.saved+' saved observations · '+session.total+' frozen publications'),node('p',session.created_at));
-    const button=node('button',session.legacy?'Inspect legacy session':'Open review session');
+    const button=node('button',session.legacy?'Inspect legacy session':session.status==='completed'?'View Review Summary':'Open review session');
     button.onclick=()=>load(session.handle).catch(failure);card.append(button);el('review-sessions').append(card);
   }
 }
-async function load(handle) {
+async function load(handle,{preview=false}={}) {
   const data=await api('sessions/'+handle); state=data;dirty=false;clearTimeout(timer);
+  previewVisible=preview;
   el('review-recover').hidden=true;el('review-recovery').hidden=true;
   el('review-overview').hidden=true;el('review-workspace').hidden=false;el('review-summary').hidden=true;
   el('review-paper').hidden=false;
@@ -121,30 +125,47 @@ async function load(handle) {
   el('review-document').hidden=true;el('review-document-next').hidden=true;el('review-document-position').textContent='';
   el('review-open-document').hidden=!data.document_available||data.lifecycle==='completed'&&!data.document_opened;
   el('review-source-details').hidden=data.mode!=='operational';el('review-sources').textContent=data.source_provenance?JSON.stringify(data.source_provenance,null,2):'';
-  const extent=el('review-extent');extent.replaceChildren(new Option('Choose review extent',''));
+  const extent=el('review-extent'),placeholder=new Option('Choose review extent','');placeholder.disabled=true;
+  extent.replaceChildren(placeholder);
   for (const option of ['none',...data.review_options]) extent.add(new Option(names[option],option));
   setDraft(data.review);el('review-save-state').textContent=data.recorded?'Previously saved observation; changes require an explicit save.':'Drafts are not recorded observations.';
   el('review-save-next').textContent=data.number===data.total?'Save assessment':'Save & Next';
-  el('legacy-review-notice').hidden=!data.legacy;el('assessment-form').hidden=data.legacy;
-  el('review-show-summary').hidden=data.legacy;
-  el('review-completion-status').textContent=data.published?'Membership publication recorded.':data.lifecycle==='completed'?'Review completed; observations preserved separately from membership.':'Finishing preserves skipped and incomplete drafts as undecided. Membership requires a separate authorized confirmation.';
+  const completed=data.lifecycle==='completed';
+  el('legacy-review-notice').hidden=!data.legacy;el('assessment-form').hidden=data.legacy||completed;
+  el('review-completion').hidden=data.legacy;
+  el('review-show-summary').hidden=data.legacy||completed;el('review-finish').hidden=data.legacy||completed;
+  el('review-completion-heading').textContent=completed?'Review completed — read only':'Review completion';
+  el('review-readonly-help').hidden=!completed;
+  el('review-completion-status').textContent=data.published?'Saved observations are preserved. Authoritative corpus updates have been published separately.':completed?'Saved observations are preserved. Unassessed papers remain undecided. Completing this session did not change corpus membership.':'Finish Review completes this session and preserves saved observations. Unassessed papers and incomplete or changed-unsaved drafts remain undecided. Corpus membership will not change.';
   el('review-technical').textContent=JSON.stringify({session:handle,revision:data.revision,population_sha256:data.population_sha256,evidence_snapshot_sha256:data.evidence_snapshot_sha256},null,2);
   history.replaceState(null,'','/review#'+handle);controls();
+  if (completed&&!data.legacy) await summary();
 }
 async function summary(more=false) {
+  const preview=previewVisible&&state.can_publish&&state.lifecycle==='completed'&&!state.published&&Boolean(state.publication_plan_sha256);
   if (!more) {
     el('review-summary-papers').replaceChildren();summaryOffset=0;
     const values=state.summary;const list=el('review-summary-counts');list.replaceChildren();
-    for (const [label,value] of [['Include',values.counts.included],['Exclude',values.counts.excluded],['Insufficient evidence',values.counts.insufficient_evidence],['Undecided in completion',values.undecided],['Changed unsaved drafts',values.changed_drafts],['Incomplete drafts',values.incomplete_drafts]]) list.append(node('dt',label),node('dd',String(value)));
+    for (const [label,value] of [[preview?'Proposed included publications':'Include',values.counts.included],[preview?'Proposed excluded publications':'Exclude',values.counts.excluded],['Insufficient evidence',values.counts.insufficient_evidence],[preview?'Undecided — not published':'Undecided in completion',values.undecided],['Changed unsaved drafts',values.changed_drafts],['Incomplete drafts',values.incomplete_drafts]]) list.append(node('dt',label),node('dd',String(value)));
   }
   const page=await api('sessions/'+state.handle+'/summary?offset='+summaryOffset);
-  for (const paper of page.items) el('review-summary-papers').append(node('li',(paper.title||'Untitled publication')+' — '+(names[paper.state]||paper.state)+(paper.changed_draft?' (changed draft not saved)':'')+(paper.current_membership?' · Corpus state at confirmation preview: '+(names[paper.current_membership]||paper.current_membership):'')));
+  for (const paper of page.items) {
+    const row=node('li','');row.append(node('h3',paper.title||'Untitled publication'),node('p',(names[paper.state]||paper.state)+(paper.changed_draft?' — changed draft not selected':'')+(preview&&paper.current_membership?' · Corpus state at confirmation preview: '+(names[paper.current_membership]||paper.current_membership):'')));
+    if (paper.observation_event_id) {
+      row.append(node('p','Evidence reviewed: '+(names[paper.review_extent]||paper.review_extent)),node('p',paper.rationale));
+      const details=node('details','');details.append(node('summary','Saved observation provenance'),node('p','Observation: '+paper.observation_event_id));
+      if (paper.publication_link) details.append(node('p','Authoritative decision: '+paper.publication_link.authority_event_id));
+      row.append(details);
+    } else row.append(node('p','No saved judgment selected for publication. This paper remains undecided in this completion.'));
+    el('review-summary-papers').append(row);
+  }
   summaryOffset=page.next_offset;el('review-summary-more').hidden=summaryOffset===null;
-  el('review-summary').hidden=false;el('review-finish').hidden=state.lifecycle!=='active';
+  el('review-summary').hidden=false;el('review-return').hidden=state.lifecycle!=='active';
+  el('review-summary-heading').textContent=preview?'Proposed corpus updates':'Review summary';
   el('review-authority-status').textContent=state.published?'Authoritative publication completed.':!state.can_publish?'This reviewer is not authorized to publish corpus membership. Completed observations remain available.':'Publication requires a separate preview and explicit confirmation. No updates have been published by this session.';
-  el('review-prepare-publication').hidden=state.lifecycle!=='completed'||!state.can_publish||state.published||!state.summary.selected_observations;
-  el('review-publication').hidden=!state.publication_plan_sha256||state.published;
-  el('review-publication-notice').textContent='Acting reviewer: '+state.reviewer+'. Policy: '+state.policy_id+'. Definition: '+state.question+' This confirmation is an operational, non-blinded view; only the displayed saved judgments are selected.';
+  el('review-prepare-publication').hidden=state.lifecycle!=='completed'||!state.can_publish||state.published||!state.summary.selected_observations||preview;
+  el('review-publication').hidden=!preview;
+  el('review-publication-notice').textContent='Acting reviewer: '+state.reviewer+'. Policy: '+state.policy_id+'. Definition: '+state.question+' This operational, non-blinded confirmation covers all '+state.summary.selected_observations+' selected saved judgments across the summary pages. '+state.summary.undecided+' undecided publications remain unpublished.';
   el('review-paper').hidden=true;el('assessment-form').hidden=true;
   if (!more) el('review-summary-heading').focus({preventScroll:true});
 }
@@ -167,6 +188,7 @@ el('review-return').onclick=()=>{el('review-summary').hidden=true;el('review-pap
 el('review-finish').onclick=()=>perform('finish',{preserve_undecided:true});
 el('review-prepare-publication').onclick=()=>perform('prepare_publication');
 el('review-publish').onclick=()=>perform('publish',{plan_sha256:state.publication_plan_sha256,confirm_authority:true});
+el('review-back-summary').onclick=()=>{previewVisible=false;summary().catch(failure);};
 async function documentSegment(offset=0) {
   const data=await api('sessions/'+state.handle+'/document?offset='+offset);
   el('review-document').textContent=data.text;el('review-document').hidden=false;

@@ -144,6 +144,45 @@ class GuidedReviewTests(unittest.TestCase):
         self.command('save_next',draft)
         with self.assertRaises(ContractError):self.command('save_next',draft)
 
+    def test_verified_full_document_extent_is_explicit_and_uses_frozen_basis(self):
+        self.fixture.document(self.fixture.ids[0]);self.create()
+        view=self.controller.view(self.project,self.handle)
+        self.assertTrue(view['document_available']);self.assertIn('sections',view['review_options'])
+        self.assertIn('full_document',view['review_options']);self.assertIsNone(view['review']['review_extent'])
+        self.command('open');self.controller.document(self.project,self.handle)
+        self.assertIsNone(self.controller.view(self.project,self.handle)['review']['review_extent'])
+        self.assertFalse(self.project.reviews.history(self.fixture.ids[0]))
+        self.command('save_next',{**self.draft(),'review_extent':'full_document'})
+        event=self.project.reviews.history(self.fixture.ids[0])[-1]
+        self.assertEqual(event['review_extent'],'full_document')
+        self.assertEqual(event['evidence'][0]['representation'],'structured_text')
+        self.assertEqual(event['evidence'][0]['source_sha256'],self.state()[0]['papers'][0]['document']['sha256'])
+        self.assertEqual(event['authority_state'],'non_authoritative')
+
+    def test_later_verified_text_does_not_expand_existing_extent_options(self):
+        self.create();before=self.state()[0]
+        self.fixture.document(self.fixture.ids[0])
+        view=self.controller.view(self.project,self.handle)
+        self.assertFalse(view['document_available'])
+        self.assertNotIn('sections',view['review_options']);self.assertNotIn('full_document',view['review_options'])
+        with self.assertRaises(ContractError):self.command('save_next',{**self.draft(),'review_extent':'full_document'})
+        self.assertEqual(self.state()[0],before)
+        self.assertFalse(self.project.reviews.history(self.fixture.ids[0]))
+
+    def test_completed_summary_is_readonly_and_finish_replay_preserves_history(self):
+        self.create();self.command('save_next',self.draft())
+        request=dict(command_id=uuid.uuid4().hex,expected_revision=self.state()[2],action='finish',value={'preserve_undecided':True})
+        completed=self.service.command(self.session,**request);before=fingerprint(self.project.root)
+        reopened=Project.open(self.project.root)
+        view=self.controller.view(reopened,self.handle)
+        rows=self.controller.summary_page(reopened,self.handle)['items']
+        self.assertEqual(view['lifecycle'],'completed');self.assertFalse(view['published'])
+        saved=next(x for x in rows if x['observation_event_id'])
+        self.assertEqual(saved['rationale'],self.draft()['rationale']);self.assertEqual(saved['review_extent'],'metadata')
+        self.assertEqual(GuidedReviewService(reopened).command(self.session,**request),completed)
+        with self.assertRaises(ContractError):self.command('finish',{'preserve_undecided':True})
+        self.assertEqual(fingerprint(self.project.root),before)
+
     def test_changed_unsaved_draft_is_not_selected_for_completion(self):
         self.create();self.command('save_next',self.draft());self.command('navigate','previous')
         self.command('draft',self.draft('excluded'));self.finish()
