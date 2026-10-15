@@ -65,6 +65,13 @@ fieldset:disabled { opacity: .65; }
 .welcome-intro h1 { margin-top: .4rem; }
 .eyebrow { color: #526570; font-weight: 600; margin-bottom: .4rem; }
 .primary { background: #165b78; color: white; }
+#review-paper h2, #review-identifiers { overflow-wrap: anywhere; }
+#review-create { display: grid; gap: .65rem; }
+#review-create input, #review-create select, #review-extent { width: 100%; box-sizing: border-box; min-width: 0; }
+#review-abstract { max-height: 26rem; overflow: auto; }
+#review-summary-papers { padding-left: 1.3rem; overflow-wrap: anywhere; }
+#review-summary-papers li { margin: .65rem 0; }
+.review-actions { margin: 1rem 0; }
 .danger-secondary { margin-left: .6rem; color: #813c31; background: white; }
 .danger { color: white; background: #813c31; }
 .project-card-heading, .project-actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }

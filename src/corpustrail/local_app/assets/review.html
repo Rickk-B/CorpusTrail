@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="corpustrail-session" content="SESSION_TOKEN">
+<title>CorpusTrail — Guided Review</title><link rel="stylesheet" href="/assets/app.css"><script src="/assets/review.js" defer></script></head>
+<body><header><a href="/home" class="brand">CorpusTrail</a><span class="badge">Local human review</span></header>
+<nav aria-label="Application"><a href="/home">Home</a><a href="/projects">Projects</a><a href="/dashboard">Project dashboard</a><a href="/discovery">Discovery</a><a href="/papers">Corpus</a><a href="/review" aria-current="page">Review</a><a href="/settings">Project Settings</a></nav>
+<main><h1>Guided Review</h1><p id="review-message" role="status" aria-live="polite"></p>
+<section id="review-overview"><p>Assess publications against your broad-topic corpus definition. Saved human observations and published corpus decisions are separate.</p>
+<section class="card"><h2>Start a review</h2><p id="review-empty"></p><form id="review-create">
+<label for="reviewer">Reviewer pseudonym</label><input id="reviewer" list="reviewer-options" maxlength="200" required autocomplete="off" aria-describedby="reviewer-help"><datalist id="reviewer-options"></datalist>
+<p id="reviewer-help" class="muted">Choose your reviewing identity explicitly. A pseudonym is not a login. Configuration authorship does not select a reviewer or grant publication authority.</p>
+<label for="review-population">Publications to review</label><select id="review-population" required><option value="">Choose a population</option></select>
+<label for="review-mode">Review presentation</label><select id="review-mode"><option value="method-blind">Method-blind — hide discovery methods and previous judgments</option><option value="operational">Operational — source attribution visible</option></select>
+<p class="muted">The session freezes these publications, their evidence and the corpus definition. New discoveries or evidence will not be added automatically.</p>
+<button id="start-review" class="primary">Start Guided Review</button></form></section>
+<section class="card"><h2>Existing review sessions</h2><div id="review-sessions"></div><button id="review-more-sessions" hidden>More sessions</button></section></section>
+<section id="review-workspace" hidden>
+<div class="pager"><button id="review-overview-button">Review overview</button><span id="review-progress" class="badge"></span></div>
+<p id="review-identity"></p><p id="review-mode-notice" class="muted"></p><p id="review-stale" class="notice" hidden>Project settings changed. This snapshot remains readable; start a new session before making further changes.</p>
+<details><summary>Frozen broad-corpus definition</summary><p id="review-definition" class="scientific"></p></details>
+<section id="review-paper" class="card"><h2 id="review-paper-title" tabindex="-1"></h2><p id="review-bibliography"></p><p id="review-identifiers" class="identifiers"></p>
+<h3>Frozen evidence</h3><p id="review-evidence-status"></p><p id="review-abstract-source" class="muted"></p><div id="review-abstract" class="scientific"></div>
+<button id="review-open-document" type="button" hidden>Read verified structured text</button><pre id="review-document" class="scientific" hidden></pre><p id="review-document-position" class="muted"></p><button id="review-document-next" type="button" hidden>Read next text segment</button>
+<details id="review-source-details" hidden><summary>Frozen source attribution — operational view</summary><pre id="review-sources"></pre></details></section>
+<form id="assessment-form" class="card"><h2>Your assessment</h2><p class="muted">Missing evidence does not imply exclusion. Opening a text does not attest that you have read it.</p>
+<fieldset id="assessment-fields"><legend>Broad-topic assessment</legend>
+<label class="choice"><input type="radio" name="assessment" value="included">Include</label>
+<label class="choice"><input type="radio" name="assessment" value="excluded">Exclude</label>
+<label class="choice"><input type="radio" name="assessment" value="insufficient_evidence">Insufficient evidence</label>
+<label for="review-extent">Evidence actually reviewed</label><select id="review-extent"><option value="">Choose review extent</option></select>
+<label for="review-rationale">Rationale</label><textarea id="review-rationale" rows="3" maxlength="12000" aria-describedby="rationale-help"></textarea><p id="rationale-help" class="muted">The scientific review contract requires a brief explanation for each saved assessment.</p>
+</fieldset><p id="review-save-state" role="status" aria-live="polite">No unsaved changes</p><button id="review-recover" type="button" hidden>Reload saved state while keeping my edits</button>
+<div id="review-recovery" hidden><label for="review-recovered-note">Retained input from the earlier publication</label><textarea id="review-recovered-note" readonly rows="4"></textarea></div>
+<div class="pager review-actions"><button id="review-previous" type="button">Previous</button><button id="review-skip" type="button">Skip for now</button><button id="review-save-next" class="primary" type="submit">Save &amp; Next</button><button id="review-next" type="button">Next without assessment</button></div>
+<p class="muted">Drafts autosave locally. Only Save &amp; Next records an observation; neither saving nor skipping publishes membership.</p></form>
+<section id="legacy-review-notice" class="notice" hidden>Legacy session: its original per-paper recording contract is unchanged. Inspect it here or resume using the existing review server. Start a new Guided Review for separate final publication.</section>
+<section class="card"><h2>Review completion</h2><p id="review-completion-status"></p><button id="review-show-summary" type="button">Review summary / Finish Review</button></section>
+<section id="review-summary" class="card" hidden><h2 id="review-summary-heading" tabindex="-1">Review summary</h2><dl id="review-summary-counts" class="configuration-summary"></dl>
+<p>Unassessed papers and incomplete or changed unsaved drafts remain undecided in this completion. They are not converted into scientific judgments or selected for publication.</p>
+<ul id="review-summary-papers"></ul><button id="review-summary-more" hidden>More summary publications</button>
+<div class="pager"><button id="review-return" type="button">Return to assessment</button><button id="review-finish" type="button">Finish Review — preserve undecided papers</button></div>
+<p id="review-authority-status"></p><button id="review-prepare-publication" type="button" hidden>Preview corpus updates</button>
+<section id="review-publication" hidden class="notice"><h3>Confirm corpus updates</h3><p id="review-publication-notice"></p><p>This is an authoritative, atomic corpus update using exactly the saved judgments shown above, including insufficient-evidence judgments. Skipped and unsaved drafts are not published.</p><button id="review-publish" class="primary" type="button">Confirm corpus updates</button></section>
+<div class="pager"><a href="/papers">View Corpus</a><a href="/discovery">Continue discovery</a><a href="/dashboard">Return to dashboard</a></div></section>
+<details><summary>Session identifiers and provenance</summary><button id="review-inspect-provenance" type="button">Inspect saved observation and publication provenance</button><pre id="review-technical"></pre><button id="review-provenance-more" type="button" hidden>More provenance publications</button></details>
+</section></main><footer>CorpusTrail · Human observations are not automatically corpus membership</footer></body></html>

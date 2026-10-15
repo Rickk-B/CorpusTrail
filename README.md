@@ -80,10 +80,12 @@ Discovery collects candidates, never membership decisions. Opening pages never
 contacts external services. Publication details now support explicit eligible
 [Europe PMC structured-text retrieval](docs/user/EVIDENCE.md), with verification
 outcomes and evidence provenance. Missing PMCID prevents that retrieval; automatic
-DOI/PMID enrichment is not implemented. Export has command-line tools and the
-separate review UI remains available; their guided graphical workflows, assisted
-assessment and corpus import remain planned. No model/review-write actions are introduced.
-The existing `corpustrail review serve` interface remains separate and unchanged.
+DOI/PMID enrichment is not implemented. [Guided Review](docs/user/GUIDED_REVIEW.md)
+freezes a publication/evidence set, autosaves drafts and records non-authoritative
+human observations through Save & Next. Finish Review preserves undecided papers;
+only a separate authorized confirmation publishes corpus membership atomically.
+The existing `corpustrail review serve` interface retains its legacy per-paper
+contract. Export UI, assisted assessment and corpus import remain planned.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
 Optional [macOS project removal](docs/user/PROJECT_REMOVAL.md) moves a confirmed,
 inactive project to native Trash; it never falls back to permanent deletion.

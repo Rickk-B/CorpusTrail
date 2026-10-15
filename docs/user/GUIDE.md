@@ -100,6 +100,10 @@ identity, not scientific validity. Missing evidence never implies exclusion.
 
 ## Broad-corpus human review
 
+For the browser workflow, follow [Guided Review](GUIDED_REVIEW.md). Drafts,
+saved human observations, completion and authorized corpus publication are
+separate actions. The legacy commands below retain their original contracts.
+
 ```bash
 corpustrail review prepare /tmp/my-materials --session-id curation-01 --reviewer project_reviewer_01 --authoritative --mode operational
 corpustrail review serve /tmp/my-materials --session-id curation-01 --port 8765

@@ -208,6 +208,9 @@ Awaiting corpus decision remain separate; likely or unreviewed records are not h
 Home describes which workflow steps are available here, through existing commands
 or the separate review UI, and which guided interfaces are planned. Its diagram
 is explanatory, not an action that runs a search or retrieves evidence.
+The **Review** navigation and dashboard action open [Guided Review](GUIDED_REVIEW.md):
+explicit frozen sessions, draft autosave, non-authoritative Save & Next, Finish
+Review and separate authorized corpus publication. Merely opening it is read-only.
 
 The dashboard shows project description/scope, canonical count, authoritative
 membership states, human-review/draft-history summaries, evidence availability,

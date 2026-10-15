@@ -22,7 +22,7 @@ from corpustrail.application.project_use import leased_server_factory
 
 ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; charset=utf-8',
           'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8',
-          'evidence.js': 'text/javascript; charset=utf-8'}
+          'evidence.js': 'text/javascript; charset=utf-8', 'review.js':'text/javascript; charset=utf-8'}
 
 
 def _query(value, allowed):
@@ -54,6 +54,8 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
     if controller is not None and evidence is None:
         from corpustrail.application.evidence import EvidenceController
         evidence = EvidenceController(controller)
+    from corpustrail.application.review import ReviewController
+    review = ReviewController() if controller is not None else None
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
@@ -96,7 +98,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/review'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
                     active = controller.active_handle is not None if controller is not None else project is not None
@@ -104,10 +106,13 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     setup = controller is not None and path in {'/projects', '/projects/new', '/settings'}
                     if path == '/discovery' and (not active or discovery is None):
                         return self.error(409, 'project_required', 'Open a project before using Discovery.')
-                    page = 'home.html' if home else 'projects.html' if setup else 'discovery.html' if path == '/discovery' else 'index.html'
+                    if path == '/review' and (not active or review is None):
+                        return self.error(409,'project_required','Open a project before using Guided Review.')
+                    page = 'home.html' if home else 'projects.html' if setup else 'review.html' if path=='/review' else 'discovery.html' if path == '/discovery' else 'index.html'
                     html = assets.joinpath(page).read_text(encoding='utf-8')
                     html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active else 'hidden')
                     html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
+                    html = html.replace('REVIEW_NAV_HIDDEN', '' if active and review is not None else 'hidden')
                     html = html.replace('EVIDENCE_WORKFLOW_HIDDEN', '' if active and evidence is not None else 'hidden')
                     html = html.replace('PROJECT_BROWSER_STATUS', 'Local project workspace' if evidence is not None else 'Read-only project browser')
                     return self.send(200, html, 'text/html; charset=utf-8')
@@ -130,6 +135,21 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     query = _query(route.query, {'handle'})
                     result = controller.settings(query.get('handle'))
                     return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
+                if review is not None and path.startswith('/api/v1/review/'):
+                    with controller.use() as current:
+                        query=_query(route.query,{'offset','limit'})
+                        page={k:_number(v) for k,v in query.items()}
+                        if path=='/api/v1/review/configuration': result=review.configuration(current,**page)
+                        else:
+                            match=re.fullmatch(r'/api/v1/review/sessions/([0-9a-f]{64})(?:/(summary|document))?',path)
+                            if not match: return self.error(404,'not_found','Review session not found.')
+                            handle,section=match.groups()
+                            if section=='summary': result=review.summary_page(current,handle,**page)
+                            elif section=='document': result=review.document(current,handle,**page)
+                            else:
+                                if page: raise ContractError('session view does not accept paging parameters')
+                                result=review.view(current,handle)
+                        return self.send(200,json.dumps(result,ensure_ascii=False,allow_nan=False))
                 if evidence is not None and path.startswith('/api/v1/evidence/'):
                     with controller.use() as current:
                         match = re.fullmatch(r'/api/v1/evidence/(papers|operations)/([0-9a-f]{64})(?:/(history|provenance))?',path)
@@ -223,6 +243,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                       '/api/v1/projects/trash/cancel', '/api/v1/projects/trash/execute'}
             routes.update('/api/v1/discovery/'+name for name in ('prepare', 'approve', 'start', 'invalidate', 'cancel'))
             routes.add('/api/v1/evidence/start')
+            routes.update('/api/v1/review/'+name for name in ('create','command'))
             if controller is None or self.path not in routes:
                 return self.readonly()
             self.close_connection = True
@@ -234,6 +255,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             from corpustrail.application.projects import ProjectCommandError, SCHEMA
             is_discovery = self.path.startswith('/api/v1/discovery/')
             is_evidence = self.path=='/api/v1/evidence/start'
+            is_review = self.path.startswith('/api/v1/review/')
             try:
                 lengths = self.headers.get_all('Content-Length')
                 if (self.headers.get_all('Content-Type') != ['application/json']
@@ -255,10 +277,13 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 from corpustrail.application.trash import SCHEMA as TRASH_SCHEMA
                 from corpustrail.application.discovery import SCHEMA as DISCOVERY_SCHEMA
                 from corpustrail.application.evidence import SCHEMA as EVIDENCE_SCHEMA
-                expected_schema = EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                from corpustrail.curation.guided import SCHEMA as REVIEW_SCHEMA
+                expected_schema = REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
                 if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if is_evidence:
+                if is_review:
+                    with controller.use() as current: result=review.command(current,self.path.rsplit('/',1)[1],body)
+                elif is_evidence:
                     if set(body)!={'paper','request_id','eligibility_hash','confirm_external'}: raise ValueError('unsupported evidence fields')
                     with controller.use() as current: result = evidence.start(current,**body)
                 elif is_discovery:

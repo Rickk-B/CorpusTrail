@@ -14,9 +14,11 @@
   prevent metadata-based human decisions. Pending documents are not trusted.
 - Interrupted discovery/acquisition/export may leave a partial reserved directory.
   Preserve/inspect it and use a new ID; no automatic repair/deletion. Multi-file
-  publication is not a single crash-atomic transaction.
-- Native XML accepts valid UTF-8/UTF-16/ASCII/Latin-1, refuses DTD/entities and
-  bounds bytes/nodes/depth/text. Compressed XML and UTF-32 are unsupported.
+  artifact/export publication is not a single crash-atomic transaction. Guided
+  corpus-membership confirmation, by contrast, uses one scientific DB transaction.
+- Native XML follows [bounded-inert-jats/v2](../developer/XML_POLICY.md): a narrowly
+  recognized inert JATS DOCTYPE is supported; DTD/entity loading remains prohibited.
+  Bytes/nodes/depth/text are bounded. Compressed XML and UTF-32 are unsupported.
   Large local JSON/CSV imports are trusted-local operations and not uniformly
   bounded; do not expose them as an untrusted remote endpoint.
 - Optional ML needs both human binary classes and compatible recorded libraries.
@@ -25,6 +27,11 @@
   browser testing or 3.x certification. Preserve original custom IDs/full population.
 - Linux is the alpha target. Other OS behavior/hard links and later Python versions
   need verification before a support claim. No public service/index is provided.
+- Guided sessions freeze configuration and evidence. Configuration changes make
+  them read-only; corrections after completion need a new session. Legacy sessions
+  keep their original review-server contract. Pseudonyms are attribution/policy
+  controls, not a new authentication system. Hosted browser checks are not native
+  researcher acceptance, and no general JATS/PDF coverage is claimed.
 - Experimental model adapters are offline/mock-tested, not yet tested against a
   real OpenAI-compatible server, OpenAI hosted API, Ollama, LM Studio, vLLM or
   another real provider/runtime. Connection tests and structured-task checks are

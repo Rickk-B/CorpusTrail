@@ -62,6 +62,11 @@ class IsolationTests(unittest.TestCase):
                      r"scripts/", r"pipeline_data/", r"(?<![\w-])review/", r"PYTHONPATH", r"search_terms\.yaml")
         for path in root.rglob("*.py"):
             body = path.read_text(encoding="utf-8")
+            # The versioned localhost route is not the historical research
+            # folder "review/". Keep the folder prohibition everywhere else,
+            # including other literals in this same server module.
+            if path.relative_to(root).as_posix() == 'local_app/server.py':
+                body = body.replace('/api/v1/review/', '/api/v1/curation/')
             for pattern in forbidden:
                 self.assertIsNone(re.search(pattern, body, re.I), (path, pattern))
         # Historical SQL resources are the one frozen, documented compatibility exception.
@@ -70,6 +75,10 @@ class IsolationTests(unittest.TestCase):
         pattern = r"(?<![\w-])review/"
         self.assertIsNotNone(re.search(pattern, 'Path("review/research_packet.json")'))
         self.assertIsNone(re.search(pattern, '"corpustrail-broad-corpus-review/v1"'))
+        body='"/api/v1/review/sessions"; Path("review/research_packet.json")'
+        sanitized=body.replace('/api/v1/review/', '/api/v1/curation/')
+        self.assertIsNotNone(re.search(pattern,sanitized))
+        self.assertIsNone(re.search(pattern,'"/api/v1/review/sessions"'.replace('/api/v1/review/','/api/v1/curation/')))
 
     def test_schema_resource_allowlist_and_hashes(self):
         root = resources.files("corpustrail.operational")
