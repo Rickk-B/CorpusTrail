@@ -10,7 +10,8 @@ particular systematic-review question.
 Enter your reviewer pseudonym explicitly. It is an attribution, not a login.
 Configuration authorship does not select a reviewer or grant corpus-publication
 authority. Choose either all currently collected canonical publications or those
-awaiting a corpus decision. No selection is made silently. An explicit broad-corpus
+awaiting a corpus decision, or a saved [population version](POPULATIONS.md).
+No selection is made silently. An explicit broad-corpus
 definition must already exist in Project Settings.
 
 **Start Guided Review** freezes that publication set, corpus definition,

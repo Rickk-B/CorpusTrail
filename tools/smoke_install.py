@@ -53,6 +53,12 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
                      'src/corpustrail/local_app/assets/evidence.js',
                      'src/corpustrail/local_app/assets/review.html', 'src/corpustrail/local_app/assets/review.js',
                      'src/corpustrail/curation/guided.py', 'src/corpustrail/application/review.py',
+                     'src/corpustrail/populations/service.py', 'src/corpustrail/populations/contracts.py',
+                     'src/corpustrail/application/populations.py',
+                     'src/corpustrail/operational/schema/038_candidate_populations.sql',
+                     'src/corpustrail/local_app/assets/populations.html',
+                     'src/corpustrail/local_app/assets/populations.js',
+                     'docs/user/POPULATIONS.md', 'docs/developer/POPULATIONS.md',
                      'src/corpustrail/resources/origins.json'):
         if not (source / required).is_file():
             raise RuntimeError('sdist omitted required provenance/tutorial: ' + required)
@@ -111,6 +117,7 @@ def run(*, dependency_wheels=None) -> dict:
                          'corpustrail/local_app/assets/projects.html', 'corpustrail/local_app/assets/projects.js',
                          'corpustrail/local_app/assets/discovery.html', 'corpustrail/local_app/assets/discovery.js',
                          'corpustrail/local_app/assets/evidence.js',
+                         'corpustrail/local_app/assets/populations.html', 'corpustrail/local_app/assets/populations.js',
                          'corpustrail/local_app/assets/review.html', 'corpustrail/local_app/assets/review.js'):
             if required not in wheel_entries:
                 raise RuntimeError('wheel omitted local frontend asset: ' + required)

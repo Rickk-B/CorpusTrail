@@ -17,7 +17,8 @@ class BrowserAcceptance(unittest.TestCase):
     def setUp(self):
         # Review order uses canonical IDs. Stabilize only synthetic visual IDs;
         # every run still has a private root, lock directory and browser context.
-        self.fixture = ApplicationFixture(project_id='browser-guided-fixture' if 'review' in self._testMethodName else None)
+        self.fixture = ApplicationFixture(project_id='browser-guided-fixture' if 'review' in self._testMethodName else
+            'browser-population-fixture' if 'population' in self._testMethodName else None)
         self.addCleanup(self.fixture.close)
         self.context = self.runtime.browser.new_context(viewport=self.runtime.viewport,
             device_scale_factor=1, locale='en-US', timezone_id='UTC', color_scheme='light',
@@ -29,6 +30,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.diagnostics = []
         self.tokens = set()
         self.expected_http_errors = set()
+        self.expected_console_errors = []
         self.expected_transport_failure = False
         self.local_requests=0
         self.external_requests=0
@@ -43,8 +45,13 @@ class BrowserAcceptance(unittest.TestCase):
                 request_route.continue_()
         self.context.route('**/*', route)
         self.page.on('pageerror', lambda error: self.diagnostics.append('JavaScript: '+str(error)))
-        self.page.on('console', lambda msg: self.diagnostics.append('Console: '+msg.text)
-            if msg.type=='error' and not (self.expected_transport_failure and 'net::ERR_FAILED' in msg.text) else None)
+        def console(msg):
+            if msg.type!='error':return
+            if msg.text in self.expected_console_errors:
+                self.expected_console_errors.remove(msg.text);return
+            if not (self.expected_transport_failure and 'net::ERR_FAILED' in msg.text):
+                self.diagnostics.append('Console: '+msg.text)
+        self.page.on('console',console)
         self.page.on('requestfailed', lambda req: self.diagnostics.append('Failed local request: '+req.method+' '+req.url.split('?')[0])
             if not (self.expected_transport_failure and req.url.endswith('/api/v1/review/command')) else None)
         self.page.on('response', lambda response: self.diagnostics.append('HTTP '+str(response.status)+' '+response.url.split('?')[0])
@@ -404,6 +411,155 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Start Guided Review',exact=True).click()
         expect(self.page.locator('#review-workspace')).to_be_visible()
         expect(self.page.locator('#review-definition')).to_have_text(SCOPE)
+
+    def test_population_freeze_combine_review_and_restart(self):
+        import hashlib
+        import uuid
+        from corpustrail._internal.pipeline import preserve
+        from corpustrail.identity import BibliographicRecord,Identifier,SourceReference
+        from corpustrail.populations import ImportedSource
+        from corpustrail.providers import metadata_provider
+        project=self.fixture.project
+        initial_reviews={p:project.reviews.history(p) for p in self.fixture.papers}
+        self.open_project()
+        before=fingerprint(self.fixture.root)
+        self.page.get_by_role('link',name='Candidate Populations',exact=True).click()
+        expect(self.page.locator('#population-list-status')).to_contain_text('No saved population versions')
+        self.assertEqual(before,fingerprint(self.fixture.root));self.assertEqual(self.fixture.transport.calls,[])
+        self.assertEqual(self.page.locator('input[type=file]').count(),0)
+        self.layout();self.snapshot('population-empty')
+        self.page.get_by_label('Population name',exact=True).fill('Initial collected candidates')
+        self.page.get_by_label('Created by',exact=True).fill('fixture_reviewer')
+        self.page.locator('#population-all').check()
+        before=fingerprint(self.fixture.root)
+        self.page.get_by_role('button',name='Preview Candidate Population',exact=True).click()
+        expect(self.page.locator('#population-preview-counts')).to_contain_text('5')
+        self.assertEqual(before,fingerprint(self.fixture.root))
+        self.layout();self.snapshot('population-preview')
+        self.page.get_by_role('button',name='Freeze Population',exact=True).evaluate('b=>{b.click();b.click();}')
+        expect(self.page.locator('#population-message')).to_contain_text('Candidate population frozen')
+        expect(self.page.locator('#population-detail-counts')).to_contain_text('5')
+        self.assertEqual(project.populations.versions()['total'],1)
+        first=project.populations.versions()['items'][0]
+        self.layout();self.snapshot('population-frozen')
+        # Controlled future-adapter contract: real enrollment + preserved source,
+        # no production format parser or HTTP import endpoint.
+        body=b'{"synthetic_export":["known publication","new publication"]}'
+        sha=preserve(project,body,'application/json','2026-01-01T00:00:00+00:00')
+        observations=[]
+        for i,doi in enumerate(('10.1234/evidence.1','10.1234/population-import.6')):
+            record=BibliographicRecord('Synthetic adapter candidate '+str(i),identifiers=(Identifier('doi',doi),))
+            source=SourceReference('fixture://population-adapter',str(i),sha,len(body),'synthetic-adapter',
+                '2026-01-01T00:00:00+00:00',identity_status='verified')
+            plan=project.identities.plan(record,source)
+            pid=project.identities.apply(plan,approve_new_identity=True,approve_aliases=True)
+            observations.extend(x['observation_id'] for x in project.identities.observations(pid) if x['source']['source_uri']=='fixture://population-adapter')
+        imported=project.populations.freeze_import_source(ImportedSource('synthetic-source-v1','synthetic-adapter','v1',sha,tuple(observations)),
+            request_id=uuid.uuid4().hex,name='Synthetic source interface',actor='fixture')
+        provider=metadata_provider('openalex')
+        plan=project.discovery.plan(provider,run_id='population-discovery',query='synthetic porous materials',max_pages=1,max_attempts=1)
+        project.discovery.execute(plan,provider,transport=self.fixture.transport,confirm_external=True)
+        project.discovery.canonicalize(plan.run_id,approve_new_identities=True,approve_aliases=True)
+        calls=len(self.fixture.transport.calls)
+        self.assertEqual(len(project.identities.papers()),7)
+        self.page.reload(wait_until='networkidle')
+        self.page.get_by_label('Population name',exact=True).fill('Combined origin candidates')
+        self.page.get_by_label('Created by',exact=True).fill('fixture_reviewer')
+        for name in ('Initial collected candidates','Synthetic source interface'):
+            self.page.get_by_role('checkbox',name='Use '+name+' · Version 1 in a combination',exact=True).check()
+        self.page.locator('#population-form details').filter(has=self.page.get_by_text('Completed discovery sources',exact=True)).locator('summary').click()
+        self.page.get_by_role('checkbox',name=re.compile('openalex · synthetic porous materials')).check()
+        self.page.get_by_role('button',name='Preview Candidate Population',exact=True).click()
+        expect(self.page.locator('#population-preview')).to_be_visible()
+        self.page.get_by_role('button',name='Freeze Population',exact=True).click()
+        expect(self.page.locator('#population-detail-heading')).to_have_text('Combined origin candidates · Version 1')
+        combined=project.populations.versions()['items'][0]
+        self.assertEqual(combined['member_count'],7);self.assertEqual(combined['unresolved_count'],0)
+        expect(self.page.locator('#population-detail-sources')).to_contain_text('Initial collected candidates')
+        expect(self.page.locator('#population-detail-sources')).to_contain_text('Synthetic source interface')
+        expect(self.page.locator('#population-detail-sources')).to_contain_text('openalex')
+        self.page.get_by_role('button',name='Verify Stored Integrity',exact=True).click()
+        expect(self.page.locator('#population-verify-result')).to_contain_text('integrity verified')
+        self.layout();self.snapshot('population-combined')
+        self.assertEqual({p:project.reviews.history(p) for p in self.fixture.papers},initial_reviews)
+        self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in project.identities.papers()))
+        self.page.get_by_role('link',name='Review This Frozen Version',exact=True).click()
+        expect(self.page.locator('#review-population')).to_have_value(combined['version_id'])
+        expect(self.page.locator('#reviewer')).to_have_value('')
+        self.page.locator('#reviewer').fill('fixture_reviewer')
+        self.page.get_by_role('button',name='Start Guided Review',exact=True).click()
+        expect(self.page.locator('#review-progress')).to_contain_text('of 7')
+        expect(self.page.locator('#review-population-version')).to_contain_text('Version 1')
+        self.snapshot('population-review');self.layout()
+        review_handle=self.page.url.split('#')[1]
+        # An addition and explicit successor cannot expand the earlier session.
+        raw=b'new candidate after the frozen review'
+        record=BibliographicRecord('Later candidate outside frozen population',identifiers=(Identifier('doi','10.1234/population-later.8'),))
+        source=SourceReference('fixture://later-population','later','sha256:'+hashlib.sha256(raw).hexdigest(),len(raw),'fixture',
+            '2026-01-01T00:00:00+00:00',identity_status='verified')
+        project.identities.apply(project.identities.plan(record,source),approve_new_identity=True,approve_aliases=True)
+        self.visit('/populations')
+        card=self.page.locator('#population-versions article').filter(has=self.page.get_by_role('heading',name='Combined origin candidates · Version 1 · Frozen',exact=True))
+        card.get_by_role('button',name='Create Successor Version',exact=True).click()
+        self.page.get_by_label('Created by',exact=True).fill('fixture_reviewer');self.page.locator('#population-all').check()
+        self.page.get_by_role('button',name='Preview Candidate Population',exact=True).click()
+        self.page.get_by_role('button',name='Freeze Population',exact=True).click()
+        expect(self.page.locator('#population-detail-heading')).to_have_text('Combined origin candidates · Version 2')
+        self.assertEqual(project.populations.versions()['items'][0]['member_count'],8)
+        self.assertEqual(project.populations.inspect(first['version_id'])['member_count'],5)
+        self.assertEqual(project.populations.inspect(combined['version_id'])['member_count'],7)
+        self.snapshot('population-history');self.layout()
+        before=fingerprint(self.fixture.root);self.fixture.restart();self.open_project()
+        self.visit('/review#'+review_handle)
+        expect(self.page.locator('#review-progress')).to_contain_text('of 7')
+        expect(self.page.locator('#review-population-version')).to_contain_text('Version 1')
+        self.visit('/populations#'+combined['version_id'].split(':')[1])
+        expect(self.page.locator('#population-detail-heading')).to_have_text('Combined origin candidates · Version 1')
+        self.assertEqual(before,fingerprint(self.fixture.root))
+        self.assertEqual(calls,len(self.fixture.transport.calls))
+        self.assertTrue(project.populations.verify(combined['version_id'])['verified'])
+        self.assertEqual(imported['member_count'],2)
+
+    def test_population_selection_stale_preview_and_legacy_upgrade(self):
+        from unittest.mock import patch
+        from corpustrail._internal.database import migrations
+        from corpustrail.project import Project,ProjectConfig,ReviewPolicy
+        self.open_project();self.visit('/populations')
+        self.page.locator('#population-name').fill('Explicit selected candidate')
+        self.page.locator('#population-actor').fill('fixture')
+        self.page.get_by_text('Select individual publications',exact=True).click()
+        self.page.locator('#population-search').fill('without a PMCID')
+        self.page.get_by_role('button',name='Find Publications',exact=True).click()
+        self.page.get_by_role('checkbox',name='Publication without a PMCID',exact=True).check()
+        self.page.get_by_role('button',name='Preview Candidate Population',exact=True).click()
+        self.page.locator('#population-name').fill('Edited selection invalidates preview')
+        expect(self.page.locator('#population-preview')).to_be_hidden()
+        self.page.get_by_role('button',name='Preview Candidate Population',exact=True).click()
+        expect(self.page.locator('#population-preview')).to_be_visible()
+        expect(self.page.get_by_role('button',name='Freeze Population',exact=True)).to_be_enabled()
+        # Real configuration revision invalidates a stale prepared population.
+        from dataclasses import replace
+        project=self.fixture.project
+        project.configure(replace(project.config,config_version=2,name='Renamed fixture'),
+            expected_event_id=project.configuration_history()[-1]['event_id'],created_by='fixture')
+        self.expected_http_errors.add(409)
+        self.expected_console_errors.append('Failed to load resource: the server responded with a status of 409 (Conflict)')
+        self.page.get_by_role('button',name='Freeze Population',exact=True).click()
+        expect(self.page.locator('#population-message')).to_contain_text('preview again')
+        self.assertEqual(project.populations.versions()['total'],0)
+        self.snapshot('population-conflict');self.layout()
+        with patch('corpustrail._internal.database.migrations',return_value=migrations()[:37]):
+            legacy=Project.create(self.fixture.root/'legacy-population',ProjectConfig('legacy-population','Legacy population fixture',
+                'Synthetic older project',review=ReviewPolicy(scope=SCOPE)),created_by='fixture')
+        self.visit('/projects')
+        self.page.locator('#project-list article').filter(has=self.page.get_by_role('heading',name='Legacy population fixture',exact=True)).get_by_role('button',name='Open Project').click()
+        expect(self.page.locator('#project-name')).to_have_text('Legacy population fixture')
+        self.visit('/populations');expect(self.page.locator('#population-upgrade')).to_be_visible()
+        self.assertFalse(legacy.populations.ready());self.snapshot('population-upgrade');self.layout()
+        self.page.get_by_role('button',name='Back Up and Enable Populations',exact=True).click()
+        expect(self.page.locator('#population-message')).to_contain_text('Population storage enabled')
+        self.assertTrue(legacy.populations.ready());self.assertEqual(len(list((legacy.root/legacy.config.data_directory/'population-upgrades').glob('*.sqlite3'))),1)
+        self.assertEqual(self.fixture.transport.calls,[])
 
     def test_review_guided_save_finish_publish_and_resume(self):
         from dataclasses import replace

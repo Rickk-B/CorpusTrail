@@ -30,6 +30,7 @@ python tools/browser_acceptance.py --suite smoke --viewports laptop --output /tm
 python tools/browser_acceptance.py --suite evidence --viewports desktop --output /tmp/ct-browser-evidence
 python tools/browser_acceptance.py --suite discovery --viewports desktop --output /tmp/ct-browser-discovery
 python tools/browser_acceptance.py --suite review --viewports desktop --output /tmp/ct-browser-review
+python tools/browser_acceptance.py --suite population --viewports desktop --output /tmp/ct-browser-population
 python tools/browser_acceptance.py --suite project --viewports desktop --output /tmp/ct-browser-project
 python tools/browser_acceptance.py --output /tmp/ct-browser-full
 python tools/browser_acceptance.py --visual compare --output /tmp/ct-browser-compare
@@ -99,6 +100,15 @@ The evidence scenario also restarts the actual HTTP server/controllers, reopens 
 same disposable project, and verifies persisted history/text without new requests
 or scientific-file changes. This is graceful restart testing, not crash-resume.
 For original-response inspection, see [read-only diagnostics](EVIDENCE_DIAGNOSTICS.md).
+
+Population scenarios exercise actual immutable versions, preview invalidation,
+explicit backed-up schema-37 upgrade, independent synthetic source-adapter enrollment,
+offline discovery, overlapping canonical IDs, deterministic union, frozen Review
+selection and persistence after graceful restart. They create no membership or
+review observations. Source ordering/integrity, process races/crashes and historical
+scientific-table preservation are also covered by the standalone scientific suite.
+Production format importers are absent. Population smoke is included on hosted macOS;
+only controlled Linux rendering is used for pixel comparisons.
 
 ## Visual baselines and review
 

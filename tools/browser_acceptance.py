@@ -26,6 +26,8 @@ for names in LIMITED.values():
         'review-missing-evidence','review-assessment','review-summary','review-completed','review-publication',
         'review-unauthorized','review-empty','review-finished-dashboard','review-confirmed',
         'journal-results','journal-no-results','review-completed-overview'})
+    names.update({'population-empty','population-preview','population-frozen','population-combined',
+        'population-history','population-review','population-conflict','population-upgrade'})
 
 
 class Runtime:
@@ -80,7 +82,7 @@ class Runtime:
                 window.scrollTo(0,element.getBoundingClientRect().top+window.scrollY-padding);
             }''')
             page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
-        masks=page.locator('#root-location,#intended-location,#trash-location,#configuration-location,#configuration-definition,#project-list .project-location,#summary dl dd:last-child,#evidence-raw,#plan-details,#document-position,#technical-identifiers input').filter(visible=True)
+        masks=page.locator('#root-location,#intended-location,#trash-location,#configuration-location,#configuration-definition,#project-list .project-location,#summary dl dd:last-child,#evidence-raw,#plan-details,#document-position,#technical-identifiers input,#population-header,#population-lineage,#population-issues').filter(visible=True)
         try:
             if subject:
                 page.locator(subject).screenshot(path=str(path),animations='disabled',caret='hide')
@@ -154,7 +156,7 @@ class Runtime:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review'),default='all')
+    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population'),default='all')
     parser.add_argument('--viewports',nargs='+',choices=tuple(VIEWPORTS),default=list(VIEWPORTS))
     parser.add_argument('--visual',choices=('capture','compare'),default='capture')
     parser.add_argument('--output',type=Path,help='New output directory; existing reports are never overwritten')
@@ -194,7 +196,7 @@ def execute(args):
             runtime=Runtime(browser,args.output,args.visual,args.suite,args.viewports)
             BrowserAcceptance.runtime=runtime
             methods=unittest.defaultTestLoader.getTestCaseNames(BrowserAcceptance)
-            if args.suite=='smoke':methods=[m for m in methods if 'evidence' in m or 'home' in m or 'review' in m or 'journal' in m]
+            if args.suite=='smoke':methods=[m for m in methods if 'evidence' in m or 'home' in m or 'review' in m or 'journal' in m or 'population' in m]
             elif args.suite!='all':methods=[m for m in methods if args.suite in m]
             for name in args.viewports:
                 runtime.viewport_name=name;runtime.viewport=VIEWPORTS[name]

@@ -204,7 +204,34 @@ class DevelopmentArtifactTests(unittest.TestCase):
 
     def test_guided_review_hashes_match_the_current_scientific_source(self):
         for name,expected in TOOL['GUIDED_REVIEW_HASHES'].items():
+            if name in TOOL['POPULATION_HASHES']:
+                expected=TOOL['POPULATION_HASHES'][name]
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+
+    def test_population_review_hashes_match_current_scientific_source(self):
+        for name,expected in TOOL['POPULATION_HASHES'].items():
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+
+    def test_population_boundary_requires_exact_hashes_and_reviewed_lineage(self):
+        accepted=self.implementation;hashes={}
+        for name in ('src/corpustrail/populations/service.py','src/corpustrail/operational/schema/038_candidate_populations.sql'):
+            path=self.root/name;path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_text('reviewed_population_fixture = True\n',encoding='utf-8')
+            hashes[name]=hashlib.sha256(path.read_bytes()).hexdigest()
+        self.commit();reviewed=TOOL['git'](self.root,'rev-parse','HEAD')
+        globals_=TOOL['check_implementation'].__globals__
+        with patch.dict(globals_,{'POPULATION_COMMIT':reviewed,'POPULATION_HASHES':hashes}):
+            receipt=TOOL['check_implementation'](self.root,accepted,reviewed,distribution=accepted,accepted_checkpoint1=accepted)
+            self.assertEqual(receipt['populations']['migration'],38)
+            self.assertFalse(receipt['populations']['production_importers'])
+            with patch.dict(globals_,{'POPULATION_COMMIT':'0'*40}):
+                with self.assertRaisesRegex(ValueError,'reviewed implementation'):
+                    TOOL['check_implementation'](self.root,accepted,reviewed,distribution=accepted,accepted_checkpoint1=accepted)
+            for name in hashes:
+                path=self.root/name;path.write_text('unreviewed_override = True\n',encoding='utf-8');self.commit()
+                with self.assertRaisesRegex(ValueError,'frozen reviewed'):
+                    TOOL['check_implementation'](self.root,accepted,TOOL['git'](self.root,'rev-parse','HEAD'),distribution=accepted,accepted_checkpoint1=accepted)
+                path.write_text('reviewed_population_fixture = True\n',encoding='utf-8');self.commit()
 
     def test_guided_review_boundary_is_frozen_and_requires_reviewed_lineage(self):
         accepted=self.implementation

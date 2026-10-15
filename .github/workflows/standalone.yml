@@ -58,6 +58,8 @@ jobs:
           python -m pip install --no-deps .
           python -I -m unittest discover -s tests -p test_project_management.py -v
           python -I -m unittest discover -s tests -p test_guided_review.py -v
+          python -I -m unittest discover -s tests -p test_populations.py -v
+          python -I -m unittest discover -s tests -p test_population_app.py -v
           python -I -m unittest discover -s tests -p test_discovery_app.py -v
           python -I -m unittest discover -s tests -p test_evidence_app.py -v
           python -I -m unittest discover -s tests -p test_evidence_diagnostic.py -v

@@ -25,6 +25,7 @@ include tools/evidence_diagnostic.py
 recursive-include .github/workflows *.yml
 global-exclude __pycache__ *.pyc *.sqlite3 *~
 include docs/developer/BROWSER_TESTING.md
+include docs/developer/POPULATIONS.md docs/developer/GUIDED_REVIEW.md
 include docs/developer/BROWSER_ACCEPTANCE_VERIFICATION.md
 include docs/developer/EVIDENCE_DIAGNOSTICS.md
 include docs/developer/JATS_COMPATIBILITY.md

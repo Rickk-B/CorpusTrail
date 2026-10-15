@@ -86,6 +86,9 @@ human observations through Save & Next. Finish Review preserves undecided papers
 only a separate authorized confirmation publishes corpus membership atomically.
 The existing `corpustrail review serve` interface retains its legacy per-paper
 contract. Export UI, assisted assessment and corpus import remain planned.
+The [Populations workspace](docs/user/POPULATIONS.md) freezes origin-independent
+candidate versions, retains lineage, combines exact canonical sets and feeds
+Guided Review. Production format importers remain separately gated and unavailable.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
 Optional [macOS project removal](docs/user/PROJECT_REMOVAL.md) moves a confirmed,
 inactive project to native Trash; it never falls back to permanent deletion.

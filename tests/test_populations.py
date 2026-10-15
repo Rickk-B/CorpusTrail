@@ -369,3 +369,20 @@ with project_use(p.root):
             db.execute('DELETE FROM schema_migrations WHERE version=38')
         with self.assertRaisesRegex(ContractError,'complete registered schema history'):
             Project.open(self.root)
+
+    def test_population_operations_preserve_existing_evidence_membership_and_session_rows(self):
+        from test_curation_prioritization import CurationTests
+        fixture=CurationTests();fixture.setUp();self.addCleanup(fixture.doCleanups)
+        fixture.label(fixture.ids[0]);fixture.document(fixture.ids[0]);fixture.prepare()
+        project=fixture.project
+        def scientific_rows():
+            with connection(project.database_path) as db:
+                names=[r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                       if not r[0].startswith(('ct_population_','sqlite_'))]
+                return {name:[tuple(r) for r in db.execute('SELECT * FROM "'+name+'"')] for name in names}
+        before=scientific_rows();fields=self.fields()
+        preview=project.populations.preview(**fields)
+        version=project.populations.create(**fields,expected_preview_sha256=preview['preview_sha256'])
+        project.populations.verify(version['version_id']);project.populations.members(version['version_id'])
+        self.assertEqual(before,scientific_rows())
+        self.assertEqual(project.reviews.membership(fixture.ids[0])['state'],'included')

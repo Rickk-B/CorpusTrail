@@ -13,6 +13,20 @@ packaged UI changes; unchanged scientific/configuration service source and schem
 are verified. Configuration writes are explicitly supported now: unchanged
 scientific service source must not be mistaken for a read-only application.
 
+## Checkpoint 6 population provenance
+
+The current receipt additionally freezes the population foundation at
+`32fbf15a54568ea356e70e9de05eb26708fa85ab`, including exact hashes for migration
+038, its manifest and the narrow Guided Review/project compatibility integration.
+`checkpoint.populations` identifies the population contract/policy, schema-37
+read compatibility, explicit backed-up upgrade and absence of production importers.
+The historical Guided Review receipt remains recorded; only its separately frozen
+population integration gains new hashes. Session authority, XML policy and JATS
+renderer hashes remain unchanged. New scientific files cannot piggyback on this
+boundary: ancestry, a strict path allowlist and exact scientific hashes are checked.
+As always, `source.commit_sha` and `source.tree_sha` identify the actual final build,
+not that historical foundation commit. No receipt implies researcher acceptance.
+
 ## Chosen workflow and approval boundary
 
 Use the existing **Standalone alpha acceptance** GitHub Actions workflow. Its

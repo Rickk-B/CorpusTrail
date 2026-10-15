@@ -1,13 +1,16 @@
 # Local projects, settings and read-only paper browser
 
-This development build includes Checkpoints 1–4 of `0.1.0a3.dev0`, not a public a3
+This development build includes Checkpoints 1–6 of `0.1.0a3.dev0`, not a public a3
 release. The project wizard and settings have explicit configuration writes.
 The [Discovery workflow](DISCOVERY.md) prepares, approves and executes exact frozen
 searches as separate actions, with local background progress and search history.
 Publication details support [explicit eligible evidence retrieval](EVIDENCE.md).
 Dashboard, catalogue, details and provenance browsing remain read-only. No page
 automatically discovers papers, acquires evidence, records reviews or invokes
-models. No migrations or new dependencies are required for a current a2 project.
+models. [Populations](POPULATIONS.md) adds explicit candidate versions and unions.
+Existing schema-37 projects remain usable without writes; population storage needs
+an explicit backed-up additive upgrade. There are no new production dependencies
+or production file-format importers.
 
 ## Launch
 
