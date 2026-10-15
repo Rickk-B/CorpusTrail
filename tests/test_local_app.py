@@ -46,10 +46,10 @@ class AppFixture(unittest.TestCase):
         self.ids = [self.enroll(i) for i in range(5)]
         self.reads = ProjectReads(self.project)
 
-    def enroll(self, i, *, title=None, year=None, abstract=True):
+    def enroll(self, i, *, title=None, year=None, abstract=True, journal='Fixture journal'):
         record = BibliographicRecord(title if title is not None else ('Duplicate title' if i < 2 else 'Paper '+str(i)),
             'Invented abstract '+str(i) if abstract else None, ('Fixture author',), year or 2020+i,
-            'Fixture journal', (Identifier('doi', '10.1234/app.'+str(i)),) if i != 1 else ())
+            journal, (Identifier('doi', '10.1234/app.'+str(i)),) if i != 1 else ())
         body = canonical({'fixture': i}).encode()
         source = SourceReference('fixture://private-query/'+str(i), str(i),
             'sha256:'+hashlib.sha256(body).hexdigest(), len(body), 'fixture_source', AT, identity_status='verified')
@@ -216,6 +216,26 @@ class ReadModelTests(AppFixture):
         for kwargs in ({'sort': 'paper_id;DELETE'}, {'membership': 'model_included'}, {'limit': 101}, {'limit': True}, {'q': 'x'*301}):
             with self.assertRaises(ValueError): self.reads.papers(**kwargs)
 
+    def test_local_journal_literal_matching_filters_and_missing_metadata(self):
+        journal='Journal of Materials: Methods & Results (Series A)'
+        extra=self.enroll(10,journal=journal)
+        self.enroll(11,journal=None)
+        before=fingerprints(self.root)
+        for query in ('Fixture journal','xture journal','fixture JOURNAL'):
+            self.assertEqual(self.reads.papers(q=query)['total'],5)
+        for query in (journal,journal.upper(),'Methods & Results (Series A)'):
+            found=self.reads.papers(q=query)
+            self.assertEqual([x['handle'] for x in found['items']],[extra.split(':')[1]])
+        # The scientific read API keeps its established literal-substring
+        # contract; surrounding browser-input whitespace is normalized by the UI.
+        self.assertEqual(self.reads.papers(q=' Fixture journal ')['total'],0)
+        self.assertEqual(self.reads.papers(q='Journal with no matching publication')['total'],0)
+        self.assertEqual(self.reads.papers(q='')['total'],7)
+        self.assertEqual(self.reads.papers(q='Fixture journal',evidence='structured_text')['total'],0)
+        self.assertEqual(self.reads.papers(q='Fixture journal',membership='included')['total'],0)
+        self.assertEqual(self.reads.papers(q='Fixture journal',review='not_human_reviewed')['total'],5)
+        self.assertEqual(fingerprints(self.root),before)
+
     def test_evidence_pending_mismatch_invalid_and_verified_body_access(self):
         for i, kind in enumerate(('verified', 'pending', 'mismatch', 'invalid')): self.document(i, kind=kind)
         paper = self.reads.paper(self.handle(0))['paper']
@@ -374,7 +394,7 @@ class ReadModelTests(AppFixture):
                 if tag == 'form': self.in_filters = False
         controls = FilterControls(); controls.feed(html)
         self.assertEqual(controls.controls, ['search', 'membership', 'evidence-filter', 'review-filter',
-                                             'sort', 'page-size', 'submit'])
+                                             'sort', 'page-size', 'submit', 'clear-filters'])
         self.assertEqual(controls.labels, 6)
         grid = re.search(r'#filters\s*\{([^}]+)\}', css).group(1)
         self.assertIn('repeat(4, minmax(0, 1fr))', grid)

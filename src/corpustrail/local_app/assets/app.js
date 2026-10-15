@@ -119,6 +119,8 @@ let pageState;
 let listGeneration = 0;
 async function catalogue(cursor = null) {
   const generation = ++listGeneration;
+  // Local catalogue input convenience, not a provider/search-plan rewrite.
+  byId('search').value=byId('search').value.trim();
   const params = new URLSearchParams({q: byId('search').value, membership: byId('membership').value,
     evidence: byId('evidence-filter').value, review: byId('review-filter').value,
     sort: byId('sort').value, limit: byId('page-size').value});
@@ -126,7 +128,7 @@ async function catalogue(cursor = null) {
   const page = await api('papers?' + params);
   if (generation !== listGeneration) return;
   pageState = page; byId('catalogue').hidden = false;
-  text('page-count', page.total ? 'Showing ' + (page.offset + 1) + '–' + (page.offset + page.items.length) + ' of ' + page.total + ' papers' : 'No matching papers');
+  text('page-count', page.total ? 'Showing ' + (page.offset + 1) + '–' + (page.offset + page.items.length) + ' of ' + page.total + ' papers' : 'No matching papers. Try a shorter query or clear search and filters. Missing journal metadata cannot match journal names.');
   const box = byId('paper-list'); box.replaceChildren();
   for (const paper of page.items) {
     const card = node('article', ''); const heading = node('h2', '');
@@ -214,6 +216,10 @@ async function detail(handle) {
   if (!paper.representations.some(rep => rep.readable)) reps.prepend(node('p', 'No full-text document is currently available to read as verified evidence in CorpusTrail.'));
 }
 byId('filters').addEventListener('submit', event => { event.preventDefault(); catalogue().catch(failure); });
+byId('clear-filters').onclick=()=>{
+  for (const id of ['search','membership','evidence-filter','review-filter']) byId(id).value='';
+  catalogue().catch(failure);
+};
 byId('previous-page').onclick = () => catalogue(pageState.previous_cursor).catch(failure);
 byId('next-page').onclick = () => catalogue(pageState.next_cursor).catch(failure);
 byId('advanced').addEventListener('toggle', () => { if (byId('advanced').open && !provenanceState) provenance().catch(failure); });

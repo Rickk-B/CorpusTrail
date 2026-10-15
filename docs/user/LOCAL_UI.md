@@ -262,6 +262,25 @@ identifier field can be selected and copied manually.
 
 ## Limits and troubleshooting
 
+### Searching local journals
+
+On **Corpus**, **Search papers** searches stored titles, authors and journal names
+in this project, not an external journal directory or scholarly database.
+Matching is case-insensitive literal substring text. Exact and partial journal
+names work; punctuation remains significant. The browser ignores surrounding
+search-box whitespace. All selected corpus, evidence and human-review filters
+must also match. **Clear search and filters** resets those filters and the query.
+Papers without stored journal metadata cannot match a journal name, but can still
+be found by title or author. A no-results message does not mean a journal has no
+literature. For external literature discovery, use **Discovery** and approve its
+exact search plan separately.
+
+The reported macOS no-results incident could not be conclusively attributed
+without its original query, filters and stored metadata. Disposable real-service
+tests demonstrated a browser whitespace issue, now corrected; they do not prove
+the cause of that original incident. The underlying read API still treats its
+query as literal text, including whitespace, and has not changed.
+
 For updating/uninstalling the software without deleting your projects, see
 [removal and storage ownership](REMOVAL_STORAGE.md).
 

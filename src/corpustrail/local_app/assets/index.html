@@ -29,14 +29,16 @@
     <section id="catalogue" hidden><h1>Corpus</h1><p><a REVIEW_NAV_HIDDEN href="/review">Review collected publications</a></p>
       <p>Browse the publications collected for your research topic, including those awaiting a corpus decision. Membership, human review and evidence availability are separate. Missing evidence never means exclusion.</p>
       <form id="filters">
-        <label>Search papers<input id="search" type="search" maxlength="300" placeholder="Search title, author or journal"></label>
+        <label>Search papers<input id="search" type="search" maxlength="300" placeholder="Search title, author or journal" aria-describedby="catalogue-search-help"></label>
         <label>Corpus decision<select id="membership"><option value="">All corpus states</option><option value="included">In corpus</option><option value="excluded">Out of corpus</option><option value="insufficient_evidence">Insufficient evidence</option><option value="unresolved">Awaiting corpus decision — unresolved</option><option value="not_reviewed">Awaiting corpus decision — no published decision</option></select></label>
         <label>Evidence<select id="evidence-filter"><option value="">All evidence</option><option value="metadata">Metadata best available</option><option value="abstract">Abstract best available</option><option value="structured_text">Verified document body</option><option value="pending">Has pending document</option><option value="mismatch_or_invalid">Has mismatch / invalid document</option></select></label>
         <label>Human review<select id="review-filter"><option value="">All human-review states</option><option value="human_reviewed">Human review recorded</option><option value="not_human_reviewed">No human review recorded</option><option value="draft_history">Draft activity (not a recorded review)</option></select></label>
         <label>Sort by<select id="sort"><option value="title">Title</option><option value="year_newest">Year: newest first</option><option value="year_oldest">Year: oldest first</option></select></label>
         <label>Results per page<select id="page-size"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
         <button type="submit">Apply filters</button>
+        <button id="clear-filters" type="button">Clear search and filters</button>
       </form>
+      <p id="catalogue-search-help" class="muted">Search only this project's stored titles, authors and journal names. Matching is case-insensitive literal text, including partial names; punctuation is significant. Surrounding search-box whitespace is ignored. Every selected filter must also match. This does not search external databases; missing journal metadata cannot match a journal name.</p>
       <p id="page-count" aria-live="polite"></p><div id="paper-list"></div>
       <div class="pager"><button id="previous-page">Previous page</button><button id="next-page">Next page</button></div>
     </section>
