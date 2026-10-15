@@ -24,7 +24,8 @@ for names in LIMITED.values():
     names.add('evidence-footnotes')
     names.update({'review-session-selection','review-active','review-verified-text','review-long-title',
         'review-missing-evidence','review-assessment','review-summary','review-completed','review-publication',
-        'review-unauthorized','review-empty'})
+        'review-unauthorized','review-empty','review-finished-dashboard','review-confirmed',
+        'journal-results','journal-no-results','review-completed-overview'})
 
 
 class Runtime:
@@ -193,7 +194,7 @@ def execute(args):
             runtime=Runtime(browser,args.output,args.visual,args.suite,args.viewports)
             BrowserAcceptance.runtime=runtime
             methods=unittest.defaultTestLoader.getTestCaseNames(BrowserAcceptance)
-            if args.suite=='smoke':methods=[m for m in methods if 'evidence' in m or 'home' in m or 'review' in m]
+            if args.suite=='smoke':methods=[m for m in methods if 'evidence' in m or 'home' in m or 'review' in m or 'journal' in m]
             elif args.suite!='all':methods=[m for m in methods if args.suite in m]
             for name in args.viewports:
                 runtime.viewport_name=name;runtime.viewport=VIEWPORTS[name]

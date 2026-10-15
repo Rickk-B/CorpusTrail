@@ -30,6 +30,7 @@ python tools/browser_acceptance.py --suite smoke --viewports laptop --output /tm
 python tools/browser_acceptance.py --suite evidence --viewports desktop --output /tmp/ct-browser-evidence
 python tools/browser_acceptance.py --suite discovery --viewports desktop --output /tmp/ct-browser-discovery
 python tools/browser_acceptance.py --suite review --viewports desktop --output /tmp/ct-browser-review
+python tools/browser_acceptance.py --suite project --viewports desktop --output /tmp/ct-browser-project
 python tools/browser_acceptance.py --output /tmp/ct-browser-full
 python tools/browser_acceptance.py --visual compare --output /tmp/ct-browser-compare
 python -m unittest browser_tests.test_infrastructure -v
@@ -86,6 +87,14 @@ publication and backend refusal for an unauthorized identity. A newly collected
 publication stays outside the frozen set. Review services/API successes are never
 mocked. Empty projects create no phantom sessions. All three viewports are covered;
 the macOS smoke selection also includes these scenarios.
+Review refinement coverage includes disabled extent placeholders, explicit existing
+full-document attestation, completed read-only observations/provenance, failure
+before Finish acknowledgement, the completion dashboard link, summary/preview/back/
+refresh transitions and separately confirmed publication. Local journal tests
+compare actual browser requests, HTTP responses, rendered titles and ProjectReads
+for exact/partial/case/trimmed/punctuation/empty/unmatched queries, missing metadata,
+combined filters and clear/reset. No search or authoritative review response is
+mocked. The macOS smoke selection includes local journal search as well.
 The evidence scenario also restarts the actual HTTP server/controllers, reopens the
 same disposable project, and verifies persisted history/text without new requests
 or scientific-file changes. This is graceful restart testing, not crash-resume.

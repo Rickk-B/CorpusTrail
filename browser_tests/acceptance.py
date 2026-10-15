@@ -102,7 +102,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.layout();self.snapshot('catalogue')
         # Existing macOS filter-box regression: compare actual boxes, not labels.
         if self.runtime.viewport['width']>=1000:
-            boxes=[self.page.locator(s).bounding_box() for s in ('#sort','#page-size','#filters button')]
+            boxes=[self.page.locator(s).bounding_box() for s in ('#sort','#page-size','#filters button[type="submit"]')]
             self.assertLessEqual(max(b['y'] for b in boxes)-min(b['y'] for b in boxes),1)
             self.assertLessEqual(max(b['height'] for b in boxes)-min(b['height'] for b in boxes),1)
         self.page.get_by_role('combobox',name='Sort by',exact=True).select_option('year_newest')
@@ -140,6 +140,54 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.keyboard.press('Tab')
         focus=self.page.evaluate('''() => {const e=document.activeElement,c=getComputedStyle(e);return {tag:e.tagName,outline:c.outlineStyle,width:parseFloat(c.outlineWidth)};}''')
         self.assertNotEqual(focus['tag'],'BODY');self.assertNotEqual(focus['outline'],'none');self.assertGreater(focus['width'],0)
+
+    def test_project_journal_search_and_filters(self):
+        import hashlib
+        from urllib.parse import parse_qs, urlsplit
+        from corpustrail.identity import BibliographicRecord, Identifier, SourceReference
+        from corpustrail.application.reads import ProjectReads
+        project=self.fixture.project
+        journal='Journal of Tests: Science & Methods (Series A)'
+        for number,source_name in ((6,journal),(7,None)):
+            raw=('journal-fixture-'+str(number)).encode()
+            source=SourceReference('fixture://journal/'+str(number),str(number),
+                'sha256:'+hashlib.sha256(raw).hexdigest(),len(raw),'fixture_discovery',
+                '2026-01-01T00:00:00+00:00',identity_status='verified')
+            record=BibliographicRecord('Journal search fixture '+str(number),source=source_name,
+                identifiers=(Identifier('doi','10.1234/journal.'+str(number)),))
+            project.identities.apply(project.identities.plan(record,source),approve_new_identity=True,approve_aliases=True)
+        before=fingerprint(self.fixture.root)
+        self.open_project();self.visit('/papers')
+        def search(query,expected):
+            self.page.get_by_label('Search papers').fill(query)
+            with self.page.expect_response(lambda response:'/api/v1/papers?' in response.url) as received:
+                self.page.get_by_role('button',name='Apply filters',exact=True).click()
+            response=received.value
+            data=response.json()
+            self.assertEqual(response.status,200)
+            self.assertEqual(parse_qs(urlsplit(response.url).query,keep_blank_values=True)['q'],[query.strip()])
+            self.assertEqual(data['total'],expected)
+            expect(self.page.locator('#paper-list article')).to_have_count(expected)
+            self.assertEqual(sorted(self.page.locator('#paper-list h2').all_text_contents()),
+                sorted(item['bibliography']['title'] for item in data['items']))
+            self.assertEqual(data['total'],ProjectReads(project).papers(q=query.strip(),
+                evidence=self.page.locator('#evidence-filter').input_value())['total'])
+        for query in ('Synthetic Journal','Synthetic','sYnThEtIc JOURNAL','  Synthetic Journal  '):
+            search(query,5)
+        search(journal,1);self.layout();self.snapshot('journal-results')
+        search('Science & Methods',1)
+        self.page.locator('#evidence-filter').select_option('structured_text')
+        search(journal,0)
+        expect(self.page.locator('#page-count')).to_contain_text('No matching papers')
+        self.page.get_by_role('button',name='Clear search and filters',exact=True).click()
+        expect(self.page.locator('#paper-list article')).to_have_count(7)
+        expect(self.page.locator('#evidence-filter')).to_have_value('')
+        expect(self.page.get_by_label('Search papers')).to_have_value('')
+        search('Journal search fixture 7',1)  # Missing journal, still searchable by title.
+        search('',7)
+        search('Legitimately unmatched journal',0);self.layout();self.snapshot('journal-no-results')
+        self.assertEqual(before,fingerprint(self.fixture.root))
+        self.assertEqual(self.fixture.transport.calls,[])
 
     def test_project_wizard_settings_and_confirmation(self):
         self.page.get_by_role('link',name='Create New Project',exact=True).click()
@@ -379,14 +427,19 @@ class BrowserAcceptance(unittest.TestCase):
                 self.page.get_by_role('button',name='Read verified structured text',exact=True).click()
                 expect(self.page.locator('#review-document')).to_contain_text('Invented structured scientific fixture text')
                 expect(self.page.locator('#review-extent')).to_have_value('')
+                expect(self.page.locator('#review-extent option[value=""]')).to_be_disabled()
+                expect(self.page.locator('#review-extent option[value="full_document"]')).to_have_text('Verified structured text — full document')
+                self.assertFalse(project.reviews.history(self.fixture.papers[0]))
                 self.snapshot('review-verified-text')
             elif 'Long scientific title' in title:self.snapshot('review-long-title')
             else:
                 expect(self.page.locator('#review-evidence-status')).to_contain_text('No abstract available')
+                expect(self.page.locator('#review-extent option[value="full_document"]')).to_have_count(0)
+                expect(self.page.locator('#review-extent option[value="sections"]')).to_have_count(0)
                 if not captured_missing:
                     self.snapshot('review-missing-evidence');captured_missing=True
             self.page.locator('input[name="assessment"][value="'+outcome+'"]').check()
-            self.page.locator('#review-extent').select_option('metadata')
+            self.page.locator('#review-extent').select_option('full_document' if title==TITLE else 'metadata')
             self.page.locator('#review-rationale').fill('Invented human assessment '+str(i+1))
             expect(self.page.locator('#review-save-state')).to_contain_text('Draft saved')
             if i==0:
@@ -415,14 +468,34 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(before,fingerprint(self.fixture.root))
         self.page.locator('#review-show-summary').click()
         expect(self.page.locator('#review-summary')).to_be_visible();self.snapshot('review-summary')
-        self.page.get_by_role('button',name='Finish Review — preserve undecided papers',exact=True).click()
-        expect(self.page.locator('#review-completion-status')).to_contain_text('Review completed')
+        self.page.get_by_role('button',name='Finish Review',exact=True).evaluate('button=>{button.click();button.click();}')
+        expect(self.page).to_have_url(self.fixture.origin+'/dashboard#review-completed-'+handle)
+        expect(self.page.locator('#dashboard-review-result')).to_contain_text('Finishing did not change corpus membership')
+        self.snapshot('review-finished-dashboard');self.layout()
+        self.page.locator('#dashboard-review-summary').click()
+        expect(self.page.locator('#review-completion-heading')).to_have_text('Review completed — read only')
+        expect(self.page.locator('#assessment-form')).to_be_hidden()
+        expect(self.page.locator('#review-finish')).to_be_hidden()
+        expect(self.page.locator('#review-summary-papers')).to_contain_text('Invented human assessment 1')
         self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
-        self.snapshot('review-completed')
+        self.snapshot('review-completed',subject='main')
+        observations={p:project.reviews.history(p) for p in self.fixture.papers}
         self.page.get_by_role('button',name='Preview corpus updates',exact=True).click()
-        expect(self.page.locator('#review-publication')).to_be_visible();self.snapshot('review-publication');self.layout()
+        expect(self.page.locator('#review-publication')).to_be_visible()
+        expect(self.page.locator('#review-prepare-publication')).to_be_hidden()
+        expect(self.page.locator('#review-summary-counts')).to_contain_text('Proposed included publications')
+        self.assertEqual(observations,{p:project.reviews.history(p) for p in self.fixture.papers})
+        self.snapshot('review-publication',subject='main');self.layout()
+        self.page.get_by_role('button',name='Back to Review Summary',exact=True).click()
+        expect(self.page.locator('#review-publication')).to_be_hidden()
+        expect(self.page.locator('#review-prepare-publication')).to_be_visible()
+        self.page.reload(wait_until='networkidle')
+        expect(self.page.locator('#review-publication')).to_be_hidden()
+        expect(self.page.locator('#assessment-form')).to_be_hidden()
+        self.page.get_by_role('button',name='Preview corpus updates',exact=True).click()
         self.page.get_by_role('button',name='Confirm corpus updates',exact=True).click()
         expect(self.page.locator('#review-message')).to_contain_text('confirmed decisions updated')
+        self.snapshot('review-confirmed',subject='main')
         states=[project.reviews.membership(p)['state'] for p in self.fixture.papers]
         self.assertEqual(states.count('included'),2);self.assertEqual(states.count('excluded'),2)
         self.assertEqual(states.count('insufficient_evidence'),1)
@@ -452,7 +525,17 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#review-rationale')).to_have_value('Incomplete draft retained without a judgment')
         expect(self.page.locator('#review-progress')).to_contain_text('0 with saved observations')
         self.assertEqual(before,{p:project.reviews.history(p) for p in self.fixture.papers})
-        self.page.locator('#review-show-summary').click();self.page.locator('#review-finish').click()
+        # Failure must leave the draft/session in place, never redirect early.
+        self.expected_transport_failure=True
+        self.page.route('**/api/v1/review/command',lambda route:route.abort('failed'))
+        self.page.locator('#review-finish').click()
+        expect(self.page.locator('#review-message')).to_contain_text('current input is retained')
+        expect(self.page.locator('#review-rationale')).to_have_value('Incomplete draft retained without a judgment')
+        self.assertIn('/review#',self.page.url)
+        self.page.unroute('**/api/v1/review/command');self.expected_transport_failure=False
+        self.page.locator('#review-finish').click()
+        expect(self.page.locator('#dashboard-review-result')).to_contain_text('Unassessed papers remain undecided')
+        self.page.locator('#dashboard-review-summary').click()
         expect(self.page.locator('#review-summary-counts')).to_contain_text('5')
         expect(self.page.locator('#review-summary-counts')).to_contain_text('Incomplete drafts')
         self.assertEqual(before,{p:project.reviews.history(p) for p in self.fixture.papers})
@@ -467,12 +550,16 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#review-message')).to_contain_text('Human observation saved')
         self.page.locator('#review-show-summary').click()
         self.page.locator('#review-finish').click()
+        expect(self.page.locator('#dashboard-review-result')).to_contain_text('Finishing did not change corpus membership')
+        self.page.locator('#dashboard-review-summary').click()
         expect(self.page.locator('#review-authority-status')).to_contain_text('not authorized')
         expect(self.page.locator('#review-prepare-publication')).to_be_hidden()
         # Capture the real content bounds, not Chromium's transient old scroll
         # extent after the taller assessment panel has collapsed. Nothing in
         # main is hidden/masked for this screenshot; page overflow is still checked.
         self.snapshot('review-unauthorized',subject='main');self.layout()
+        expect(self.page.locator('#assessment-form')).to_be_hidden()
+        expect(self.page.locator('#review-save-next')).to_be_hidden()
         token=self.page.locator('meta[name="corpustrail-session"]').get_attribute('content')
         handle=self.page.url.split('#')[1]
         headers={'X-CorpusTrail-Session':token,'X-CorpusTrail-CSRF':token,'Origin':self.fixture.origin}
@@ -483,6 +570,13 @@ class BrowserAcceptance(unittest.TestCase):
                   'expected_revision':current['revision'],'action':'prepare_publication','value':None})
         self.assertEqual(refused.status,409)
         self.assertTrue(all(self.fixture.project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
+        self.page.get_by_role('button',name='Back to Review Overview',exact=True).click()
+        expect(self.page.locator('#review-overview')).to_be_visible()
+        self.snapshot('review-completed-overview');self.layout()
+        self.page.get_by_role('button',name='View Review Summary',exact=True).click()
+        expect(self.page.locator('#review-summary')).to_be_visible()
+        self.page.get_by_role('link',name='Back to Project Dashboard',exact=True).click()
+        expect(self.page.locator('#project-name')).to_have_text('Synthetic materials')
         from corpustrail.project import Project,ProjectConfig,ReviewPolicy
         empty=Project.create(self.fixture.root/'empty',ProjectConfig('empty-review','Empty review project','Invented empty fixture',review=ReviewPolicy(scope=SCOPE)),created_by='fixture')
         self.visit('/projects')
