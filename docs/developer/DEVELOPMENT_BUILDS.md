@@ -136,7 +136,7 @@ or delete projects. Keep an older wheel/environment if you need to return to a2.
 
 GitHub requires sign-in and repository read access to download Actions artifacts.
 Even a public repository's workflow artifact is not an anonymous permanent download.
-The workflow requests **90 days**, subject to repository/organization retention
+The workflow requests **14 days**, subject to repository/organization retention
 limits; artifacts can disappear earlier if the artifact/run/repository is deleted.
 Save a local copy and receipt before expiry. Re-running builds the pinned run commit
 again, producing a new run-attempt artifact; it does not guarantee identical bytes.

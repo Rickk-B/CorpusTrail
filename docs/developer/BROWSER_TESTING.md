@@ -34,6 +34,7 @@ python tools/browser_acceptance.py --suite population --viewports desktop --outp
 python tools/browser_acceptance.py --suite project --viewports desktop --output /tmp/ct-browser-project
 python tools/browser_acceptance.py --output /tmp/ct-browser-full
 python tools/browser_acceptance.py --visual compare --output /tmp/ct-browser-compare
+python tools/browser_acceptance.py --browser webkit --output /tmp/ct-browser-webkit
 python -m unittest browser_tests.test_infrastructure -v
 ```
 
@@ -112,7 +113,7 @@ only controlled Linux rendering is used for pixel comparisons.
 
 ## Visual baselines and review
 
-Playwright **1.63.0** pins Chromium and Pillow **12.0.0** performs comparisons. Linux
+Playwright **1.63.0** pins Chromium/WebKit and Pillow **12.3.0** performs comparisons. Linux
 CI is Ubuntu 24.04. A test-process Fontconfig file selects installed DejaVu Sans;
 production CSS and CSP are not bypassed. Strong test-process family binding and a
 Chromium platform-font probe prevent silent serif fallback even when installed
@@ -120,6 +121,18 @@ font hashes match. The manifest records browser version, font SHA, architecture,
 locale, timezone, device scale and comparison policy. A
 different renderer fails comparison with instructions to capture separately; macOS
 never compares against Linux pixel baselines.
+
+Baselines are namespaced as `linux-chromium`, `darwin-chromium` and
+`darwin-webkit`. A macOS manifest additionally freezes the OS version; rendering
+changes require a new explicit review, not relaxed pixel thresholds. Capture a
+complete passing run on the intended hosted platform/engine, download its report,
+inspect representative images directly, then use the same `--approve-baselines
+REPORT --reviewed` command locally. It chooses the destination from the report's
+validated platform/engine and records the capture report SHA-256/source identity.
+The approval command does not need to run on macOS and does not launch a browser.
+CI contains no baseline approval or automatic fallback from compare to capture.
+Initial platform bring-up deliberately uses capture; comparisons are enabled only
+after those first hosted screenshots have actually been inspected and approved.
 Tests wait for the actual dashboard URL/content after asynchronous project opening
 before starting another navigation. The completed unauthorized-review snapshot
 uses the full `main` content bounds: Chromium's earlier scroll extent can outlive
@@ -157,7 +170,7 @@ git diff --stat -- browser_tests/baselines
 ```
 
 The approval command is separate from running tests, rejects failed/partial/
-comparison/non-Linux reports, and records hashes in the dedicated manifest. CI has
+comparison/unsupported-renderer reports, and records hashes in the dedicated manifest. CI has
 no approval step. Baselines are small developer resources in Git; browser reports,
 baselines, browsers and tooling are excluded from wheels/sdists. The normal wheel
 does not even declare a Playwright optional dependency.
@@ -166,8 +179,12 @@ does not even declare a Playwright optional dependency.
 
 `Offline Chromium / reviewed Linux visual baselines` blocks the development wheel
 on interaction, runtime/network, layout or reviewed screenshot failures. A separate
-macOS Chromium smoke job exercises interactions without cross-OS pixel comparison.
-Both upload bounded synthetic reports even after failures (30-day retention).
+macOS Python 3.13 job runs the complete suite in both Chromium and WebKit, sharing
+one wheel/tool installation. Playwright WebKit is compatibility coverage, not an
+assertion that every Safari version behaves identically. No self-hosted runners
+or personal devices are used. Both upload bounded synthetic reports even after
+failures (seven-day retention). The runtime report records Python, OpenSSL, Expat,
+Playwright, browser, macOS version and architecture; it never dumps environment values.
 If installation fails before the runner starts, CI logs report that failure; no
 screenshots are claimed. A failed browser/renderer setup is never a passing skip.
 Existing Python 3.11–3.13 core/ML/wheel/sdist, Windows/macOS lifecycle, native Trash
@@ -180,6 +197,6 @@ cases through the same Python fixtures/runner. A browser pass does not authorize
 later checkpoints or establish live-provider interoperability. Native researcher
 acceptance remains important for subjective UX and platform-specific differences.
 
-Current limitations: Chromium only; limited macOS smoke, no Windows browser job,
+Current limitations: headless Chromium/WebKit, no Windows browser job,
 no axe/WCAG certification, no live providers, no native-browser Trash execution,
 and no assertion that screenshots establish scientific validity or perfect UX.

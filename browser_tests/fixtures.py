@@ -57,6 +57,7 @@ class FixtureTransport:
         self.mismatch = False
         self.invalid = False
         self.fail_crossref = False
+        self.discovery_transport_error = False
         self.footnotes = False
 
     def request(self, url, **kwargs):
@@ -89,6 +90,12 @@ class FixtureTransport:
                 {'DOI': '10.1234/evidence.1', 'title': [TITLE]},
                 {'DOI': '10.1234/discovery.3', 'title': ['Discovered glass scaffold']}], 'total-results': 2}}
         elif parsed.hostname == 'www.ebi.ac.uk' and parsed.path.endswith('/search'):
+            if self.discovery_transport_error:
+                import ssl
+                import urllib.error
+                from corpustrail.providers.network import ProviderTransportError
+                try:raise urllib.error.URLError(ssl.SSLCertVerificationError(1,'synthetic private diagnostic'))
+                except urllib.error.URLError as error:raise ProviderTransportError('transport_failed') from error
             value = {'hitCount': 2, 'resultList': {'result': [
                 {'id': '123', 'source': 'MED', 'doi': '10.1234/evidence.1', 'pmcid': 'PMC123', 'title': TITLE},
                 {'id': '124', 'source': 'MED', 'doi': '10.1234/discovery.4', 'title': 'Discovered polymer study'}]}}

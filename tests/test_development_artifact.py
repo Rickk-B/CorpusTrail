@@ -4,6 +4,7 @@ from pathlib import Path
 import hashlib
 import json
 import os
+import re
 import runpy
 import shutil
 import subprocess
@@ -133,7 +134,14 @@ class DevelopmentArtifactTests(unittest.TestCase):
         self.assertIn('persist-credentials: false', artifact)
         self.assertIn("CHECKPOINT_IMPLEMENTATION_SHA: '6e116118f05e53ec3694c60e9171cb873a437bf8'", artifact)
         self.assertIn('fetch-depth: 0', artifact)
-        self.assertIn('retention-days: 90', artifact)
+        self.assertIn('retention-days: 14', artifact)
+        self.assertIn('cancel-in-progress: true',source)
+        self.assertEqual(len(re.findall(r'uses: actions/[^@\s]+@[0-9a-f]{40}',source)),source.count('uses: actions/'))
+        mac=source.split('  browser-macos-smoke:',1)[1].split('  development-artifact:',1)[0]
+        self.assertIn("python-version: '3.13'",mac)
+        for engine in ('chromium','webkit'):
+            self.assertIn('--browser '+engine,mac)
+        self.assertNotIn('--suite smoke',mac)
         self.assertIn('overwrite: false', artifact)
         self.assertIn('contents: read', source)
         for dangerous in ('secrets.', 'twine', 'gh release', 'git push', 'contents: write', 'id-token: write'):

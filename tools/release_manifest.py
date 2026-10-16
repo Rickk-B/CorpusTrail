@@ -11,6 +11,7 @@ RECEIPTS = {'docs/phase2b_migration_origins.json', 'docs/phase2c_migration_origi
 TOOLS = {'tools/smoke_install.py', 'tools/smoke_asreview.py', 'tools/release_manifest.py',
          'tools/development_artifact.py', 'tools/evidence_diagnostic.py',
          'tools/validation-constraints.txt', 'tools/audit_release.py', 'tools/verify_git_identity.py'}
+TOOLS.update({'tools/discovery_environment_diagnostic.py','tools/repository_audit.py'})
 FIXTURE_DATA = {'examples/synthetic-materials/records.json', 'examples/synthetic-discovery/responses.json',
                 'examples/synthetic-discovery/article.xml'}
 EXCLUDED = ['docs/PHASE* engineering archives', 'docs/*_smoke*.json build/runtime receipts',

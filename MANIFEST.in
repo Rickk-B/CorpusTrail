@@ -22,10 +22,12 @@ include tools/verify_git_identity.py
 include tools/validation-constraints.txt
 include tools/development_artifact.py
 include tools/evidence_diagnostic.py
+include tools/discovery_environment_diagnostic.py tools/repository_audit.py
 recursive-include .github/workflows *.yml
 global-exclude __pycache__ *.pyc *.sqlite3 *~
 include docs/developer/BROWSER_TESTING.md
 include docs/developer/POPULATIONS.md docs/developer/GUIDED_REVIEW.md
+include docs/developer/DISCOVERY_TRANSPORT_DIAGNOSTICS.md docs/developer/SECURITY_PUBLICATION_REVIEW.md
 include docs/developer/BROWSER_ACCEPTANCE_VERIFICATION.md
 include docs/developer/EVIDENCE_DIAGNOSTICS.md
 include docs/developer/JATS_COMPATIBILITY.md

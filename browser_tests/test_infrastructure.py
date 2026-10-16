@@ -46,7 +46,7 @@ class VisualInfrastructureTests(unittest.TestCase):
         (self.root/'screenshots').mkdir(exist_ok=True)
         Image.new('RGB',(10,10),'white').save(self.root/'screenshots'/'desktop-example.png')
         value={'mode':'capture','passed':True,'suite':'all','viewports':['desktop','laptop','narrow'],
-               'environment':{'platform':'linux'},'screenshots':[{'path':'screenshots/desktop-example.png'}]}
+               'environment':{'platform':'linux','browser':'chromium'},'screenshots':[{'path':'screenshots/desktop-example.png'}]}
         value.update(changes)
         (self.root/'report.json').write_text(json.dumps(value),encoding='utf-8')
 
@@ -59,10 +59,18 @@ class VisualInfrastructureTests(unittest.TestCase):
 
     def test_failed_compare_partial_or_other_platform_cannot_be_approved(self):
         for change in ({'passed':False},{'mode':'compare'},{'suite':'evidence'},
-                       {'viewports':['desktop']},{'environment':{'platform':'darwin'}}):
+                       {'viewports':['desktop']},{'environment':{'platform':'unknown','browser':'chromium'}}):
             self.candidate(**change)
             with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=True)
         self.assertFalse((self.root/'approved').exists())
+
+    def test_platform_and_engine_baselines_are_separate_and_require_review(self):
+        from tools.browser_acceptance import baseline_directory
+        for engine in ('chromium','webkit'):
+            self.candidate(environment={'platform':'darwin','browser':engine})
+            self.assertEqual(baseline_directory({'platform':'darwin','browser':engine}).name,'darwin-'+engine)
+            with self.assertRaises(ValueError):approve(self.root,self.root/engine,reviewed=False)
+            approve(self.root,self.root/engine,reviewed=True)
 
     def test_candidate_paths_and_symlinks_are_confined(self):
         self.candidate(screenshots=[{'path':'../outside.png'}])

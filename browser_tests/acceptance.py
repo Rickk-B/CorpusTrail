@@ -369,6 +369,34 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#history button')).to_have_count(2)
         self.assertEqual(len(self.fixture.transport.calls),8)
 
+    def test_discovery_transport_error_is_not_a_confirmed_rate_limit(self):
+        initial={pid:self.fixture.project.reviews.history(pid) for pid in self.fixture.papers}
+        self.open_project();self.visit('/discovery')
+        self.fixture.transport.discovery_transport_error=True
+        self.page.locator('#query').fill('synthetic transport diagnostic')
+        for checkbox in self.page.locator('[data-provider]').all():
+            if checkbox.is_enabled():checkbox.set_checked(checkbox.input_value()=='europepmc')
+        self.page.get_by_role('button',name='Preview Search Plan',exact=True).click()
+        self.page.get_by_role('button',name='Approve Search Plan',exact=True).click()
+        self.assertEqual(self.fixture.transport.calls,[])
+        self.page.get_by_role('button',name='Run Discovery',exact=True).click()
+        expect(self.page.locator('#job-status')).to_contain_text('1/1 providers finished',timeout=15000)
+        expect(self.page.locator('#provider-progress')).to_contain_text('TLS certificate verification failed')
+        self.assertNotIn('rate limit',self.page.locator('#provider-progress').inner_text().lower())
+        self.assertEqual(len(self.fixture.transport.calls),1)
+        from corpustrail._internal.pipeline import events
+        records=events(self.fixture.project,kind='request_result')
+        self.assertEqual(records[-1]['payload']['error'],'ProviderCertificateError')
+        self.assertIsNone(records[-1]['payload']['http_status'])
+        self.layout();self.snapshot('discovery-transport-error')
+        self.page.reload(wait_until='networkidle')
+        self.page.locator('#history button').click()
+        expect(self.page.locator('#provider-progress')).to_contain_text('TLS certificate verification failed')
+        self.assertEqual(len(self.fixture.transport.calls),1)
+        for pid in self.fixture.papers:
+            self.assertEqual(self.fixture.project.reviews.history(pid),initial[pid])
+            self.assertEqual(self.fixture.project.reviews.membership(pid)['state'],'not_reviewed')
+
     def test_evidence_table_footnotes_persist(self):
         self.open_project();self.visit('/papers')
         self.page.get_by_role('link',name=TITLE,exact=True).click()
@@ -481,11 +509,15 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Verify Stored Integrity',exact=True).click()
         expect(self.page.locator('#population-verify-result')).to_contain_text('integrity verified')
         self.layout();self.snapshot('population-combined')
+        self.page.locator('#population-provenance summary').click()
+        expect(self.page.locator('#population-lineage')).to_contain_text('fixture')
+        self.snapshot('population-lineage',subject='#population-detail');self.layout()
         self.assertEqual({p:project.reviews.history(p) for p in self.fixture.papers},initial_reviews)
         self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in project.identities.papers()))
         self.page.get_by_role('link',name='Review This Frozen Version',exact=True).click()
         expect(self.page.locator('#review-population')).to_have_value(combined['version_id'])
         expect(self.page.locator('#reviewer')).to_have_value('')
+        self.snapshot('population-review-selection');self.layout()
         self.page.locator('#reviewer').fill('fixture_reviewer')
         self.page.get_by_role('button',name='Start Guided Review',exact=True).click()
         expect(self.page.locator('#review-progress')).to_contain_text('of 7')
@@ -506,6 +538,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Freeze Population',exact=True).click()
         expect(self.page.locator('#population-detail-heading')).to_have_text('Combined origin candidates · Version 2')
         self.assertEqual(project.populations.versions()['items'][0]['member_count'],8)
+        self.snapshot('population-successor');self.layout()
         self.assertEqual(project.populations.inspect(first['version_id'])['member_count'],5)
         self.assertEqual(project.populations.inspect(combined['version_id'])['member_count'],7)
         self.snapshot('population-history');self.layout()
@@ -518,6 +551,12 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(before,fingerprint(self.fixture.root))
         self.assertEqual(calls,len(self.fixture.transport.calls))
         self.assertTrue(project.populations.verify(combined['version_id'])['verified'])
+        self.visit('/review#'+review_handle)
+        self.page.get_by_role('button',name='Finish Review',exact=True).click()
+        expect(self.page).to_have_url(re.compile('/dashboard#review-completed-'))
+        self.visit('/review#'+review_handle)
+        expect(self.page.locator('#review-completion-heading')).to_contain_text('Review completed')
+        self.snapshot('population-review-completed');self.layout()
         self.assertEqual(imported['member_count'],2)
 
     def test_population_selection_stale_preview_and_legacy_upgrade(self):
@@ -559,6 +598,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Back Up and Enable Populations',exact=True).click()
         expect(self.page.locator('#population-message')).to_contain_text('Population storage enabled')
         self.assertTrue(legacy.populations.ready());self.assertEqual(len(list((legacy.root/legacy.config.data_directory/'population-upgrades').glob('*.sqlite3'))),1)
+        self.snapshot('population-upgraded');self.layout()
         self.assertEqual(self.fixture.transport.calls,[])
 
     def test_review_guided_save_finish_publish_and_resume(self):

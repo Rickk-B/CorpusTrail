@@ -10,14 +10,14 @@ MAX_CHANGED_RATIO = .0005
 MAX_TILE_RATIO = .02
 
 
-def rendering_environment(browser_version):
+def rendering_environment(browser_version,engine='chromium'):
     directory=Path('/usr/share/fonts/truetype/dejavu')
     names=('DejaVuSans-Bold.ttf','DejaVuSans.ttf','DejaVuSansMono-Bold.ttf','DejaVuSansMono-BoldOblique.ttf',
            'DejaVuSansMono-Oblique.ttf','DejaVuSansMono.ttf','DejaVuSerif-Bold.ttf','DejaVuSerif.ttf')
     fonts={name:hashlib.sha256((directory/name).read_bytes()).hexdigest() for name in names if (directory/name).is_file()}
     if sys.platform=='linux' and len(fonts)!=len(names):
         raise ValueError('Install fonts-dejavu-core for the controlled Linux browser renderer')
-    return {'schema': 'corpustrail-browser-renderer/v1', 'browser': 'chromium',
+    result = {'schema': 'corpustrail-browser-renderer/v1', 'browser': engine,
             'browser_version': browser_version, 'platform': sys.platform,
             'machine': platform.machine(), 'device_scale_factor': 1,
             'fonts_sha256': fonts,
@@ -25,6 +25,9 @@ def rendering_environment(browser_version):
             'font': 'DejaVu Sans' if sys.platform=='linux' else 'platform system-ui (not compared)', 'locale': 'en-US', 'timezone': 'UTC',
             'channel_tolerance': CHANNEL_TOLERANCE, 'max_changed_ratio': MAX_CHANGED_RATIO,
             'max_tile_ratio': MAX_TILE_RATIO}
+    if sys.platform=='darwin':
+        result.update(macos=platform.mac_ver()[0],font='platform system-ui (platform/engine-specific baseline)')
+    return result
 
 
 def compare(expected, actual, difference):
@@ -56,8 +59,10 @@ def approve(report, destination, *, reviewed):
     if not reviewed:
         raise ValueError('Baseline approval requires --reviewed after inspecting screenshots')
     value=json.loads((report/'report.json').read_text(encoding='utf-8'))
-    if value['mode']!='capture' or not value['passed'] or value['environment']['platform']!='linux':
-        raise ValueError('Approve only a passing Linux capture run, never a failed comparison')
+    from tools.browser_acceptance import baseline_directory
+    baseline_directory(value['environment'])  # Validate platform/engine even for explicit custom destinations.
+    if value['mode']!='capture' or not value['passed']:
+        raise ValueError('Approve only a passing capture run, never a failed comparison')
     # Do not bless a partial run and silently discard other reviewed images.
     if value['suite']!='all' or value['viewports']!=['desktop','laptop','narrow']:
         raise ValueError('Approval requires a complete three-viewport capture')
@@ -74,4 +79,6 @@ def approve(report, destination, *, reviewed):
         shutil.copyfile(report/'screenshots'/name,destination/name)
     (destination/'manifest.json').write_text(json.dumps({'schema':'corpustrail-browser-baselines/v1',
         'environment':value['environment'],'images_sha256':images,
+        'capture_source_sha':value.get('source_sha'),
+        'capture_report_sha256':hashlib.sha256((report/'report.json').read_bytes()).hexdigest(),
         'review':'Explicitly approved after direct image inspection; not automatic test updates.'},indent=2)+'\n',encoding='utf-8')
