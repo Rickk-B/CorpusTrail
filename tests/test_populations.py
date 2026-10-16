@@ -285,6 +285,38 @@ class PopulationTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError,'link is missing'):
             ReviewController().view(self.project,result['session_id'].split(':')[1])
 
+    def test_upgrade_failure_rolls_back_all_schema_38_ddl_and_retains_schema_37_backup(self):
+        legacy_root=self.root.parent/'legacy-interrupted'
+        existing=migrations()
+        with patch('corpustrail._internal.database.migrations',return_value=existing[:37]):
+            legacy=Project.create(legacy_root,self.project.config,created_by='fixture',created_at=AT)
+        self.project=legacy;self.enroll('preserved',doi='10.1234/preserved-before-upgrade')
+        with connection(legacy.database_path) as db:before=list(db.iterdump())
+        backup=legacy_root/'data'/'interrupted-upgrade.sqlite3'
+        # Inject a failure AFTER all actual migration-038 DDL, inside the real
+        # upgrade transaction, before its history insert/commit. No fake store.
+        broken=existing[:-1]+((existing[-1][0],existing[-1][1]+'\nSELECT nonexistent_checkpoint6_function();\n'),)
+        with patch('corpustrail._internal.database.migrations',return_value=broken):
+            with self.assertRaises(sqlite3.OperationalError):Project.upgrade(legacy_root,backup=backup.relative_to(legacy_root).as_posix(),created_at=AT)
+        self.assertFalse(Project.open(legacy_root).populations.ready())
+        for path in (legacy.database_path,backup):
+            with connection(path) as db:
+                self.assertEqual(list(db.iterdump()),before)
+                self.assertEqual(db.execute('PRAGMA integrity_check').fetchone()[0],'ok')
+        # A new, explicitly chosen backup is required; no implicit resume/retry.
+        upgraded=Project.upgrade(legacy_root,backup='data/explicit-retry.sqlite3',created_at=AT)
+        self.assertTrue(upgraded.populations.ready())
+
+    def test_backup_creation_failure_prevents_migration(self):
+        legacy_root=self.root.parent/'legacy-backup-failure'
+        with patch('corpustrail._internal.database.migrations',return_value=migrations()[:37]):
+            legacy=Project.create(legacy_root,self.project.config,created_by='fixture',created_at=AT)
+        before=legacy.database_path.read_bytes()
+        with patch('corpustrail._internal.database.os.open',side_effect=OSError('Synthetic backup failure')):
+            with self.assertRaises(OSError):Project.upgrade(legacy_root,backup='data/refused-backup.sqlite3',created_at=AT)
+        self.assertEqual(legacy.database_path.read_bytes(),before)
+        self.assertFalse(Project.open(legacy_root).populations.ready())
+
     def test_previous_schema_opens_without_writes_and_explicit_upgrade_preserves_history(self):
         legacy_root = self.root.parent/'legacy'
         with patch('corpustrail._internal.database.migrations',return_value=migrations()[:37]):
