@@ -90,7 +90,11 @@ field('population-form').onsubmit=async event=>{
   event.preventDefault();if(busy)return;lock(true);
   try{
     candidateRequest={request_id:crypto.randomUUID().replaceAll('-',''),...requestFields()};
-    const data=await api('populations/preview',candidateRequest);approvedPreview=data.population;
+    const request=candidateRequest,data=await api('populations/preview',request);
+    // An edit may invalidate the selection while its read-only preview is in flight.
+    // Never redisplay or approve that older response over the edited selection.
+    if(candidateRequest!==request)return;
+    approvedPreview=data.population;
     counts(field('population-preview-counts'),approvedPreview);field('population-preview').hidden=false;
     field('population-unresolved-label').hidden=!approvedPreview.unresolved_count;
     field('population-preview-heading').focus();message('Preview only. No population, review or corpus decision has been created.');
