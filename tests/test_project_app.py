@@ -203,6 +203,7 @@ class GuidedProjectTests(ProjectFixture):
     def test_explicit_launcher_project_outside_root_no_duplicate_database(self):
         external = Project.create(Path(self.temp.name)/'external', ProjectConfig('external','External topic','Invented'), created_by='fixture')
         controller = ProjectController(projects_root=self.root, project=external)
+        self.addCleanup(controller.close)
         before = fingerprint(external.root)
         self.assertEqual(controller.project().root, external.root)
         controller.entry(); controller.settings()
@@ -230,6 +231,7 @@ class GuidedProjectTests(ProjectFixture):
         self.assertEqual(len(self.controller.project().configuration_history()), 2)
         self.assertEqual(before['corpustrail.project.json'], fingerprint(self.controller.project().root)['corpustrail.project.json'])
         fresh = ProjectController(projects_root=self.root)
+        self.addCleanup(fresh.close)
         fresh.open(fresh.entry()['items'][0]['handle'])
         self.assertEqual(fresh.settings()['version'], 2)
 
