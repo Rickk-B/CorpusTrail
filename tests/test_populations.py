@@ -317,6 +317,36 @@ class PopulationTests(unittest.TestCase):
         self.assertEqual(legacy.database_path.read_bytes(),before)
         self.assertFalse(Project.open(legacy_root).populations.ready())
 
+    def test_process_exit_during_upgrade_rolls_back_and_releases_project_use(self):
+        legacy_root=self.root.parent/'legacy-process-exit'
+        with patch('corpustrail._internal.database.migrations',return_value=migrations()[:37]):
+            legacy=Project.create(legacy_root,self.project.config,created_by='fixture',created_at=AT)
+        with connection(legacy.database_path) as db:before=list(db.iterdump())
+        script='''
+import os,sqlite3,sys
+from pathlib import Path
+from unittest.mock import patch
+from corpustrail.project import Project
+from corpustrail.application.project_use import acquire_project_use
+original=sqlite3.connect
+def connect(*args,**kwargs):
+ db=original(*args,**kwargs)
+ def trace(sql):
+  if sql.upper().replace(' ','').startswith('INSERTINTOSCHEMA_MIGRATIONSVALUES(38,'):os._exit(23)
+ db.set_trace_callback(trace)
+ return db
+with acquire_project_use(Path(sys.argv[1])):
+ with patch('corpustrail._internal.database.sqlite3.connect',side_effect=connect):
+  Project.upgrade(sys.argv[1],backup='data/process-exit-backup.sqlite3',created_at='2026-01-01T00:00:00+00:00')
+'''
+        result=subprocess.run([sys.executable,'-I','-c',script,str(legacy_root)],capture_output=True,timeout=25)
+        self.assertEqual(result.returncode,23,result.stderr.decode('utf-8',errors='replace'))
+        reopened=Project.open(legacy_root);self.assertFalse(reopened.populations.ready())
+        for path in (reopened.database_path,legacy_root/'data'/'process-exit-backup.sqlite3'):
+            with connection(path) as db:self.assertEqual(list(db.iterdump()),before)
+        from corpustrail.application.project_use import acquire_project_use
+        with acquire_project_use(legacy_root,exclusive=True):pass
+
     def test_previous_schema_opens_without_writes_and_explicit_upgrade_preserves_history(self):
         legacy_root = self.root.parent/'legacy'
         with patch('corpustrail._internal.database.migrations',return_value=migrations()[:37]):
