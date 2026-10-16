@@ -318,7 +318,9 @@ class PopulationTests(unittest.TestCase):
         self.assertFalse(Project.open(legacy_root).populations.ready())
 
     def test_process_exit_during_upgrade_rolls_back_and_releases_project_use(self):
-        legacy_root=self.root.parent/'legacy-process-exit'
+        # macOS /var is a symlink. Pass the same canonical root that the
+        # application registers, rather than weakening the project's no-link guard.
+        legacy_root=(self.root.parent/'legacy-process-exit').resolve()
         with patch('corpustrail._internal.database.migrations',return_value=migrations()[:37]):
             legacy=Project.create(legacy_root,self.project.config,created_by='fixture',created_at=AT)
         with connection(legacy.database_path) as db:before=list(db.iterdump())
