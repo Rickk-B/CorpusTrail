@@ -14,6 +14,7 @@ import secrets
 import threading
 import time
 import uuid
+import ssl
 
 from corpustrail import __version__
 from corpustrail._internal.values import content_hash, digest_bytes, now, ContractError
@@ -21,7 +22,7 @@ from corpustrail.discovery import SearchPlan
 from corpustrail.models.contracts import safe_data
 from corpustrail.providers import metadata_provider
 from corpustrail.providers.metadata import request_preview, verify_preview_request
-from corpustrail.providers.network import UrlLibTransport
+from corpustrail.providers.network import UrlLibTransport, ProviderTransportError
 from . import _workflow_files as files
 from .project_use import acquire_project_use, ProjectUseError
 from .projects import NAMES, ProjectCommandError, ProjectController
@@ -30,6 +31,93 @@ SCHEMA = 'corpustrail-discovery-workflow/v1'
 BOUNDS = {'page_size': 20, 'max_pages': 1, 'max_attempts': 1,
           'retry_delay_seconds': 1, 'max_retry_wait_seconds': 30}
 TERMINAL = {'completed', 'partial', 'failed', 'cancelled', 'interrupted'}
+
+
+# Fixed type names, not remote exception messages, enter the existing operational
+# error field. Scientific retry states/limits and the transport remain unchanged.
+class ProviderCertificateError(ProviderTransportError): pass
+class ProviderTlsError(ProviderTransportError): pass
+class ProviderDnsError(ProviderTransportError): pass
+class ProviderTimeoutError(ProviderTransportError): pass
+class ProviderConnectionRefusedError(ProviderTransportError): pass
+
+
+TRANSPORT_MESSAGES = {
+    'ProviderCertificateError': 'TLS certificate verification failed. Check the trust configuration of the Python environment used to launch CorpusTrail; verification remains enabled.',
+    'ProviderTlsError': 'The TLS connection failed before an HTTP response was received.',
+    'ProviderDnsError': 'The provider hostname could not be resolved; no HTTP response was received.',
+    'ProviderTimeoutError': 'The request timed out before a usable HTTP response was received.',
+    'ProviderConnectionRefusedError': 'The connection was refused before an HTTP response was received.',
+}
+
+
+def offline_environment_report():
+    """No network/project access; omit paths, credentials and proxy URLs."""
+    import platform
+    import xml.parsers.expat
+    from importlib.metadata import version, PackageNotFoundError
+    paths=ssl.get_default_verify_paths()
+    try:app_version=version('corpus-trail')
+    except PackageNotFoundError:app_version='not installed in this interpreter'
+    result={'schema':'corpustrail-offline-transport-environment/v1',
+        'offline':True,'project_access':False,'python':platform.python_version(),
+        'system':platform.system(),'architecture':platform.machine(),'corpustrail':app_version,
+        'openssl':ssl.OPENSSL_VERSION,'expat':xml.parsers.expat.EXPAT_VERSION,
+        'default_ca_file_exists':bool(paths.cafile and os.path.isfile(paths.cafile)),
+        'default_ca_directory_exists':bool(paths.capath and os.path.isdir(paths.capath)),
+        'overrides_present':{k:bool(os.environ.get(k)) for k in ('SSL_CERT_FILE','SSL_CERT_DIR','REQUESTS_CA_BUNDLE','CURL_CA_BUNDLE')},
+        'proxy_configuration_present':{k:bool(v) for h in UrlLibTransport()._opener.handlers
+            if type(h).__module__=='urllib.request' and type(h).__name__=='ProxyHandler'
+            for k,v in h.proxies.items() if k in {'http','https','all','no'}}}
+    try:
+        context=ssl.create_default_context()
+        result.update(tls_context_created=True,certificate_verification_required=context.verify_mode==ssl.CERT_REQUIRED,
+            hostname_verification=context.check_hostname,trust_store_counts=context.cert_store_stats())
+    except (OSError,ssl.SSLError,ValueError):
+        result.update(tls_context_created=False,explanation='Default TLS context creation failed; sensitive exception details omitted.')
+    result['limitations']='Offline trust-store presence cannot prove that Europe PMC resolves, connects, or has a trusted certificate on this device. No native cause is established.'
+    return result
+
+
+def transport_failure_type(error):
+    """Inspect only typed causes, never parse/log arbitrary exception strings.
+
+    urllib may wrap a proxy, resolver or TLS failure. The observed primitive
+    identifies a failure category, not which host/proxy configuration caused it.
+    """
+    seen=set()
+    while isinstance(error,BaseException) and id(error) not in seen and len(seen)<8:
+        seen.add(id(error))
+        for primitive,category in ((ssl.SSLCertVerificationError,ProviderCertificateError),
+                (ssl.SSLError,ProviderTlsError),
+                (TimeoutError,ProviderTimeoutError),(ConnectionRefusedError,ProviderConnectionRefusedError)):
+            if isinstance(error,primitive):return category
+        bases={(base.__module__,base.__name__) for base in type(error).__mro__}
+        # Inspect fixed library type identities without adding a network-import
+        # capability to the application layer. Never inspect exception messages.
+        if ('socket','gaierror') in bases:return ProviderDnsError
+        error=error.reason if ('urllib.error','URLError') in bases else error.__cause__
+    return ProviderTransportError
+
+
+def request_failure(project,run_id):
+    """Read-only interpretation of authoritative request outcomes, including old records."""
+    from corpustrail._internal.pipeline import events
+    records=events(project,scope_id=run_id,kind='request_result')
+    if not records:return None
+    value=records[-1]['payload']
+    if value.get('status')!='retryable_error':return None
+    status=value.get('http_status');error=value.get('error')
+    if status==429:
+        message='The provider returned HTTP 429 (rate limit).'
+    elif isinstance(status,int):
+        message='The provider returned HTTP '+str(status)+'.'
+    else:
+        message=TRANSPORT_MESSAGES.get(error,'No HTTP response was recorded. The saved diagnostic does not establish whether TLS, DNS, proxy or another connection problem caused this failure.')
+    message+=' '+('Retry blocked by the approved wait limit.' if value.get('retry_blocked') else
+                   'Another approved attempt is pending.' if value.get('will_retry') else 'No further automatic attempt is authorized by this plan.')
+    return {'category':error if error in TRANSPORT_MESSAGES else 'http_rate_limit' if status==429 else 'http_error' if isinstance(status,int) else 'transport_unknown',
+            'http_status':status,'message':message}
 
 
 def _handle(value):
@@ -75,7 +163,12 @@ class _SafeTransport:
         self.transport, self.values, self.network = transport, values, transport.network
 
     def request(self, *args, **kwargs):
-        response = self.transport.request(*args, **kwargs)
+        try:
+            response = self.transport.request(*args, **kwargs)
+        except ProviderTransportError as error:
+            category=transport_failure_type(error)
+            if category is ProviderTransportError:raise
+            raise category('transport_failed') from error
         # Reject echoed credentials before the scientific service preserves bytes
         # or allowlisted rate headers. Never log rejected remote text.
         text = response.body.decode('utf-8', errors='replace')
@@ -389,7 +482,8 @@ class DiscoveryController:
             children.append({'provider': child['provider'], 'label': child['label'],
                 'status': results[child['provider']]['status'] if child['provider'] in results else
                           ('interrupted' if status=='interrupted' else 'running') if child['provider'] in started else 'not_started',
-                **run, 'outcome': results.get(child['provider'])})
+                **run, 'outcome': results.get(child['provider']),
+                'failure': request_failure(project,child['plan']['run_id']) if run['completion'] and run['completion']['outcome']=='retryable_error' else None})
         available = status in {'prepared', 'approved'}
         try: self._validate(project, value)
         except ContractError: available = False

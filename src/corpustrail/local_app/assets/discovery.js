@@ -5,7 +5,7 @@ const session = document.querySelector('meta[name="corpustrail-session"]').conte
 const schema = 'corpustrail-discovery-workflow/v1';
 let configuration, view=null, previewNonce=null, busy=false, timer=null, generation=0;
 const messages = {prepared:'Awaiting approval', approved:'Approved — not yet run', queued:'Queued', running:'Running', completed:'Completed bounded search', partial:'Completed with errors / partial', failed:'Failed — inspect preserved work', interrupted:'Interrupted — no automatic replay', cancelled:'Stopped between providers', invalidated:'Edited — a new preview is required'};
-const outcomes = {exhausted:'No further results reported',truncated_page_limit:'Approved page limit reached; more results may exist',truncated_provider_limit:'Provider result limit reached',retryable_error:'Temporary failure or rate limit; retries exhausted or blocked',permanent_error:'Request rejected — inspect provenance',not_found:'Database returned not found',malformed_response:'Response could not be normalized',requires_configuration:'Credential configuration needed'};
+const outcomes = {exhausted:'No further results reported',truncated_page_limit:'Approved page limit reached; more results may exist',truncated_provider_limit:'Provider result limit reached',retryable_error:'Request unsuccessful — inspect the recorded outcome',permanent_error:'Request rejected — inspect provenance',not_found:'Database returned not found',malformed_response:'Response could not be normalized',requires_configuration:'Credential configuration needed'};
 function message(value) { get('message').textContent=value; }
 async function api(path, body) {
   const options={headers:{'X-CorpusTrail-Session':session},cache:'no-store'};
@@ -59,7 +59,7 @@ function renderPlan(value) {
 function renderJob(value) {
   get('job-status').textContent=messages[value.status]+' · '+value.providers_finished+'/'+value.providers_total+' providers finished'+(value.elapsed_seconds===null?'':' · '+value.elapsed_seconds+' seconds elapsed');
   get('provider-progress').replaceChildren();
-  for(const p of value.providers)get('provider-progress').append(make('li',p.label+': '+p.status+' · '+p.observations_preserved+' observations preserved · '+p.physical_requests_started+' request attempts started'+(p.completion?' · '+(outcomes[p.completion.outcome]||p.completion.outcome):'')+(p.outcome?.diagnostic?' · '+p.outcome.message:'')));
+  for(const p of value.providers)get('provider-progress').append(make('li',p.label+': '+p.status+' · '+p.observations_preserved+' observations preserved · '+p.physical_requests_started+' request attempts started'+(p.completion?' · '+(p.failure?.message||outcomes[p.completion.outcome]||p.completion.outcome):'')+(p.outcome?.diagnostic?' · '+p.outcome.message:'')));
   get('results').replaceChildren();
   const labels={observations_preserved:'Provider observations preserved',linked_observations:'Observations linked to publications',unique_publications:'Unique publications linked',publications_created_by_run:'Publications created by this search',previously_known_publications:'Previously known publications',observations_not_linked:'Observations not linked (pending/identity issues)',provider_errors:'Provider errors / interrupted requests'};
   for(const [key,label] of Object.entries(labels))get('results').append(make('dt',label),make('dd',String(value.summary[key])));
