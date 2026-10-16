@@ -455,3 +455,29 @@ with project_use(p.root):
         project.populations.verify(version['version_id']);project.populations.members(version['version_id'])
         self.assertEqual(before,scientific_rows())
         self.assertEqual(project.reviews.membership(fixture.ids[0])['state'],'included')
+
+    def test_legacy_upgrade_preserves_existing_scientific_tables_and_backup(self):
+        from test_curation_prioritization import CurationTests
+        fixture=CurationTests()
+        with patch('corpustrail._internal.database.migrations',return_value=migrations()[:37]):
+            fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        fixture.label(fixture.ids[0]);fixture.document(fixture.ids[0]);fixture.prepare()
+        project=fixture.project
+        with connection(project.database_path) as db:
+            original_dump=list(db.iterdump())
+            names=[r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                   if r[0] not in ('schema_migrations','sqlite_sequence')]
+            before={name:[tuple(r) for r in db.execute('SELECT * FROM "'+name+'"')] for name in names}
+        fields={'request_id':uuid.uuid4().hex,'confirm_backup':True,
+            'project_id':project.config.project_id,'config_event_id':project.configuration_history()[-1]['event_id']}
+        result=PopulationController().command(project,'upgrade',fields)
+        self.assertTrue(result['backup_created'])
+        upgraded=Project.open(project.root)
+        self.assertTrue(upgraded.populations.ready())
+        with connection(upgraded.database_path) as db:
+            self.assertEqual(before,{name:[tuple(r) for r in db.execute('SELECT * FROM "'+name+'"')] for name in names})
+        backup=project.root/project.config.data_directory/'population-upgrades'/(fields['request_id']+'.sqlite3')
+        with connection(backup) as db:self.assertEqual(list(db.iterdump()),original_dump)
+        self.assertEqual(upgraded.reviews.membership(fixture.ids[0])['state'],'included')
+        self.assertTrue(upgraded.evidence.representations(fixture.ids[0],trusted_only=True))
