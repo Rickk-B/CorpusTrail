@@ -60,15 +60,28 @@ class BrowserAcceptance(unittest.TestCase):
         self.visit('/')
 
     def tearDown(self):
+        self.page.wait_for_load_state('networkidle')
         errors = self.diagnostics+self.fixture.errors+self.fixture.transport.errors
         self.runtime.finish_case(self, errors)
         self.assertEqual(errors, [], 'Browser/backend diagnostics must be clean')
 
     def visit(self, path):
+        # A visible heading can precede a page's final read-only requests.
+        # Let them finish before test-driven navigation; never suppress aborted
+        # requests or relax diagnostics to accommodate WebKit's reporting.
+        self.page.wait_for_load_state('networkidle')
         self.page.goto(self.fixture.origin+path, wait_until='networkidle')
         token=self.page.locator('meta[name="corpustrail-session"]').get_attribute('content')
         if token: self.tokens.add(token)
         expect(self.page.locator('main h1:visible')).to_have_count(1)
+
+    def reload(self):
+        self.page.wait_for_load_state('networkidle')
+        self.page.reload(wait_until='networkidle')
+
+    def restart(self):
+        self.page.wait_for_load_state('networkidle')
+        self.fixture.restart()
 
     def open_project(self):
         self.visit('/projects')
@@ -357,7 +370,7 @@ class BrowserAcceptance(unittest.TestCase):
             self.assertIn(text,results)
         self.snapshot('discovery-results',subject='#results');self.layout()
         self.assertEqual(len(self.fixture.transport.calls),4)
-        self.page.reload(wait_until='networkidle')
+        self.reload()
         expect(self.page.locator('#history button')).to_have_count(1)
         self.page.locator('#history button').click()
         expect(self.page.locator('#job-status')).to_contain_text('Completed bounded search')
@@ -378,7 +391,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(len(self.fixture.project.identities.papers()),9)
         for pid in self.fixture.project.identities.papers():
             self.assertEqual(self.fixture.project.reviews.membership(pid)['state'],'not_reviewed')
-        self.page.reload(wait_until='networkidle')
+        self.reload()
         expect(self.page.locator('#history button')).to_have_count(2)
         self.assertEqual(len(self.fixture.transport.calls),8)
 
@@ -402,7 +415,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(records[-1]['payload']['error'],'ProviderCertificateError')
         self.assertIsNone(records[-1]['payload']['http_status'])
         self.layout();self.snapshot('discovery-transport-error')
-        self.page.reload(wait_until='networkidle')
+        self.reload()
         self.page.locator('#history button').click()
         expect(self.page.locator('#provider-progress')).to_contain_text('TLS certificate verification failed')
         self.assertEqual(len(self.fixture.transport.calls),1)
@@ -432,9 +445,9 @@ class BrowserAcceptance(unittest.TestCase):
           return element.scrollTop+element.clientHeight>=element.scrollHeight-1;
         }''')
         self.assertTrue(reachable,'Long footnotes must remain reachable by reader scrolling')
-        self.page.reload(wait_until='networkidle');read_notes()
+        self.reload();read_notes()
         before=fingerprint(self.fixture.root)
-        self.fixture.restart();self.open_project();self.visit('/papers')
+        self.restart();self.open_project();self.visit('/papers')
         self.page.get_by_role('link',name=TITLE,exact=True).click();read_notes()
         expect(self.page.locator('#evidence-operations button')).to_have_count(1)
         self.assertEqual(len(self.fixture.transport.calls),1)
@@ -503,7 +516,7 @@ class BrowserAcceptance(unittest.TestCase):
         project.discovery.canonicalize(plan.run_id,approve_new_identities=True,approve_aliases=True)
         calls=len(self.fixture.transport.calls)
         self.assertEqual(len(project.identities.papers()),7)
-        self.page.reload(wait_until='networkidle')
+        self.reload()
         self.page.get_by_label('Population name',exact=True).fill('Combined origin candidates')
         self.page.get_by_label('Created by',exact=True).fill('fixture_reviewer')
         for name in ('Initial collected candidates','Synthetic source interface'):
@@ -555,7 +568,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(project.populations.inspect(first['version_id'])['member_count'],5)
         self.assertEqual(project.populations.inspect(combined['version_id'])['member_count'],7)
         self.snapshot('population-history');self.layout()
-        before=fingerprint(self.fixture.root);self.fixture.restart();self.open_project()
+        before=fingerprint(self.fixture.root);self.restart();self.open_project()
         self.visit('/review#'+review_handle)
         expect(self.page.locator('#review-progress')).to_contain_text('of 7')
         expect(self.page.locator('#review-population-version')).to_contain_text('Version 1')
@@ -570,6 +583,8 @@ class BrowserAcceptance(unittest.TestCase):
         self.visit('/review#'+review_handle)
         expect(self.page.locator('#review-completion-heading')).to_contain_text('Review completed')
         self.snapshot('population-review-completed');self.layout()
+        self.assertEqual({pid:project.reviews.history(pid) for pid in self.fixture.papers},initial_reviews)
+        self.assertTrue(all(project.reviews.membership(pid)['state']=='not_reviewed' for pid in project.identities.papers()))
         self.assertEqual(imported['member_count'],2)
 
     def test_population_selection_stale_preview_and_legacy_upgrade(self):
@@ -685,9 +700,9 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(sum(len(project.reviews.history(p))-len(initial[p]) for p in self.fixture.papers),5)
         self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
         handle=self.page.url.split('#')[1]
-        self.page.reload(wait_until='networkidle')
+        self.reload()
         expect(self.page.locator('#review-progress')).to_contain_text('5 with saved observations')
-        before=fingerprint(self.fixture.root);self.fixture.restart();self.open_project();self.visit('/review')
+        before=fingerprint(self.fixture.root);self.restart();self.open_project();self.visit('/review')
         self.page.get_by_role('button',name='Open review session',exact=True).click()
         expect(self.page.locator('#review-progress')).to_contain_text('5 with saved observations')
         self.assertEqual(before,fingerprint(self.fixture.root))
@@ -714,7 +729,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Back to Review Summary',exact=True).click()
         expect(self.page.locator('#review-publication')).to_be_hidden()
         expect(self.page.locator('#review-prepare-publication')).to_be_visible()
-        self.page.reload(wait_until='networkidle')
+        self.reload()
         expect(self.page.locator('#review-publication')).to_be_hidden()
         expect(self.page.locator('#assessment-form')).to_be_hidden()
         self.page.get_by_role('button',name='Preview corpus updates',exact=True).click()
@@ -746,7 +761,7 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#review-progress')).to_contain_text('Paper 2 of 5')
         self.page.get_by_role('button',name='Previous',exact=True).click()
         expect(self.page.locator('#review-rationale')).to_have_value('Incomplete draft retained without a judgment')
-        self.page.reload(wait_until='networkidle')
+        self.reload()
         expect(self.page.locator('#review-rationale')).to_have_value('Incomplete draft retained without a judgment')
         expect(self.page.locator('#review-progress')).to_contain_text('0 with saved observations')
         self.assertEqual(before,{p:project.reviews.history(p) for p in self.fixture.papers})
@@ -847,7 +862,7 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#evidence-history')).to_contain_text('Invalid document — not trusted',timeout=15000)
         self.assertEqual(valid,self.fixture.project.evidence.representations(self.fixture.papers[0],trusted_only=True))
         self.layout()
-        self.page.reload(wait_until='networkidle')
+        self.reload()
         expect(self.page.locator('#evidence-history')).to_contain_text('Document identity mismatch — not trusted')
         expect(self.page.locator('#evidence-operations button')).to_have_count(3)
         self.assertEqual(len(self.fixture.transport.calls),3)
@@ -856,7 +871,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Read verified structured text').click()
         expect(self.page.locator('#document-text')).to_contain_text('Invented structured scientific fixture text')
         before_restart=fingerprint(self.fixture.root)
-        self.fixture.restart()
+        self.restart()
         self.open_project();self.visit('/papers')
         self.page.get_by_role('link',name=TITLE,exact=True).click()
         expect(self.page.locator('#evidence-operations button')).to_have_count(3)
