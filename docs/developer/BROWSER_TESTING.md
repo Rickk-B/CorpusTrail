@@ -21,7 +21,7 @@ source .venv-browser/bin/activate
 python -m pip install '.[dev]' -r tools/browser-requirements.txt
 python -m build --wheel --no-isolation
 python -m pip install --no-deps --force-reinstall dist/*.whl
-python -m playwright install chromium
+python -m playwright install chromium webkit
 # Linux system libraries, if needed (requires administrator privileges):
 python -m playwright install-deps chromium
 # Linux baseline font: fonts-dejavu-core, supplied by Ubuntu 24.04.
@@ -61,6 +61,10 @@ Guided-review visual fixtures use a fixed synthetic project identifier so their
 canonical-ID order is reproducible. Their temporary project roots and external
 lock directories remain unique per case/run, including concurrent runs; no project
 state or lease anchor is shared. Other fixtures retain generated identifiers.
+Test-driven navigation, refresh and graceful restart wait for the preceding
+page's local reads to settle. Cancelled/failed requests remain errors rather
+than being filtered out. Auxiliary project controllers are explicitly closed;
+fixtures do not depend on garbage-collection timing to release leases.
 
 Only the provider transport is injected. OpenAlex, Crossref, Europe PMC and Semantic
 Scholar responses use their actual normalizers, exact identity pipeline, persisted
@@ -88,7 +92,7 @@ graceful restart, completion without membership, separately confirmed atomic
 publication and backend refusal for an unauthorized identity. A newly collected
 publication stays outside the frozen set. Review services/API successes are never
 mocked. Empty projects create no phantom sessions. All three viewports are covered;
-the macOS smoke selection also includes these scenarios.
+the complete hosted macOS Chromium and WebKit selections include these scenarios.
 Review refinement coverage includes disabled extent placeholders, explicit existing
 full-document attestation, completed read-only observations/provenance, failure
 before Finish acknowledgement, the completion dashboard link, summary/preview/back/
@@ -96,7 +100,7 @@ refresh transitions and separately confirmed publication. Local journal tests
 compare actual browser requests, HTTP responses, rendered titles and ProjectReads
 for exact/partial/case/trimmed/punctuation/empty/unmatched queries, missing metadata,
 combined filters and clear/reset. No search or authoritative review response is
-mocked. The macOS smoke selection includes local journal search as well.
+mocked. Both hosted macOS engines include local journal search as well.
 The evidence scenario also restarts the actual HTTP server/controllers, reopens the
 same disposable project, and verifies persisted history/text without new requests
 or scientific-file changes. This is graceful restart testing, not crash-resume.
@@ -108,8 +112,9 @@ offline discovery, overlapping canonical IDs, deterministic union, frozen Review
 selection and persistence after graceful restart. They create no membership or
 review observations. Source ordering/integrity, process races/crashes and historical
 scientific-table preservation are also covered by the standalone scientific suite.
-Production format importers are absent. Population smoke is included on hosted macOS;
-only controlled Linux rendering is used for pixel comparisons.
+Production format importers are absent. Complete population coverage runs in
+both hosted macOS engines. Pixel comparisons use separately reviewed Linux
+Chromium, macOS Chromium and macOS WebKit baselines, never cross-platform pixels.
 
 ## Visual baselines and review
 

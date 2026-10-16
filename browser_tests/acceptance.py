@@ -291,6 +291,7 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#trash-execute')).to_be_enabled()
         self.snapshot('trash-confirmation');self.layout()
         self.page.get_by_role('button',name='Cancel',exact=True).click()
+        expect(self.page.locator('#message')).to_contain_text('Confirmation closed. Cancelling does not move or restore any project.')
         expect(self.page.locator('#project-list article')).to_have_count(2)
         self.assertEqual(before,fingerprint(self.fixture.root))
         # Hold a real cooperating process lease; current-launcher close is not
@@ -391,6 +392,8 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(len(self.fixture.project.identities.papers()),9)
         for pid in self.fixture.project.identities.papers():
             self.assertEqual(self.fixture.project.reviews.membership(pid)['state'],'not_reviewed')
+        # Terminal counts render before the final preserved-history read.
+        expect(self.page.locator('#history button').first).to_contain_text('Completed with errors / partial')
         self.reload()
         expect(self.page.locator('#history button')).to_have_count(2)
         self.assertEqual(len(self.fixture.transport.calls),8)
