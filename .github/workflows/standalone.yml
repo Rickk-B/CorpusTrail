@@ -140,8 +140,8 @@ jobs:
           python -m build --wheel --no-isolation
           python -m pip install --no-deps dist/*.whl
           python -m playwright install chromium webkit
-      - name: Complete Chromium / platform-specific visual capture
-        run: python tools/browser_acceptance.py --browser chromium --output browser-acceptance/chromium
+      - name: Complete Chromium / reviewed macOS visual comparisons
+        run: python tools/browser_acceptance.py --browser chromium --visual compare --output browser-acceptance/chromium
       - name: Complete WebKit / platform-specific visual capture
         if: success() || failure()
         run: python tools/browser_acceptance.py --browser webkit --output browser-acceptance/webkit

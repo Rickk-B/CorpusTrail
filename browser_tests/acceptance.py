@@ -34,6 +34,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.expected_transport_failure = False
         self.local_requests=0
         self.external_requests=0
+        self.csp_enforcement_checks=0
         def route(request_route):
             request = request_route.request
             if not request.url.startswith(self.fixture.origin+'/'):
@@ -93,6 +94,15 @@ class BrowserAcceptance(unittest.TestCase):
 
     def test_home_catalogue_readonly(self):
         before=fingerprint(self.fixture.root)
+        if self.runtime.environment['browser']=='webkit':
+            # The test-only driver adapter must not bypass production CSP.
+            self.expected_console_errors.append("Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.")
+            blocked=self.page.evaluate('''() => {
+                const style=document.createElement('style');style.textContent='html { outline: 99px solid red !important; }';
+                document.head.append(style);const blocked=style.sheet===null;style.remove();return blocked;
+            }''')
+            self.assertTrue(blocked,'Production CSP must still refuse arbitrary inline CSS')
+            self.csp_enforcement_checks+=1
         expect(self.page.get_by_role('heading',name='Welcome to CorpusTrail')).to_be_visible()
         expect(self.page.locator('.workflow li')).to_have_count(7)
         self.assertEqual(self.page.locator('.step-number').all_text_contents(),[str(i) for i in range(1,8)])
@@ -103,6 +113,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.open_project();self.snapshot('dashboard')
         self.page.get_by_role('link',name='Discover More Publications',exact=True).click()
         expect(self.page.get_by_role('heading',name='Discovery',exact=True)).to_be_visible()
+        expect(self.page.locator('#providers input')).to_have_count(4)
         self.assertEqual(self.fixture.transport.calls,[])
         self.visit('/papers')
         expect(self.page.locator('#paper-list article')).to_have_count(5)
@@ -144,7 +155,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(before,fingerprint(self.fixture.root))
         self.assertEqual(self.fixture.transport.calls,[])
         # Actual keyboard focus, not merely a CSS string assertion.
-        self.page.keyboard.press('Tab')
+        self.page.keyboard.press('Alt+Tab' if self.runtime.environment['browser']=='webkit' else 'Tab')
         focus=self.page.evaluate('''() => {const e=document.activeElement,c=getComputedStyle(e);return {tag:e.tagName,outline:c.outlineStyle,width:parseFloat(c.outlineWidth)};}''')
         self.assertNotEqual(focus['tag'],'BODY');self.assertNotEqual(focus['outline'],'none');self.assertGreater(focus['width'],0)
 
@@ -287,6 +298,8 @@ class BrowserAcceptance(unittest.TestCase):
             child.communicate(timeout=10)
         self.visit('/projects');card=self.page.locator('article').filter(has=self.page.get_by_role('heading',name='Disposable browser project',exact=True))
         card.get_by_role('button',name='Open Project').click()
+        expect(self.page).to_have_url(re.compile('/dashboard$'))
+        expect(self.page.locator('#project-name')).to_have_text('Disposable browser project')
         self.visit('/settings')
         expect(self.page.locator('#description')).to_have_value('Updated topic description from the actual browser.')
         self.page.locator('#configuration-info summary').click()
@@ -570,8 +583,24 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.locator('#population-search').fill('without a PMCID')
         self.page.get_by_role('button',name='Find Publications',exact=True).click()
         self.page.get_by_role('checkbox',name='Publication without a PMCID',exact=True).check()
-        self.page.get_by_role('button',name='Preview Candidate Population',exact=True).click()
-        self.page.locator('#population-name').fill('Edited selection invalidates preview')
+        # Delay the REAL controller response, not its scientific result. Editing
+        # during a pending preview must not let its late response reappear.
+        from corpustrail.application.populations import PopulationController
+        entered,released=threading.Event(),threading.Event()
+        original=PopulationController.command
+        def delayed(controller,project,action,body):
+            value=original(controller,project,action,body)
+            if action=='preview':
+                entered.set()
+                if not released.wait(10):raise AssertionError('Preview gate timed out')
+            return value
+        try:
+            with patch.object(PopulationController,'command',new=delayed):
+                self.page.get_by_role('button',name='Preview Candidate Population',exact=True).click()
+                self.assertTrue(entered.wait(5))
+                self.page.locator('#population-name').fill('Edited selection invalidates preview')
+                with self.page.expect_response(lambda response:response.url.endswith('/api/v1/populations/preview')):released.set()
+        finally:released.set()
         expect(self.page.locator('#population-preview')).to_be_hidden()
         self.page.get_by_role('button',name='Preview Candidate Population',exact=True).click()
         expect(self.page.locator('#population-preview')).to_be_visible()

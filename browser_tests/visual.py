@@ -27,6 +27,7 @@ def rendering_environment(browser_version,engine='chromium'):
             'max_tile_ratio': MAX_TILE_RATIO}
     if sys.platform=='darwin':
         result.update(macos=platform.mac_ver()[0],font='platform system-ui (platform/engine-specific baseline)')
+    if engine=='webkit':result['screenshot_adapter']='pinned-inert-style-suppression/v1'
     return result
 
 

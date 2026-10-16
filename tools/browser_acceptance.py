@@ -58,6 +58,9 @@ class Runtime:
     def snapshot(self,case,name,full_page=True,subject=None,anchor=None):
         if self.viewport_name in LIMITED and name not in LIMITED[self.viewport_name]:return
         page=case.page
+        if self.environment['browser']=='webkit':
+            case.assertEqual(page.evaluate('document.getAnimations().filter(a=>a.playState==="running").length'),0,
+                'Pinned WebKit screenshot adapter requires the reduced-motion page to have no running animations')
         page.wait_for_load_state('networkidle')
         if sys.platform=='linux' and self.environment['browser']=='chromium':
             session=case.context.new_cdp_session(page)
@@ -144,6 +147,7 @@ class Runtime:
         (self.output/'diagnostics'/(name+'.txt')).write_text(diagnostic or 'No browser/runtime/network errors.\n',encoding='utf-8')
         self.cases.append({'scenario':case._testMethodName,'viewport':self.viewport_name,'passed':not failed,
             'errors':diagnostic.splitlines(),'controlled_provider_requests':len(case.fixture.transport.calls),
+            'csp_enforcement_checks':getattr(case,'csp_enforcement_checks',0),
             'local_http_requests':case.local_requests,
             'unexpected_external_requests':getattr(case,'external_requests',0)+len(case.fixture.errors)+len(case.fixture.transport.errors)})
 
@@ -204,8 +208,9 @@ def main():
 def execute(args):
     from playwright.sync_api import sync_playwright
     from browser_tests.acceptance import BrowserAcceptance
+    from browser_tests.webkit_screenshots import driver_environment
     logs=io.StringIO();passed=True;started=time.monotonic()
-    with tempfile.TemporaryDirectory(prefix='ct-browser-renderer-') as cache,sync_playwright() as driver:
+    with tempfile.TemporaryDirectory(prefix='ct-browser-renderer-') as cache,driver_environment(args.browser),sync_playwright() as driver:
         env=dict(os.environ)
         if sys.platform=='linux':
             env.update(FONTCONFIG_FILE=str(ROOT/'browser_tests'/'fonts.conf'),XDG_CACHE_HOME=cache)

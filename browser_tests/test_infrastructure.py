@@ -72,6 +72,29 @@ class VisualInfrastructureTests(unittest.TestCase):
             with self.assertRaises(ValueError):approve(self.root,self.root/engine,reviewed=False)
             approve(self.root,self.root/engine,reviewed=True)
 
+    def test_webkit_adapter_is_pinned_in_memory_and_restores_environment(self):
+        import hashlib
+        import os
+        import playwright
+        from playwright.sync_api import sync_playwright
+        from .webkit_screenshots import driver_environment,BUNDLE_SHA256
+        bundle=Path(playwright.__file__).parent/'driver/package/lib/coreBundle.js'
+        before=hashlib.sha256(bundle.read_bytes()).hexdigest()
+        self.assertEqual(before,BUNDLE_SHA256)
+        previous=os.environ.get('NODE_OPTIONS')
+        with driver_environment('webkit'),sync_playwright() as driver:
+            self.assertEqual(driver.webkit.name,'webkit')
+        self.assertEqual(os.environ.get('NODE_OPTIONS'),previous)
+        self.assertEqual(hashlib.sha256(bundle.read_bytes()).hexdigest(),before)
+
+    def test_webkit_adapter_refuses_unreviewed_driver_or_node_options(self):
+        from unittest.mock import patch
+        from .webkit_screenshots import driver_environment
+        with patch('browser_tests.webkit_screenshots.version',return_value='unreviewed'):
+            with self.assertRaises(ValueError),driver_environment('webkit'):pass
+        with patch.dict('os.environ',{'NODE_OPTIONS':'--unexpected'}):
+            with self.assertRaises(ValueError),driver_environment('webkit'):pass
+
     def test_candidate_paths_and_symlinks_are_confined(self):
         self.candidate(screenshots=[{'path':'../outside.png'}])
         with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=True)

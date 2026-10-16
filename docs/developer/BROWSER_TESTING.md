@@ -133,6 +133,34 @@ The approval command does not need to run on macOS and does not launch a browser
 CI contains no baseline approval or automatic fallback from compare to capture.
 Initial platform bring-up deliberately uses capture; comparisons are enabled only
 after those first hosted screenshots have actually been inspected and approved.
+
+### WebKit and strict CSP
+
+The first full WebKit run exposed a Playwright 1.63 screenshot helper that inserts
+an inert `body {}` inline stylesheet to synchronize animations. CorpusTrail's
+unchanged production CSP correctly refuses it. The test-only
+`browser_tests/webkit_screenshots.py` / `.cjs` adapter disables exactly that one
+driver synchronization instruction **in memory**, before the pinned Node driver
+loads. Both the Python guard and Node loader check the complete reviewed driver
+SHA-256; an unknown version/hash fails setup. Linux and published Apple Silicon
+wheel driver bytes were checked identical. Installed files are never modified.
+`NODE_OPTIONS` is process-scoped/restored; pre-existing options fail closed.
+
+This is not `bypass_csp`, a response-header change or a console-error allowlist.
+The actual application, stylesheet, scripts and security policy are unchanged.
+Each WebKit capture asserts no running animations under reduced-motion settings;
+the application's current CSS has no animations to synchronize. Arbitrary inline
+CSS is explicitly tested as still blocked, with that deliberate negative check
+counted in the report. All unexpected console/CSP/runtime errors still fail.
+The adapter policy is recorded in the renderer manifest. Review/remove this
+narrow workaround when updating Playwright; do not blindly patch new versions.
+
+Mac WebKit keyboard tests use native Option+Tab for all-control traversal rather
+than changing macOS keyboard settings. Navigation waits for the actual dashboard
+and loaded controls before leaving a page; aborted unfinished requests are not
+silently ignored. A deliberately delayed *real* population-controller response
+tests edits during a pending preview. Late previews are discarded by request
+identity; the existing backend stale/hash/revision guards remain unchanged.
 Tests wait for the actual dashboard URL/content after asynchronous project opening
 before starting another navigation. The completed unauthorized-review snapshot
 uses the full `main` content bounds: Chromium's earlier scroll extent can outlive
