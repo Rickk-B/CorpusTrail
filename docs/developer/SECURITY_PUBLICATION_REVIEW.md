@@ -72,7 +72,8 @@ larger runner. No billing settings or capacity are changed. Baseline workflow
 wall time was about 21 minutes: Linux acceptance 12–18 minutes/job, Linux browser
 5 minutes, macOS smoke about 1.6 minutes, lifecycle 0.5–2.6 minutes, final bundle
 about 3 minutes. Full Chromium plus WebKit reuses one macOS Python/tool/wheel
-setup; estimate 8–12 minutes total instead of 1.6, bounded to 25 minutes.
+setup; the complete staging pass took about 13 minutes instead of 1.6.
+Allow 12–15 minutes for normal full coverage, bounded to 25 minutes.
 
 At inspection 46 artifacts used 137,251,966 compressed bytes. Expect roughly
 40–70 MB for both macOS reports per run, plus Linux screenshots and a small

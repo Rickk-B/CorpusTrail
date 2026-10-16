@@ -95,6 +95,34 @@ class VisualInfrastructureTests(unittest.TestCase):
         with patch.dict('os.environ',{'NODE_OPTIONS':'--unexpected'}):
             with self.assertRaises(ValueError),driver_environment('webkit'):pass
 
+    def test_navigation_wait_observes_new_requests_and_continuous_quiet(self):
+        from unittest.mock import patch
+        from .acceptance import BrowserAcceptance
+        clock=[0.0];request=object();pending=set()
+        def pump(milliseconds):
+            clock[0]+=milliseconds/1000
+            if .2<=clock[0]<.8:pending.add(request)
+            else:pending.discard(request)
+        case=types.SimpleNamespace(pending_requests=pending,
+            page=types.SimpleNamespace(wait_for_timeout=pump),fail=self.fail)
+        with patch('browser_tests.acceptance.time.monotonic',side_effect=lambda:clock[0]):
+            BrowserAcceptance.settle_reads(case)
+        self.assertGreaterEqual(clock[0],1.3)
+        self.assertFalse(pending)
+
+    def test_navigation_wait_is_bounded_and_does_not_hide_unfinished_requests(self):
+        from unittest.mock import patch
+        from .acceptance import BrowserAcceptance
+        clock=[0.0];pending={object()}
+        def pump(milliseconds):clock[0]+=milliseconds/1000
+        case=types.SimpleNamespace(pending_requests=pending,
+            page=types.SimpleNamespace(wait_for_timeout=pump),fail=self.fail)
+        with patch('browser_tests.acceptance.time.monotonic',side_effect=lambda:clock[0]):
+            with self.assertRaisesRegex(AssertionError,'requests did not finish'):
+                BrowserAcceptance.settle_reads(case)
+        self.assertLessEqual(clock[0],10.1)
+        self.assertTrue(pending)
+
     def test_candidate_paths_and_symlinks_are_confined(self):
         self.candidate(screenshots=[{'path':'../outside.png'}])
         with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=True)

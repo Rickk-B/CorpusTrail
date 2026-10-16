@@ -63,7 +63,10 @@ lock directories remain unique per case/run, including concurrent runs; no proje
 state or lease anchor is shared. Other fixtures retain generated identifiers.
 Test-driven navigation, refresh and graceful restart wait for the preceding
 page's local reads to settle. Cancelled/failed requests remain errors rather
-than being filtered out. Auxiliary project controllers are explicitly closed;
+than being filtered out. This observes actual request events and a continuous
+quiet interval, with a ten-second bound, rather than a possibly stale load-state
+flag. Progress screenshots wait for the factual first provider attempt, not
+merely the parent operation's earlier running state. Auxiliary project controllers are explicitly closed;
 fixtures do not depend on garbage-collection timing to release leases.
 
 Only the provider transport is injected. OpenAlex, Crossref, Europe PMC and Semantic
@@ -113,8 +116,12 @@ selection and persistence after graceful restart. They create no membership or
 review observations. Source ordering/integrity, process races/crashes and historical
 scientific-table preservation are also covered by the standalone scientific suite.
 Production format importers are absent. Complete population coverage runs in
-both hosted macOS engines. Pixel comparisons use separately reviewed Linux
-Chromium, macOS Chromium and macOS WebKit baselines, never cross-platform pixels.
+both hosted macOS engines. Pixel comparison infrastructure separates Linux
+Chromium, macOS Chromium and macOS WebKit, never comparing cross-platform pixels.
+Linux and macOS Chromium baselines are reviewed. WebKit is currently in full
+capture/bootstrap validation: its baseline remains unapproved until a complete
+passing capture is directly inspected. CI must then switch WebKit to comparison;
+failed captures cannot be approved to bypass this remaining gate.
 
 ## Visual baselines and review
 

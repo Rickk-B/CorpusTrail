@@ -5,6 +5,7 @@ import queue
 import subprocess
 import sys
 import threading
+import time
 import unittest
 
 from playwright.sync_api import expect
@@ -35,6 +36,10 @@ class BrowserAcceptance(unittest.TestCase):
         self.local_requests=0
         self.external_requests=0
         self.csp_enforcement_checks=0
+        self.pending_requests=set()
+        self.page.on('request',lambda request:self.pending_requests.add(request))
+        self.page.on('requestfinished',lambda request:self.pending_requests.discard(request))
+        self.page.on('requestfailed',lambda request:self.pending_requests.discard(request))
         def route(request_route):
             request = request_route.request
             if not request.url.startswith(self.fixture.origin+'/'):
@@ -60,7 +65,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.visit('/')
 
     def tearDown(self):
-        self.page.wait_for_load_state('networkidle')
+        self.settle_reads()
         errors = self.diagnostics+self.fixture.errors+self.fixture.transport.errors
         self.runtime.finish_case(self, errors)
         self.assertEqual(errors, [], 'Browser/backend diagnostics must be clean')
@@ -69,19 +74,35 @@ class BrowserAcceptance(unittest.TestCase):
         # A visible heading can precede a page's final read-only requests.
         # Let them finish before test-driven navigation; never suppress aborted
         # requests or relax diagnostics to accommodate WebKit's reporting.
-        self.page.wait_for_load_state('networkidle')
+        self.settle_reads()
         self.page.goto(self.fixture.origin+path, wait_until='networkidle')
         token=self.page.locator('meta[name="corpustrail-session"]').get_attribute('content')
         if token: self.tokens.add(token)
         expect(self.page.locator('main h1:visible')).to_have_count(1)
 
     def reload(self):
-        self.page.wait_for_load_state('networkidle')
+        self.settle_reads()
         self.page.reload(wait_until='networkidle')
 
     def restart(self):
-        self.page.wait_for_load_state('networkidle')
+        self.settle_reads()
         self.fixture.restart()
+
+    def settle_reads(self):
+        # load-state networkidle can already be satisfied when a fresh routed
+        # request is queued. Observe actual request completion and a continuous
+        # quiet interval instead of trusting that stale load-state flag.
+        deadline=time.monotonic()+10
+        quiet=None
+        while time.monotonic()<deadline:
+            self.page.wait_for_timeout(50)  # Pump real Playwright request events.
+            if self.pending_requests:
+                quiet=None
+            elif quiet is None:
+                quiet=time.monotonic()
+            elif time.monotonic()-quiet>=0.5:
+                return
+        self.fail('Local application requests did not finish within the bounded navigation wait')
 
     def open_project(self):
         self.visit('/projects')
@@ -358,6 +379,8 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Run Discovery',exact=True).click()
         expect(self.page.locator('#job-status')).to_contain_text('Running')
         expect(self.page.locator('#repeat')).to_be_enabled()
+        expect(self.page.locator('#provider-progress li').first).to_have_text(
+            'OpenAlex: running · 0 observations preserved · 1 request attempts started')
         self.page.locator('#job-section').scroll_into_view_if_needed()
         self.snapshot('discovery-progress',full_page=False,anchor='#job-section')
         self.fixture.transport.gate.set()
@@ -393,7 +416,7 @@ class BrowserAcceptance(unittest.TestCase):
         for pid in self.fixture.project.identities.papers():
             self.assertEqual(self.fixture.project.reviews.membership(pid)['state'],'not_reviewed')
         # Terminal counts render before the final preserved-history read.
-        expect(self.page.locator('#history button').first).to_contain_text('Completed with errors / partial')
+        expect(self.page.locator('#history button').filter(has_text='Completed with errors / partial')).to_have_count(1)
         self.reload()
         expect(self.page.locator('#history button')).to_have_count(2)
         self.assertEqual(len(self.fixture.transport.calls),8)
