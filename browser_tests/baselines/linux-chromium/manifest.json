@@ -64,6 +64,8 @@
     "desktop-projects.png": "785fe5894077f7e9844239cc8bc2de815baa800cb12f4ce26630890d1e72b187",
     "desktop-trash-confirmation.png": "84e679f3cefbd0da428b9e8690e3410b8466fd639aaddb99a3ccdac6946c077d",
     "desktop-review-session-selection.png": "11348fcf7726ff42c14b97dce52b1a4d68574d9e95a6c68fe99e45c06408c86f",
+    "desktop-review-session-selection-skip.png": "11348fcf7726ff42c14b97dce52b1a4d68574d9e95a6c68fe99e45c06408c86f",
+    "desktop-review-session-selection-unauthorized.png": "11348fcf7726ff42c14b97dce52b1a4d68574d9e95a6c68fe99e45c06408c86f",
     "desktop-review-active.png": "ca71b0a85a1d902c9d3c1a5d18f7c6d4c59b9f8da2f35a502cee7adfcd6cd91e",
     "desktop-review-missing-evidence.png": "ca71b0a85a1d902c9d3c1a5d18f7c6d4c59b9f8da2f35a502cee7adfcd6cd91e",
     "desktop-review-assessment.png": "bdecc93c3d5d3614045213d8d361114f8e1873fc4e09a57ac009ff99e0ad3e87",
@@ -106,6 +108,8 @@
     "laptop-wizard-summary.png": "0305ce6a30335a515a8a25a49266986a67d0738278a5f566fd3581b60624c022",
     "laptop-empty-dashboard.png": "a632750d19728e8e424f1676b84d4c39552504a86fb8f7231bc370de0db9dba6",
     "laptop-review-session-selection.png": "5263f4c7f8e72239530e0af65d70e64f5bfa8978a2f900c9f2f3ac6150e04cde",
+    "laptop-review-session-selection-skip.png": "5263f4c7f8e72239530e0af65d70e64f5bfa8978a2f900c9f2f3ac6150e04cde",
+    "laptop-review-session-selection-unauthorized.png": "5263f4c7f8e72239530e0af65d70e64f5bfa8978a2f900c9f2f3ac6150e04cde",
     "laptop-review-active.png": "b6f8028ffc843ad5d16c2aa936ab8cd29118748e3099fdb3d42757e5de36b8e6",
     "laptop-review-missing-evidence.png": "b6f8028ffc843ad5d16c2aa936ab8cd29118748e3099fdb3d42757e5de36b8e6",
     "laptop-review-assessment.png": "6ac885b16b75cf1e17b996fe28c71f6d1080b8040cc06b8ea5c6f58bce2d94a3",
@@ -152,6 +156,8 @@
     "narrow-projects.png": "3d25e5c3a8121ae25bf2f48198c01375cd87567405bef45ba5461c379eb88c79",
     "narrow-trash-confirmation.png": "155c6150be4bc482d59cdb48e8d51046520a89e4f41f1e5c740f977c0633d982",
     "narrow-review-session-selection.png": "07a21bb5acde297b2287f31183bdb69da711240b9213338803db1883a90ad732",
+    "narrow-review-session-selection-skip.png": "07a21bb5acde297b2287f31183bdb69da711240b9213338803db1883a90ad732",
+    "narrow-review-session-selection-unauthorized.png": "07a21bb5acde297b2287f31183bdb69da711240b9213338803db1883a90ad732",
     "narrow-review-active.png": "a09352c4b8df4c76d03cdfbaeab4558bccd96f0973d4a1432be44a0b066a2938",
     "narrow-review-missing-evidence.png": "a09352c4b8df4c76d03cdfbaeab4558bccd96f0973d4a1432be44a0b066a2938",
     "narrow-review-assessment.png": "b9080141abc1448046da98c8ed8c31c488b1b7254790bbbf9f00f04886fa1664",
@@ -168,5 +174,6 @@
   },
   "capture_source_sha": "03f750e46b3f4b02b0bf95df7815416e24de3fa3",
   "capture_report_sha256": "f9f92c452d440011c1862c8aeba2db10076a917c47463960a6ac19bab39d9e8c",
-  "review": "Explicitly approved after direct image inspection; not automatic test updates."
+  "review": "Explicitly approved after direct image inspection; not automatic test updates.",
+  "selection_capture_review": "Separately named skip/unauthorized initial-selection states retain the directly reviewed existing empty-selection pixels. No scientific input is selected at this point. Each state is independently captured and strictly compared; no prior image bytes or thresholds changed."
 }

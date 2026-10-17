@@ -72,6 +72,8 @@ def approve(report, destination, *, reviewed):
         path=report/snapshot['path']
         if path.is_symlink() or not path.is_file() or path.parent!=report/'screenshots' or not path.resolve().is_relative_to(report.resolve()):
             raise ValueError('Invalid candidate screenshot path')
+        if path.name in images:
+            raise ValueError('Repeated screenshot path cannot be approved')
         images[path.name]=hashlib.sha256(path.read_bytes()).hexdigest()
     destination.mkdir(parents=True,exist_ok=True)
     if destination.is_symlink() or any((destination/name).is_symlink() for name in (*images,'manifest.json')):

@@ -64,6 +64,23 @@ class VisualInfrastructureTests(unittest.TestCase):
             with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=True)
         self.assertFalse((self.root/'approved').exists())
 
+    def test_repeated_capture_path_is_refused_before_browser_use(self):
+        from tools.browser_acceptance import Runtime
+        self.candidate()
+        path=self.root/'screenshots'/'desktop-example.png'
+        before=path.read_bytes()
+        runtime=object.__new__(Runtime)
+        runtime.viewport_name='desktop';runtime.output=self.root
+        with self.assertRaisesRegex(AssertionError,'distinct capture name'):
+            runtime.snapshot(None,'example')
+        self.assertEqual(path.read_bytes(),before)
+
+    def test_repeated_capture_record_cannot_be_approved(self):
+        self.candidate(screenshots=[{'path':'screenshots/desktop-example.png'}]*2)
+        with self.assertRaisesRegex(ValueError,'Repeated screenshot path'):
+            approve(self.root,self.root/'approved',reviewed=True)
+        self.assertFalse((self.root/'approved').exists())
+
     def test_platform_and_engine_baselines_are_separate_and_require_review(self):
         from tools.browser_acceptance import baseline_directory
         for engine in ('chromium','webkit'):
@@ -94,6 +111,29 @@ class VisualInfrastructureTests(unittest.TestCase):
             with self.assertRaises(ValueError),driver_environment('webkit'):pass
         with patch.dict('os.environ',{'NODE_OPTIONS':'--unexpected'}):
             with self.assertRaises(ValueError),driver_environment('webkit'):pass
+
+    def test_discovery_fixture_clock_controls_stored_plan_and_restores_on_close(self):
+        from corpustrail.application import discovery
+        from corpustrail._internal import values
+        from .fixtures import ApplicationFixture, AT
+        original=discovery.now
+        fixture=ApplicationFixture()
+        try:
+            fixture.freeze_discovery_clock()
+            self.assertEqual(discovery.now(),AT)
+            self.assertIs(values.now,original)  # Do not replace scientific/global time.
+            preview=fixture.discovery.prepare(fixture.project,
+                request_id='fixed-discovery-clock',
+                config_event_id=fixture.project.configuration_history()[-1]['event_id'],
+                query='synthetic transport diagnostic',providers=['europepmc'],
+                bounds=dict(discovery.BOUNDS))
+            self.assertEqual(preview['plan']['created_at'],AT)
+            self.assertEqual(preview['plan']['providers'][0]['plan']['created_at'],AT)
+            self.assertEqual(fixture.discovery.history(fixture.project)['items'][0]['created_at'],AT)
+            self.assertEqual(fixture.transport.calls,[])
+        finally:
+            fixture.close()
+        self.assertIs(discovery.now,original)
 
     def test_navigation_wait_observes_new_requests_and_continuous_quiet(self):
         from unittest.mock import patch

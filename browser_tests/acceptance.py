@@ -9,7 +9,7 @@ import time
 import unittest
 
 from playwright.sync_api import expect
-from .fixtures import ApplicationFixture, ABSTRACT, SCOPE, TITLE, FOOTNOTE, fingerprint
+from .fixtures import ApplicationFixture, ABSTRACT, SCOPE, TITLE, FOOTNOTE, AT, fingerprint
 
 
 class BrowserAcceptance(unittest.TestCase):
@@ -422,6 +422,9 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(len(self.fixture.transport.calls),8)
 
     def test_discovery_transport_error_is_not_a_confirmed_rate_limit(self):
+        # History is populated asynchronously. Fix the stored plan timestamp,
+        # rather than relying on a one-time screenshot rewrite of its DOM row.
+        self.fixture.freeze_discovery_clock()
         initial={pid:self.fixture.project.reviews.history(pid) for pid in self.fixture.papers}
         self.open_project();self.visit('/discovery')
         self.fixture.transport.discovery_transport_error=True
@@ -440,6 +443,10 @@ class BrowserAcceptance(unittest.TestCase):
         records=events(self.fixture.project,kind='request_result')
         self.assertEqual(records[-1]['payload']['error'],'ProviderCertificateError')
         self.assertIsNone(records[-1]['payload']['http_status'])
+        self.assertEqual(self.fixture.discovery.history(self.fixture.project)['items'][0]['created_at'],AT)
+        expect(self.page.locator('#history button')).to_have_text(
+            'synthetic transport diagnostic · Failed — inspect preserved work · '+AT)
+        self.settle_reads()
         self.layout();self.snapshot('discovery-transport-error')
         self.reload()
         self.page.locator('#history button').click()
@@ -481,11 +488,11 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(self.fixture.project.reviews.history(self.fixture.papers[0]),[])
         self.assertEqual(self.fixture.project.reviews.membership(self.fixture.papers[0])['state'],'not_reviewed')
 
-    def start_guided_review(self,reviewer='fixture_reviewer'):
+    def start_guided_review(self,reviewer='fixture_reviewer',selection_snapshot='review-session-selection'):
         self.visit('/review')
         expect(self.page.locator('#reviewer')).to_have_value('')
         expect(self.page.locator('#review-population')).to_have_value('')
-        self.snapshot('review-session-selection');self.layout()
+        self.snapshot(selection_snapshot);self.layout()
         self.page.locator('#reviewer').fill(reviewer)
         self.page.locator('#review-population').select_option('all')
         self.page.get_by_role('button',name='Start Guided Review',exact=True).click()
@@ -774,7 +781,7 @@ class BrowserAcceptance(unittest.TestCase):
         import hashlib
         project=self.fixture.project
         before={p:project.reviews.history(p) for p in self.fixture.papers}
-        self.open_project();self.start_guided_review()
+        self.open_project();self.start_guided_review(selection_snapshot='review-session-selection-skip')
         # A newly collected canonical publication must not enter this snapshot.
         raw=b'new canonical fixture outside frozen review'
         source=SourceReference('fixture://later-collection','later','sha256:'+hashlib.sha256(raw).hexdigest(),
@@ -808,7 +815,8 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(self.fixture.transport.calls,[]);self.layout()
 
     def test_review_unauthorized_and_empty_project(self):
-        self.open_project();self.start_guided_review(reviewer='configuration_author')
+        self.open_project();self.start_guided_review(reviewer='configuration_author',
+            selection_snapshot='review-session-selection-unauthorized')
         self.page.locator('input[name="assessment"][value="included"]').check()
         self.page.locator('#review-extent').select_option('metadata')
         self.page.locator('#review-rationale').fill('Invented non-authoritative observation')

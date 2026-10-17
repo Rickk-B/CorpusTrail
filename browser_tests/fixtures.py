@@ -178,6 +178,10 @@ class ApplicationFixture:
         self.transport = FixtureTransport()
         self._start_server()
 
+    def freeze_discovery_clock(self):
+        """Fix this synthetic workflow's timestamp input; restore it on close."""
+        self.stack.enter_context(patch('corpustrail.application.discovery.now', return_value=AT))
+
     def _start_server(self):
         self.controller = ProjectController(projects_root=self.root)
         self.stack.callback(self.controller.close)

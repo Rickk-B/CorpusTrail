@@ -31,7 +31,8 @@ LIMITED={'laptop':{'welcome','wizard-reviewer','wizard-summary','empty-dashboard
          'narrow':{'welcome','projects','wizard','wizard-reviewer','wizard-summary','empty-dashboard','settings','catalogue','trash-confirmation','discovery-preview','discovery-approval','evidence-availability','evidence-result','evidence-mismatch','missing-pmcid'}}
 for names in LIMITED.values():
     names.add('evidence-footnotes')
-    names.update({'review-session-selection','review-active','review-verified-text','review-long-title',
+    names.update({'review-session-selection','review-session-selection-skip','review-session-selection-unauthorized',
+        'review-active','review-verified-text','review-long-title',
         'review-missing-evidence','review-assessment','review-summary','review-completed','review-publication',
         'review-unauthorized','review-empty','review-finished-dashboard','review-confirmed',
         'journal-results','journal-no-results','review-completed-overview'})
@@ -57,6 +58,9 @@ class Runtime:
 
     def snapshot(self,case,name,full_page=True,subject=None,anchor=None):
         if self.viewport_name in LIMITED and name not in LIMITED[self.viewport_name]:return
+        path=self.output/'screenshots'/(self.viewport_name+'-'+name+'.png')
+        if path.exists() or path.is_symlink():
+            raise AssertionError('Screenshot path already exists; use a distinct capture name: '+path.name)
         page=case.page
         if self.environment['browser']=='webkit':
             case.assertEqual(page.evaluate('document.getAnimations().filter(a=>a.playState==="running").length'),0,
@@ -90,7 +94,6 @@ class Runtime:
             if(clean!==text){nodes.push([n,text]);n.textContent=clean;}}
           window.__ctScreenshotNodes=nodes;return nodes.length;
         }''')
-        path=self.output/'screenshots'/(self.viewport_name+'-'+name+'.png')
         if anchor:
             page.locator(anchor).evaluate('''element => {
                 const padding=parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)||0;
