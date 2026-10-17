@@ -142,9 +142,9 @@ jobs:
           python -m playwright install chromium webkit
       - name: Complete Chromium / reviewed macOS visual comparisons
         run: python tools/browser_acceptance.py --browser chromium --visual compare --output browser-acceptance/chromium
-      - name: Complete WebKit / platform-specific visual capture
+      - name: Complete WebKit / reviewed macOS visual comparisons
         if: success() || failure()
-        run: python tools/browser_acceptance.py --browser webkit --output browser-acceptance/webkit
+        run: python tools/browser_acceptance.py --browser webkit --visual compare --output browser-acceptance/webkit
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
