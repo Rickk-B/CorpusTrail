@@ -125,6 +125,8 @@ class DevelopmentArtifactTests(unittest.TestCase):
 
     def test_workflow_is_validation_gated_and_read_only_to_github(self):
         source = (ROOT / '.github/workflows/standalone.yml').read_text(encoding='utf-8')
+        scientific_jobs=source.split('  acceptance:',1)[1].split('  project-lifecycle:',1)[0]
+        self.assertIn('fetch-depth: 0',scientific_jobs)
         artifact = source.split('  development-artifact:', 1)[1]
         self.assertRegex(artifact, r'needs:\s*\[acceptance, project-lifecycle, browser-acceptance, browser-macos-smoke\]')
         self.assertIn('python tools/browser_acceptance.py --visual "$BROWSER_VISUAL_MODE"', source)
