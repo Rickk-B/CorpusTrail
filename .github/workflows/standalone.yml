@@ -6,10 +6,10 @@ permissions:
 concurrency:
   group: acceptance-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-# Explicit baseline-review phase only. Capture cannot deliver a development wheel.
-# Restore compare after reviewing this source's complete platform/engine evidence.
+# CP7 capture evidence reviewed explicitly; every delivery requires strict comparison.
+# A future capture phase still cannot deliver a development wheel.
 env:
-  BROWSER_VISUAL_MODE: capture
+  BROWSER_VISUAL_MODE: compare
 jobs:
   acceptance:
     runs-on: ubuntu-latest

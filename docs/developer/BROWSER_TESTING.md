@@ -131,10 +131,10 @@ scientific-table preservation are also covered by the standalone scientific suit
 Production format importers are absent. Complete population coverage runs in
 both hosted macOS engines. Pixel comparison infrastructure separates Linux
 Chromium, macOS Chromium and macOS WebKit, never comparing cross-platform pixels.
-Linux and macOS Chromium baselines are reviewed. WebKit is currently in full
-capture/bootstrap validation: its baseline remains unapproved until a complete
-passing capture is directly inspected. CI must then switch WebKit to comparison;
-failed captures cannot be approved to bypass this remaining gate.
+Linux Chromium, macOS Chromium and macOS WebKit have separate reviewed baselines.
+All three use strict comparison for delivery. The [CP7 visual review](CP7_VISUAL_REVIEW.md)
+records the complete new capture inventory, direct inspection and retained older
+images. Capture-only output never substitutes for the final strict delivery gate.
 
 ## Visual baselines and review
 
