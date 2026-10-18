@@ -48,6 +48,18 @@ Traces have screenshots/actions, not DOM/network snapshots; session values are
 redacted before publication. No real projects, article files or credentials are
 uploaded. Successful runs do not keep traces. Failure artifacts are synthetic.
 
+Navigation retains its ten-second request-completion limit and continuous quiet
+interval. Request lifecycle diagnostics record only fixed route vocabulary,
+sequence numbers, response status and event timings, not query values, bodies,
+headers or opaque path components. Pending state is saved before failure capture.
+Teardown does not repeat a navigation wait that has already failed. Screenshot,
+trace finalization and sanitization are independently attempted, with three-second
+screenshot and five-second diagnostic/close bounds on the Linux/macOS runners.
+Collection failures are reported separately from the original test exception;
+they never turn a failed test into a pass. Raw traces remain outside the uploaded
+report until sanitization succeeds. A pending request is an observation, not proof
+of a production navigation defect or stale bookkeeping.
+
 ## Isolation and scientific coverage
 
 Each test has its own private temporary project root, external lock anchors,

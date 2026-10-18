@@ -5,11 +5,11 @@ import queue
 import subprocess
 import sys
 import threading
-import time
 import unittest
 
 from playwright.sync_api import expect
 from .fixtures import ApplicationFixture, ABSTRACT, SCOPE, TITLE, FOOTNOTE, AT, fingerprint
+from .lifecycle import RequestLedger, finalize_case, settle_reads
 
 
 class BrowserAcceptance(unittest.TestCase):
@@ -24,7 +24,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.context = self.runtime.browser.new_context(viewport=self.runtime.viewport,
             device_scale_factor=1, locale='en-US', timezone_id='UTC', color_scheme='light',
             reduced_motion='reduce', service_workers='block')
-        self.addCleanup(self.context.close)
+        self.addCleanup(self.runtime.close_context, self)
         self.context.tracing.start(screenshots=True, snapshots=False, sources=False)
         self.page = self.context.new_page()
         self.page.set_default_timeout(10000)
@@ -36,10 +36,13 @@ class BrowserAcceptance(unittest.TestCase):
         self.local_requests=0
         self.external_requests=0
         self.csp_enforcement_checks=0
-        self.pending_requests=set()
-        self.page.on('request',lambda request:self.pending_requests.add(request))
-        self.page.on('requestfinished',lambda request:self.pending_requests.discard(request))
-        self.page.on('requestfailed',lambda request:self.pending_requests.discard(request))
+        self.request_ledger=RequestLedger(self.fixture.origin)
+        self.pending_requests=self.request_ledger.pending
+        self.navigation_timeouts=[]
+        self.page.on('request',self.request_ledger.begin)
+        self.page.on('response',self.request_ledger.response)
+        self.page.on('requestfinished',lambda request:self.request_ledger.end(request,'finished'))
+        self.page.on('requestfailed',lambda request:self.request_ledger.end(request,'failed'))
         def route(request_route):
             request = request_route.request
             if not request.url.startswith(self.fixture.origin+'/'):
@@ -65,10 +68,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.visit('/')
 
     def tearDown(self):
-        self.settle_reads()
-        errors = self.diagnostics+self.fixture.errors+self.fixture.transport.errors
-        self.runtime.finish_case(self, errors)
-        self.assertEqual(errors, [], 'Browser/backend diagnostics must be clean')
+        finalize_case(self)
 
     def visit(self, path):
         # A visible heading can precede a page's final read-only requests.
@@ -92,17 +92,7 @@ class BrowserAcceptance(unittest.TestCase):
         # load-state networkidle can already be satisfied when a fresh routed
         # request is queued. Observe actual request completion and a continuous
         # quiet interval instead of trusting that stale load-state flag.
-        deadline=time.monotonic()+10
-        quiet=None
-        while time.monotonic()<deadline:
-            self.page.wait_for_timeout(50)  # Pump real Playwright request events.
-            if self.pending_requests:
-                quiet=None
-            elif quiet is None:
-                quiet=time.monotonic()
-            elif time.monotonic()-quiet>=0.5:
-                return
-        self.fail('Local application requests did not finish within the bounded navigation wait')
+        settle_reads(self)
 
     def open_project(self):
         self.visit('/projects')

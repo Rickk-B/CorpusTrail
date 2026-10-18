@@ -137,7 +137,7 @@ class VisualInfrastructureTests(unittest.TestCase):
 
     def test_navigation_wait_observes_new_requests_and_continuous_quiet(self):
         from unittest.mock import patch
-        from .acceptance import BrowserAcceptance
+        from .lifecycle import settle_reads
         clock=[0.0];request=object();pending=set()
         def pump(milliseconds):
             clock[0]+=milliseconds/1000
@@ -145,23 +145,25 @@ class VisualInfrastructureTests(unittest.TestCase):
             else:pending.discard(request)
         case=types.SimpleNamespace(pending_requests=pending,
             page=types.SimpleNamespace(wait_for_timeout=pump),fail=self.fail)
-        with patch('browser_tests.acceptance.time.monotonic',side_effect=lambda:clock[0]):
-            BrowserAcceptance.settle_reads(case)
+        with patch('browser_tests.lifecycle.time.monotonic',side_effect=lambda:clock[0]):
+            settle_reads(case)
         self.assertGreaterEqual(clock[0],1.3)
         self.assertFalse(pending)
 
     def test_navigation_wait_is_bounded_and_does_not_hide_unfinished_requests(self):
         from unittest.mock import patch
-        from .acceptance import BrowserAcceptance
+        from .lifecycle import settle_reads
         clock=[0.0];pending={object()}
         def pump(milliseconds):clock[0]+=milliseconds/1000
-        case=types.SimpleNamespace(pending_requests=pending,
+        case=types.SimpleNamespace(pending_requests=pending,navigation_timeouts=[],
+            request_ledger=types.SimpleNamespace(snapshot=lambda:{'pending_count':1}),
             page=types.SimpleNamespace(wait_for_timeout=pump),fail=self.fail)
-        with patch('browser_tests.acceptance.time.monotonic',side_effect=lambda:clock[0]):
+        with patch('browser_tests.lifecycle.time.monotonic',side_effect=lambda:clock[0]):
             with self.assertRaisesRegex(AssertionError,'requests did not finish'):
-                BrowserAcceptance.settle_reads(case)
+                settle_reads(case)
         self.assertLessEqual(clock[0],10.1)
         self.assertTrue(pending)
+        self.assertEqual(case.navigation_timeouts,[{'pending_count':1}])
 
     def test_candidate_paths_and_symlinks_are_confined(self):
         self.candidate(screenshots=[{'path':'../outside.png'}])
@@ -192,6 +194,104 @@ class VisualInfrastructureTests(unittest.TestCase):
         self.assertTrue((output/'failures'/'desktop-synthetic_failure.png').is_file())
         self.assertNotIn(token,(output/'diagnostics'/'desktop-synthetic_failure.txt').read_text(encoding='utf-8'))
         self.assertFalse(runtime.cases[0]['passed'])
+
+    def test_request_ledger_reports_pending_response_and_completion_without_secrets(self):
+        from .lifecycle import RequestLedger
+        clock=[0.0]
+        ledger=RequestLedger('http://127.0.0.1:1234',clock=lambda:clock[0])
+        # Hashable browser Request stand-in; no browser dependency for this check.
+        request=Mock(url='http://127.0.0.1:1234/api/v1/review/sessions/private-path?token=private-value',method='GET')
+        ledger.begin(request);clock[0]=2
+        ledger.response(types.SimpleNamespace(request=request,status=200))
+        report=ledger.snapshot()
+        self.assertEqual(report['pending'][0]['response_status'],200)
+        self.assertEqual(report['pending'][0]['age_seconds'],2)
+        self.assertNotIn('private',json.dumps(report))
+        self.assertTrue(report['pending'][0]['query_present'])
+        ledger.end(request,'finished');ledger.end(request,'finished')
+        self.assertEqual(ledger.snapshot()['pending_count'],0)
+        self.assertEqual(ledger.snapshot()['unmatched_completions'],1)
+        self.assertEqual(ledger.snapshot()['recent'][0]['event'],'finished')
+
+    def controlled_failure(self, *, screenshot_error=False, trace_error=False, in_teardown=False):
+        """Real unittest failure plumbing, with a clock/event-pump double only."""
+        from unittest.mock import patch
+        from .lifecycle import RequestLedger, finalize_case, settle_reads
+        from tools.browser_acceptance import Runtime
+        output=self.root/'controlled';output.mkdir()
+        runtime=Runtime(types.SimpleNamespace(version='test-renderer'),output,'capture','all',['desktop'])
+        runtime.viewport_name='desktop'
+        clock=[0.0]
+        fixture=types.SimpleNamespace(base=self.root,origin='http://127.0.0.1:1234',errors=[],
+            transport=types.SimpleNamespace(calls=[],errors=[]))
+        context=Mock();page=Mock()
+        def trace(*,path):
+            if trace_error:raise RuntimeError('private trace exception')
+            with zipfile.ZipFile(path,'w') as archive:
+                archive.writestr('trace.json','{"session":"private-token"}')
+        context.tracing.stop.side_effect=trace
+        def screenshot(**args):
+            if screenshot_error:raise TimeoutError('private screenshot exception')
+            Image.new('RGB',(10,10),'white').save(args['path'])
+        page.screenshot.side_effect=screenshot
+        page.wait_for_timeout.side_effect=lambda milliseconds:clock.__setitem__(0,clock[0]+milliseconds/1000)
+        class Controlled(unittest.TestCase):
+            def runTest(self):
+                if not in_teardown:settle_reads(self)
+            def tearDown(self):finalize_case(self)
+        case=Controlled();case.fixture=fixture;case.page=page;case.context=context;case.runtime=runtime
+        case.tokens={'private-token'};case.diagnostics=[];case.navigation_timeouts=[];case.local_requests=1
+        case.request_ledger=RequestLedger(fixture.origin,clock=lambda:clock[0])
+        request=Mock(url=fixture.origin+'/api/v1/dashboard?private-query',method='GET')
+        case.request_ledger.begin(request);case.pending_requests=case.request_ledger.pending
+        case.settle_reads=lambda:settle_reads(case)
+        result=unittest.TestResult()
+        with patch('browser_tests.lifecycle.time.monotonic',side_effect=lambda:clock[0]):case.run(result)
+        self.assertEqual(len(result.failures),1);self.assertEqual(result.errors,[])
+        self.assertIn('requests did not finish',result.failures[0][1])
+        self.assertLessEqual(clock[0],10.1)  # No second ten-second teardown wait.
+        self.assertFalse(runtime.cases[0]['passed'])
+        self.assertEqual(len(case.navigation_timeouts),1)
+        pending=json.loads((output/'diagnostics'/'desktop-runTest-requests.json').read_text(encoding='utf-8'))
+        self.assertEqual(pending['at_failure'][0]['pending_count'],1)
+        self.assertNotIn('private',json.dumps(pending))
+        page.screenshot.assert_called_once();context.tracing.stop.assert_called_once()
+        self.assertEqual(page.screenshot.call_args.kwargs['timeout'],3000)
+        self.assertIn('mask',page.screenshot.call_args.kwargs)
+        return output,runtime,case,result
+
+    def test_original_navigation_failure_survives_screenshot_failure_and_trace_is_saved(self):
+        output,runtime,case,result=self.controlled_failure(screenshot_error=True)
+        self.assertEqual(runtime.cases[0]['diagnostic_errors'],['Failure screenshot: TimeoutError'])
+        with zipfile.ZipFile(output/'traces'/'desktop-runTest.zip') as trace:
+            self.assertNotIn(b'private-token',trace.read('trace.json'))
+        self.assertNotIn('private screenshot exception',json.dumps(runtime.cases))
+
+    def test_teardown_wait_failure_still_preserves_screenshot_when_trace_fails(self):
+        output,runtime,case,result=self.controlled_failure(trace_error=True,in_teardown=True)
+        self.assertTrue((output/'failures'/'desktop-runTest.png').is_file())
+        self.assertEqual(runtime.cases[0]['diagnostic_errors'],['Trace finalization: RuntimeError'])
+        self.assertFalse((output/'traces'/'desktop-runTest.zip').exists())
+
+    def test_context_cleanup_failure_is_recorded_without_replacing_primary_failure(self):
+        output,runtime,case,result=self.controlled_failure()
+        case.context.close.side_effect=TimeoutError('private cleanup exception')
+        # unittest clears _outcome after run; recreate its completed result here.
+        case._outcome=types.SimpleNamespace(result=result)
+        runtime.close_context(case)
+        self.assertEqual(len(result.failures),1)
+        self.assertIn('Context cleanup: TimeoutError',runtime.cases[0]['diagnostic_errors'])
+        self.assertTrue((output/'diagnostics'/'desktop-runTest-cleanup.json').exists())
+
+    def test_diagnostic_deadline_interrupts_and_restores_signal_handler(self):
+        import signal
+        import time
+        from .lifecycle import diagnostic_deadline
+        previous=signal.getsignal(signal.SIGALRM);started=time.monotonic()
+        with self.assertRaises(TimeoutError),diagnostic_deadline(.02):signal.pause()
+        self.assertLess(time.monotonic()-started,1)
+        self.assertEqual(signal.getsignal(signal.SIGALRM),previous)
+        self.assertEqual(signal.getitimer(signal.ITIMER_REAL),(0.0,0.0))
 
 
 if __name__=='__main__':unittest.main()

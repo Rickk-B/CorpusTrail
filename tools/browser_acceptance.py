@@ -21,6 +21,7 @@ import zipfile
 ROOT=Path(__file__).resolve().parents[1]
 VIEWPORTS={'desktop':{'width':1440,'height':900},'laptop':{'width':1280,'height':800},'narrow':{'width':390,'height':844}}
 BASELINES=ROOT/'browser_tests'/'baselines'/'linux-chromium'
+PRIVACY_MASK='#root-location,#intended-location,#trash-location,#configuration-location,#configuration-definition,#project-list .project-location,#summary dl dd:last-child,#evidence-raw,#plan-details,#document-position,#technical-identifiers input,#population-header,#population-lineage,#population-issues'
 
 
 def baseline_directory(environment):
@@ -100,7 +101,7 @@ class Runtime:
                 window.scrollTo(0,element.getBoundingClientRect().top+window.scrollY-padding);
             }''')
             page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
-        masks=page.locator('#root-location,#intended-location,#trash-location,#configuration-location,#configuration-definition,#project-list .project-location,#summary dl dd:last-child,#evidence-raw,#plan-details,#document-position,#technical-identifiers input,#population-header,#population-lineage,#population-issues').filter(visible=True)
+        masks=page.locator(PRIVACY_MASK).filter(visible=True)
         try:
             if subject:
                 page.locator(subject).screenshot(path=str(path),animations='disabled',caret='hide',mask=[masks],mask_color='#e2ecee')
@@ -126,33 +127,70 @@ class Runtime:
         value=value.replace(str(ROOT),'<source>').replace(sys.prefix,'<test-environment>')
         return value
 
-    def finish_case(self,case,errors):
+    def finish_case(self,case,errors,failed=False):
+        from browser_tests.lifecycle import diagnostic_deadline
         result=case._outcome.result
-        failed=bool(errors) or any(test is case for test,_ in result.failures+result.errors)
+        failed=failed or bool(errors) or any(test is case for test,_ in result.failures+result.errors)
         name=self.viewport_name+'-'+case._testMethodName
         trace=self.output/'traces'/(name+'.zip')
+        diagnostic_errors=[]
+        def attempt(label,operation):
+            try:
+                with diagnostic_deadline(5):operation()
+            except Exception as error:
+                # Exception messages may include protocol URLs, paths or tokens.
+                diagnostic_errors.append(label+': '+type(error).__name__)
+        ledger=getattr(case,'request_ledger',None)
+        requests={'schema':'corpustrail-browser-request-lifecycle/v1',
+            'at_failure':getattr(case,'navigation_timeouts',[]),
+            'at_finalization':ledger.snapshot() if ledger else None}
+        # Persist metadata BEFORE invoking any fallible browser protocol command.
+        (self.output/'diagnostics'/(name+'-requests.json')).write_text(json.dumps(requests,indent=2)+'\n',encoding='utf-8')
         if failed:
-            case.page.screenshot(path=str(self.output/'failures'/(name+'.png')),full_page=True)
-            case.context.tracing.stop(path=str(trace))
+            attempt('Failure screenshot',lambda:case.page.screenshot(
+                path=str(self.output/'failures'/(name+'.png')),full_page=True,timeout=3000,
+                mask=[case.page.locator(PRIVACY_MASK).filter(visible=True)],mask_color='#e2ecee'))
+            # Raw protocol bytes never enter the uploaded report. Only a fully
+            # sanitized archive is published, even if trace finalization fails.
+            raw_trace=case.fixture.base/(name+'-private-trace.zip')
+            attempt('Trace finalization',lambda:case.context.tracing.stop(path=str(raw_trace)))
             # Browser protocol archives can contain ephemeral local session
             # values. Redact before publishing; no network/body snapshots enabled.
-            rewritten=io.BytesIO()
-            with zipfile.ZipFile(trace) as source,zipfile.ZipFile(rewritten,'w',zipfile.ZIP_DEFLATED) as target:
-                for entry in source.infolist():
-                    body=source.read(entry.filename)
-                    for token in case.tokens:body=body.replace(token.encode(),b'<redacted-session>')
-                    try:body=self.redact(body.decode('utf-8'),case).encode('utf-8')
-                    except UnicodeDecodeError:pass  # Synthetic screenshot bytes.
-                    target.writestr(entry.filename,body)
-            trace.write_bytes(rewritten.getvalue())
-        else:case.context.tracing.stop()
+            def sanitize():
+                rewritten=io.BytesIO()
+                with zipfile.ZipFile(raw_trace) as source,zipfile.ZipFile(rewritten,'w',zipfile.ZIP_DEFLATED) as target:
+                    for entry in source.infolist():
+                        body=source.read(entry.filename)
+                        for token in case.tokens:body=body.replace(token.encode(),b'<redacted-session>')
+                        try:body=self.redact(body.decode('utf-8'),case).encode('utf-8')
+                        except UnicodeDecodeError:pass  # Synthetic screenshot bytes.
+                        target.writestr(entry.filename,body)
+                trace.write_bytes(rewritten.getvalue())
+            if raw_trace.is_file():attempt('Trace sanitization',sanitize)
+        else:attempt('Trace finalization',lambda:case.context.tracing.stop())
         diagnostic=self.redact('\n'.join(errors),case)
         (self.output/'diagnostics'/(name+'.txt')).write_text(diagnostic or 'No browser/runtime/network errors.\n',encoding='utf-8')
-        self.cases.append({'scenario':case._testMethodName,'viewport':self.viewport_name,'passed':not failed,
-            'errors':diagnostic.splitlines(),'controlled_provider_requests':len(case.fixture.transport.calls),
+        (self.output/'diagnostics'/(name+'-collection.json')).write_text(json.dumps(diagnostic_errors,indent=2)+'\n',encoding='utf-8')
+        self.cases.append({'scenario':case._testMethodName,'viewport':self.viewport_name,'passed':not (failed or diagnostic_errors),
+            'errors':diagnostic.splitlines(),'diagnostic_errors':diagnostic_errors,
+            'controlled_provider_requests':len(case.fixture.transport.calls),
             'csp_enforcement_checks':getattr(case,'csp_enforcement_checks',0),
             'local_http_requests':case.local_requests,
             'unexpected_external_requests':getattr(case,'external_requests',0)+len(case.fixture.errors)+len(case.fixture.transport.errors)})
+        return diagnostic_errors
+
+    def close_context(self,case):
+        from browser_tests.lifecycle import already_failed, diagnostic_deadline
+        try:
+            with diagnostic_deadline(5):case.context.close()
+        except Exception as error:
+            failure='Context cleanup: '+type(error).__name__
+            name=self.viewport_name+'-'+case._testMethodName
+            (self.output/'diagnostics'/(name+'-cleanup.json')).write_text(json.dumps([failure])+'\n',encoding='utf-8')
+            for record in self.cases:
+                if record['scenario']==case._testMethodName and record['viewport']==self.viewport_name:
+                    record['passed']=False;record['diagnostic_errors'].append(failure)
+            if not already_failed(case):case.fail(failure)
 
     def report(self,passed,logs):
         # unittest tracebacks are synthetic but should not leak local home paths.
