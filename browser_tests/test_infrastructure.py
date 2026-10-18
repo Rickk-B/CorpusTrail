@@ -213,6 +213,17 @@ class VisualInfrastructureTests(unittest.TestCase):
         self.assertEqual(ledger.snapshot()['unmatched_completions'],1)
         self.assertEqual(ledger.snapshot()['recent'][0]['event'],'finished')
 
+    def test_reference_request_diagnostics_keep_routes_but_not_handles_or_queries(self):
+        from .lifecycle import RequestLedger
+        ledger=RequestLedger('http://127.0.0.1:1234')
+        request=Mock(url='http://127.0.0.1:1234/api/v1/references/versions/private-handle/members?secret=private-value',method='GET')
+        ledger.begin(request)
+        report=ledger.snapshot()
+        self.assertEqual(report['pending'][0]['route'],'/api/v1/references/versions/<id>/members')
+        self.assertTrue(report['pending'][0]['query_present'])
+        self.assertNotIn('private',json.dumps(report))
+        self.assertNotIn('secret',json.dumps(report))
+
     def controlled_failure(self, *, screenshot_error=False, trace_error=False, in_teardown=False):
         """Real unittest failure plumbing, with a clock/event-pump double only."""
         from unittest.mock import patch

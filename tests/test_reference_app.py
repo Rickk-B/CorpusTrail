@@ -33,6 +33,10 @@ class ReferenceHttpTests(unittest.TestCase):
     def test_workspace_and_readonly_preview_preserve_scientific_state(self):
         from test_populations import fingerprint
         before=fingerprint(self.project.root)
+        status,_,dashboard=self.call('GET','/dashboard')
+        self.assertEqual(status,200,dashboard)
+        self.assertIn('<p ><a href="/references">',dashboard)
+        self.assertNotIn('REFERENCES_NAV_HIDDEN',dashboard)
         for path in ('/references','/assets/references.js','/api/v1/references/configuration',
                      '/api/v1/references/versions','/api/v1/references/contexts'):
             status,headers,body=self.call('GET',path);self.assertEqual(status,200,body)

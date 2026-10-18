@@ -123,6 +123,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
                     html = html.replace('REVIEW_NAV_HIDDEN', '' if active and review is not None else 'hidden')
                     html = html.replace('POPULATIONS_NAV_HIDDEN', '' if active and populations is not None else 'hidden')
+                    html = html.replace('REFERENCES_NAV_HIDDEN', '' if active and references is not None else 'hidden')
                     html = html.replace('EVIDENCE_WORKFLOW_HIDDEN', '' if active and evidence is not None else 'hidden')
                     html = html.replace('PROJECT_BROWSER_STATUS', 'Local project workspace' if evidence is not None else 'Read-only project browser')
                     return self.send(200, html, 'text/html; charset=utf-8')

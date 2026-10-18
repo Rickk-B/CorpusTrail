@@ -448,6 +448,13 @@ class HttpReadTests(AppFixture):
         self.assertEqual(self.request('GET', '/api/v1/dashboard')[0], 403)
         self.assertEqual(self.request('GET', '/api/v1/dashboard', authenticated=True)[0], 200)
 
+    def test_legacy_readonly_server_does_not_advertise_reference_writes(self):
+        code, body, _ = self.request('GET', '/dashboard')
+        self.assertEqual(code, 200)
+        self.assertIn('<p hidden><a href="/references">', body)
+        self.assertNotIn('REFERENCES_NAV_HIDDEN', body)
+        self.assertEqual(self.request('GET', '/references')[0], 409)
+
     def test_mutations_rejected_even_with_token_and_csrf(self):
         before = fingerprints(self.root)
         for method in ('POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'):

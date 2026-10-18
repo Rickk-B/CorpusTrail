@@ -25,7 +25,9 @@ class RequestLedger:
         words = {'api','v1','dashboard','projects','papers','review','sessions',
             'command','discovery','history','status','evidence','populations',
             'preview','freeze','union','configuration','settings','assets',
-            'app.js','app.css','index.html','plans','jobs','create','open','close'}
+            'app.js','app.css','index.html','plans','jobs','create','open','close',
+            'references','versions','members','provenance','contexts','assignments',
+            'commit','context_preview','context_commit','upgrade','verify'}
         path = '/'.join(part if part in words else '<id>' for part in parsed.path.split('/') if part)
         method = request.method if request.method in {'GET','POST','HEAD','PUT','DELETE','OPTIONS'} else 'OTHER'
         self.pending[request] = {'sequence': self.sequence, 'method': method,
