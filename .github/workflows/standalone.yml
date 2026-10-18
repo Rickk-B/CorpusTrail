@@ -200,7 +200,7 @@ jobs:
         with:
           name: '${{ steps.bundle.outputs.artifact_name }}'
           path: '${{ runner.temp }}/corpustrail-development-artifact/'
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: error
           overwrite: false
       - name: Show tester download link
