@@ -19,13 +19,25 @@ class BrowserAcceptance(unittest.TestCase):
         # Review order uses canonical IDs. Stabilize only synthetic visual IDs;
         # every run still has a private root, lock directory and browser context.
         self.fixture = ApplicationFixture(project_id='browser-guided-fixture' if 'review' in self._testMethodName else
-            'browser-population-fixture' if 'population' in self._testMethodName else None)
+            'browser-population-fixture' if 'population' in self._testMethodName else
+            'browser-reference-fixture' if 'reference' in self._testMethodName else None)
         self.addCleanup(self.fixture.close)
         self.context = self.runtime.browser.new_context(viewport=self.runtime.viewport,
             device_scale_factor=1, locale='en-US', timezone_id='UTC', color_scheme='light',
             reduced_motion='reduce', service_workers='block')
         self.addCleanup(self.runtime.close_context, self)
         self.context.tracing.start(screenshots=True, snapshots=False, sources=False)
+        if 'reference' in self._testMethodName:
+            # Control only synthetic form operation IDs at their generation
+            # boundary. Same-paper contradictory assignments otherwise change
+            # hash order across independent screenshots. Counter survives this
+            # synthetic tab's navigations; never installed in production assets.
+            self.context.add_init_script('''(() => {
+              let n=Number(window.name||0);
+              Object.defineProperty(crypto,'randomUUID',{value:()=>{
+                window.name=String(++n);return '00000000-0000-4000-8000-'+n.toString(16).padStart(12,'0');
+              }});
+            })();''')
         self.page = self.context.new_page()
         self.page.set_default_timeout(10000)
         self.diagnostics = []
@@ -488,6 +500,189 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Start Guided Review',exact=True).click()
         expect(self.page.locator('#review-workspace')).to_be_visible()
         expect(self.page.locator('#review-definition')).to_have_text(SCOPE)
+
+    def reference_label(self,query,label='in_scope',extent='metadata',from_current=False):
+        self.page.locator('#reference-search').fill(query)
+        self.page.locator('#reference-find').click()
+        expect(self.page.locator('#reference-find')).to_be_enabled()
+        expect(self.page.locator('#reference-choices article')).to_have_count(1)
+        row=self.page.locator('#reference-choices article')
+        expect(row.locator('h3')).to_contain_text(re.compile(re.escape(query),re.I))
+        row.locator('select').select_option(extent)
+        row.get_by_role('button',name='Stage Current Corpus Decision as Reference' if from_current else 'Stage Known '+('In-scope' if label=='in_scope' else 'Out-of-scope'),exact=True).click()
+        expect(self.page.locator('#reference-message')).to_contain_text('staged only')
+
+    def reference_commit(self):
+        self.page.locator('#reference-attest').check()
+        self.page.get_by_role('button',name='Preview Reference Batch',exact=True).click()
+        expect(self.page.locator('#reference-preview')).to_be_visible()
+        self.page.get_by_role('button',name='Commit Reference Version',exact=True).evaluate('b=>{b.click();b.click();}')
+        expect(self.page.locator('#reference-message')).to_contain_text('Reference version committed')
+
+    def test_reference_batches_successors_and_restart(self):
+        from dataclasses import replace
+        from corpustrail.curation import ReviewEvent,EvidenceBasis
+        project=self.fixture.project;self.fixture.freeze_reference_clock()
+        project.configure(replace(project.config,config_version=2,review=replace(project.config.review,authorized_reviewers=('fixture_reviewer',))),
+            expected_event_id=project.configuration_history()[-1]['event_id'],created_by='fixture',created_at=AT)
+        pid=self.fixture.papers[1];source=project.identities.observations(pid)[0]['source']
+        event=ReviewEvent(pid,'included','sufficient','metadata','Invented explicit prior membership','fixture_reviewer',AT,
+            (EvidenceBasis('metadata',source['source_sha256'],source['source_uri'],artifact_validity='verified'),),authority_state='human_authorized')
+        source_event=project.reviews.apply(project.reviews.plan(event),recorded_at=AT)
+        initial={p:project.reviews.history(p) for p in self.fixture.papers}
+        self.open_project();before=fingerprint(self.fixture.root)
+        self.page.get_by_role('link',name='Reference Collections',exact=True).click()
+        expect(self.page.locator('#reference-empty')).to_contain_text('No saved reference versions')
+        self.assertEqual(before,fingerprint(self.fixture.root));self.layout();self.snapshot('reference-empty')
+        self.page.locator('#reference-name').fill('Synthetic scope examples');self.page.locator('#reference-actor').fill('fixture_reviewer')
+        self.page.locator('#reference-rationale').fill('Explicit invented boundary judgment.')
+        self.reference_label('without a PMCID',from_current=True);self.reference_label('Metadata-only','out_of_scope')
+        self.assertFalse(self.page.locator('#reference-attest').is_checked())
+        self.assertEqual(project.references.versions()['total'],0)
+        self.page.locator('#reference-attest').check();self.page.locator('#reference-rationale').fill('Explicit invented boundary judgment, reaffirmed before preview.')
+        self.assertFalse(self.page.locator('#reference-attest').is_checked())
+        self.page.locator('#reference-attest').check();before=fingerprint(self.fixture.root)
+        self.page.get_by_role('button',name='Preview Reference Batch',exact=True).click()
+        expect(self.page.locator('#reference-preview')).to_be_visible();self.assertEqual(before,fingerprint(self.fixture.root))
+        self.layout();self.snapshot('reference-preview')
+        self.page.get_by_role('button',name='Commit Reference Version',exact=True).evaluate('b=>{b.click();b.click();}')
+        expect(self.page.locator('#reference-message')).to_contain_text('Reference version committed')
+        self.assertEqual(project.references.versions()['total'],1);first=project.references.versions()['items'][0]
+        linked=next(x for x in project.references.members(first['version_id'])['items'] if x['paper_id']==pid)
+        self.assertEqual(project.references.assignment(first['version_id'],linked['assignment_id'])['assignment']['source_event']['event_id'],source_event)
+        self.layout();self.snapshot('reference-frozen')
+        self.page.locator('#reference-rationale').fill('Explicit correction after reconsideration.')
+        row=self.page.locator('#reference-members article').filter(has=self.page.get_by_role('heading',name='Publication without a PMCID',exact=True))
+        row.locator('select').select_option('metadata');row.get_by_role('button',name='Stage Corrected Label in Successor',exact=True).click()
+        self.reference_commit();second=project.references.versions()['items'][0]
+        self.assertEqual(second['version'],2);self.assertEqual(first['counts']['in_scope'],1);self.assertEqual(second['counts']['out_of_scope'],2)
+        self.layout();self.snapshot('reference-successor')
+        self.page.locator('#reference-versions article').filter(has=self.page.get_by_role('heading',name='Synthetic scope examples · Version 1',exact=True)).get_by_role('button').click()
+        expect(self.page.locator('#reference-detail-heading')).to_have_text('Synthetic scope examples · Version 1')
+        self.assertEqual(project.references.inspect(first['version_id']),first)
+        self.page.locator('#reference-provenance summary').click();expect(self.page.locator('#reference-changes pre')).to_have_count(2)
+        self.layout();self.snapshot('reference-history')
+        self.reload();expect(self.page.locator('#reference-detail-heading')).to_have_text('Synthetic scope examples · Version 1')
+        self.restart();self.open_project();self.visit('/references#'+second['version_id'].split(':')[1])
+        expect(self.page.locator('#reference-detail-heading')).to_have_text('Synthetic scope examples · Version 2')
+        self.assertEqual(initial,{p:project.reviews.history(p) for p in self.fixture.papers});self.assertEqual(self.fixture.transport.calls,[])
+        self.assertEqual(project.reviews.membership(pid)['state'],'included')
+
+    def test_reference_context_conflicts_and_exact_passage_persistence(self):
+        from .fixtures import XML
+        from corpustrail.references import ContextStrategy
+        import uuid
+        project=self.fixture.project;self.fixture.freeze_reference_clock()
+        project.evidence.preserve_document(self.fixture.papers[0],XML,representation='jats_xml',media_type='application/xml',
+            source_uri='fixture://reference-verified-text',legitimate_basis='synthetic_fixture',resolver='fixture',resolver_version='v1',created_at=AT)
+        initial={p:project.reviews.history(p) for p in self.fixture.papers}
+        population_fields={'request_id':uuid.uuid4().hex,'name':'Held-out invented boundary','actor':'fixture',
+            'sources':[{'kind':'selection','paper_ids':[self.fixture.papers[2]]}],'parent':None}
+        preview=project.populations.preview(**population_fields)
+        held=project.populations.create(**population_fields,expected_preview_sha256=preview['preview_sha256'],created_at=AT)
+        self.open_project();self.visit('/references');self.page.locator('#reference-name').fill('Positive and negative context examples')
+        self.page.locator('#reference-actor').fill('fixture_reviewer');self.page.locator('#reference-rationale').fill('Invented context boundary, not corpus membership.')
+        self.reference_label('Evidence reference',extent='structured_text');self.reference_label('without a PMCID','out_of_scope')
+        self.reference_label('Long scientific');self.reference_label('Pending document');self.reference_label('Pending document','out_of_scope')
+        self.reference_commit();version=project.references.versions()['items'][0]
+        self.assertEqual(version['counts']['conflicts'],1);expect(self.page.locator('#reference-members')).to_contain_text('Conflicting labels — ineligible')
+        self.layout();self.snapshot('reference-conflict')
+        self.page.locator('#context-builder summary').click();self.page.locator('#context-actor').fill('fixture_reviewer')
+        self.page.locator('#context-target-search').fill('Metadata-only');self.page.locator('#context-find').click()
+        expect(self.page.locator('#context-choices article')).to_have_count(1)
+        self.page.get_by_role('button',name='Select Target',exact=True).click();self.page.locator('#context-basis').select_option('metadata')
+        self.page.locator('#context-held-out').select_option(held['version_id'])
+        before=fingerprint(self.fixture.root);self.page.get_by_role('button',name='Preview Selected Context',exact=True).click()
+        expect(self.page.locator('#context-preview-status')).to_contain_text('2 selected references')
+        self.assertEqual(before,fingerprint(self.fixture.root));self.layout();self.snapshot('reference-context-preview')
+        self.page.get_by_role('button',name='Freeze Selected Context',exact=True).evaluate('b=>{b.click();b.click();}')
+        expect(self.page.locator('#reference-message')).to_contain_text('Exact selected context frozen')
+        expect(self.page.locator('#context-input')).to_contain_text('Invented structured scientific fixture text.')
+        saved=project.references.contexts()['items'][0];context=project.references.context(saved['context_id'],verify=True)
+        self.assertEqual(context['selected_count'],2);self.assertEqual(context['omission_counts'],{'conflicting_labels':2,'held_out':1})
+        self.assertNotIn(self.fixture.papers[2],{r['paper_id'] for r in context['input']['references']})
+        self.assertEqual(context['strategy']['strategy_id'],ContextStrategy().strategy_id)
+        self.layout();self.snapshot('reference-context')
+        self.reload();expect(self.page.locator('#context-input')).to_contain_text('Invented structured scientific fixture text.')
+        self.restart();self.open_project();self.visit('/references#context-'+saved['context_id'].split(':')[1])
+        expect(self.page.locator('#context-input')).to_contain_text('Invented structured scientific fixture text.')
+        self.page.get_by_role('button',name='Verify Stored Context Integrity',exact=True).click()
+        expect(self.page.locator('#context-status')).to_contain_text('Integrity verified');self.layout();self.snapshot('reference-context-restarted')
+        self.assertEqual(initial,{p:project.reviews.history(p) for p in self.fixture.papers});self.assertEqual(self.fixture.transport.calls,[])
+
+    def test_reference_large_pages_do_not_accumulate_in_browser(self):
+        import uuid
+        from corpustrail._internal.pipeline import preserve
+        from corpustrail.identity import BibliographicRecord,Identifier,SourceReference
+        from tools.reference_acceptance import assignment
+        project=self.fixture.project;self.fixture.freeze_reference_clock();ids=[]
+        for number in range(30):
+            raw=('invented-reference-page-'+str(number)).encode();sha=preserve(project,raw,'application/json',AT)
+            record=BibliographicRecord('Synthetic paginated reference '+str(number),identifiers=(Identifier('doi','10.1234/reference.page.'+str(number)),))
+            source=SourceReference('fixture://reference-pages',str(number),sha,len(raw),'synthetic-fixture',AT,identity_status='verified')
+            ids.append(project.identities.apply(project.identities.plan(record,source),approve_new_identity=True,approve_aliases=True))
+        first=None
+        for number in range(22):
+            fields={'request_id':uuid.uuid4().hex,'name':'Paginated references' if number==0 else 'Other reference family '+str(number),
+                'actor':'synthetic-curator','parent':None,'config_event_id':project.configuration_history()[-1]['event_id'],'created_at':AT,
+                'changes':[assignment(pid) for pid in (ids if number==0 else ids[:1])]}
+            preview=project.references.preview(**fields);saved=project.references.commit(**fields,expected_preview_sha256=preview['preview_sha256'])
+            if first is None:first=saved
+        self.open_project();self.visit('/references');before=fingerprint(self.fixture.root)
+        expect(self.page.locator('#reference-versions article')).to_have_count(20)
+        self.page.get_by_role('button',name='More Reference Versions',exact=True).click()
+        expect(self.page.locator('#reference-versions article')).to_have_count(2)
+        self.page.locator('#reference-versions article').filter(has=self.page.get_by_role('heading',name='Paginated references · Version 1',exact=True)).get_by_role('button').click()
+        expect(self.page.locator('#reference-members article')).to_have_count(20)
+        self.page.get_by_role('button',name='More Reference Assignments',exact=True).click()
+        expect(self.page.locator('#reference-members article')).to_have_count(10)
+        self.layout();self.snapshot('reference-pagination')
+        self.page.get_by_role('button',name='Previous Reference Assignments',exact=True).click()
+        expect(self.page.locator('#reference-members article')).to_have_count(20)
+        self.page.locator('#reference-provenance summary').click()
+        expect(self.page.locator('#reference-changes pre')).to_have_count(20)
+        self.page.get_by_role('button',name='More Correction History',exact=True).click()
+        expect(self.page.locator('#reference-changes pre')).to_have_count(10)
+        self.page.get_by_role('button',name='Previous Reference Versions',exact=True).click()
+        expect(self.page.locator('#reference-versions article')).to_have_count(20)
+        self.assertEqual(project.references.verify(first['version_id'])['counts']['paper_count'],30)
+        self.assertEqual(before,fingerprint(self.fixture.root));self.assertEqual(self.fixture.transport.calls,[])
+
+    def test_reference_stale_batch_and_explicit_legacy_upgrade(self):
+        from unittest.mock import patch
+        import uuid
+        from corpustrail._internal.database import migrations
+        from corpustrail.project import Project,ProjectConfig,ReviewPolicy
+        project=self.fixture.project;self.fixture.freeze_reference_clock();self.open_project();self.visit('/references')
+        self.page.locator('#reference-name').fill('Concurrent correction fixture');self.page.locator('#reference-actor').fill('fixture_reviewer')
+        self.reference_label('Metadata-only');self.reference_commit();version=project.references.versions()['items'][0]
+        self.page.locator('#reference-successor').click();self.reference_label('without a PMCID')
+        self.page.locator('#reference-attest').check();self.page.get_by_role('button',name='Preview Reference Batch',exact=True).click()
+        expect(self.page.locator('#reference-preview')).to_be_visible()
+        from . import fixtures
+        from corpustrail.references.contracts import POLICY
+        self.assertEqual(version['policy'],POLICY)
+        fields={'request_id':uuid.uuid4().hex,'name':version['name'],'actor':'another-fixture-actor','parent':version['version_id'],
+            'changes':[{'action':'remove','assignment_id':project.references.members(version['version_id'])['items'][0]['assignment_id'],'reason':'Controlled concurrent correction'}],
+            'config_event_id':project.configuration_history()[-1]['event_id'],'created_at':fixtures.AT}
+        preview=project.references.preview(**fields);project.references.commit(**fields,expected_preview_sha256=preview['preview_sha256'])
+        self.expected_http_errors.add(409);self.expected_console_errors.append('Failed to load resource: the server responded with a status of 409 (Conflict)')
+        self.page.get_by_role('button',name='Commit Reference Version',exact=True).click()
+        expect(self.page.locator('#reference-message')).to_contain_text('latest version')
+        expect(self.page.locator('#reference-staged')).to_contain_text('Publication without a PMCID');self.assertEqual(project.references.versions()['total'],2)
+        self.layout();self.snapshot('reference-stale')
+        # Discard only unsaved synthetic UI proposals before navigating. No
+        # scientific save is implied by leaving the page.
+        self.page.get_by_role('button',name='Unstage',exact=True).click()
+        with patch('corpustrail._internal.database.migrations',return_value=migrations()[:38]):
+            legacy=Project.create(self.fixture.root/'legacy-reference',ProjectConfig('legacy-reference','Legacy reference fixture','Synthetic older project',review=ReviewPolicy(scope=SCOPE)),created_by='fixture',created_at=AT)
+        self.visit('/projects');self.page.locator('#project-list article').filter(has=self.page.get_by_role('heading',name='Legacy reference fixture',exact=True)).get_by_role('button',name='Open Project').click()
+        expect(self.page.locator('#project-name')).to_have_text('Legacy reference fixture');self.visit('/references')
+        expect(self.page.locator('#reference-upgrade')).to_be_visible();self.assertFalse(legacy.references.ready())
+        self.layout();self.snapshot('reference-upgrade');self.page.get_by_role('button',name='Back Up and Enable References',exact=True).click()
+        expect(self.page.locator('#reference-message')).to_contain_text('Reference storage enabled')
+        self.assertTrue(legacy.references.ready());self.assertEqual(len(list((legacy.root/legacy.config.data_directory/'reference-upgrades').glob('*.sqlite3'))),1)
+        self.layout();self.snapshot('reference-upgraded');self.assertEqual(self.fixture.transport.calls,[])
 
     def test_population_freeze_combine_review_and_restart(self):
         import hashlib

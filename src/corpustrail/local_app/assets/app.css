@@ -78,6 +78,10 @@ fieldset:disabled { opacity: .65; }
 #population-form details { margin: .85rem 0; }
 #population-versions article, #population-paper-choices label { overflow-wrap: anywhere; }
 #population-form input:not([type=checkbox]), #population-search { box-sizing: border-box; width: 100%; min-width: 0; }
+.reference-workspace form { display: grid; gap: .65rem; }
+.reference-workspace input:not([type=checkbox]), .reference-workspace select { box-sizing: border-box; width: 100%; min-width: 0; }
+.reference-workspace article, .reference-workspace button { overflow-wrap: anywhere; max-width: 100%; }
+.reference-workspace article button { margin: .35rem .35rem .35rem 0; }
 .danger-secondary { margin-left: .6rem; color: #813c31; background: white; }
 .danger { color: white; background: #813c31; }
 .project-card-heading, .project-actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }

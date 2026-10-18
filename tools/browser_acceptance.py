@@ -21,7 +21,7 @@ import zipfile
 ROOT=Path(__file__).resolve().parents[1]
 VIEWPORTS={'desktop':{'width':1440,'height':900},'laptop':{'width':1280,'height':800},'narrow':{'width':390,'height':844}}
 BASELINES=ROOT/'browser_tests'/'baselines'/'linux-chromium'
-PRIVACY_MASK='#root-location,#intended-location,#trash-location,#configuration-location,#configuration-definition,#project-list .project-location,#summary dl dd:last-child,#evidence-raw,#plan-details,#document-position,#technical-identifiers input,#population-header,#population-lineage,#population-issues'
+PRIVACY_MASK='#root-location,#intended-location,#trash-location,#configuration-location,#configuration-definition,#project-list .project-location,#summary dl dd:last-child,#evidence-raw,#plan-details,#document-position,#technical-identifiers input,#population-header,#population-lineage,#population-issues,#reference-header,#reference-changes,.reference-raw,#context-header,#context-preview-input'
 
 
 def baseline_directory(environment):
@@ -41,6 +41,9 @@ for names in LIMITED.values():
         'population-history','population-review','population-conflict','population-upgrade'})
     names.update({'population-lineage','population-review-selection','population-successor','population-review-completed',
                   'population-upgraded','discovery-transport-error'})
+    names.update({'reference-empty','reference-preview','reference-frozen','reference-successor','reference-history',
+        'reference-conflict','reference-context-preview','reference-context','reference-context-restarted',
+        'reference-stale','reference-upgrade','reference-upgraded','reference-pagination'})
 
 
 class Runtime:
@@ -216,7 +219,7 @@ class Runtime:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population'),default='all')
+    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population','reference'),default='all')
     parser.add_argument('--viewports',nargs='+',choices=tuple(VIEWPORTS),default=list(VIEWPORTS))
     parser.add_argument('--visual',choices=('capture','compare'),default='capture')
     parser.add_argument('--browser',choices=('chromium','webkit'),default='chromium')

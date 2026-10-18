@@ -182,6 +182,10 @@ class ApplicationFixture:
         """Fix this synthetic workflow's timestamp input; restore it on close."""
         self.stack.enter_context(patch('corpustrail.application.discovery.now', return_value=AT))
 
+    def freeze_reference_clock(self):
+        """Only synthetic reference form timestamps, not global scientific time."""
+        self.stack.enter_context(patch('corpustrail.application.references.now',return_value=AT))
+
     def _start_server(self):
         self.controller = ProjectController(projects_root=self.root)
         self.stack.callback(self.controller.close)

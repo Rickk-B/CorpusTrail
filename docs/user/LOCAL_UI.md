@@ -1,6 +1,6 @@
 # Local projects, settings and read-only paper browser
 
-This development build includes Checkpoints 1–6 of `0.1.0a3.dev0`, not a public a3
+This development build includes Checkpoints 1–7 of `0.1.0a3.dev0`, not a public a3
 release. The project wizard and settings have explicit configuration writes.
 The [Discovery workflow](DISCOVERY.md) prepares, approves and executes exact frozen
 searches as separate actions, with local background progress and search history.
@@ -8,6 +8,8 @@ Publication details support [explicit eligible evidence retrieval](EVIDENCE.md).
 Dashboard, catalogue, details and provenance browsing remain read-only. No page
 automatically discovers papers, acquires evidence, records reviews or invokes
 models. [Populations](POPULATIONS.md) adds explicit candidate versions and unions.
+The dashboard's [Reference Collections](REFERENCES.md) workspace adds immutable
+human-attested example versions and exact locally selected contexts, not an engine.
 Existing schema-37 projects remain usable without writes; population storage needs
 an explicit backed-up additive upgrade. There are no new production dependencies
 or production file-format importers.
@@ -287,9 +289,9 @@ query as literal text, including whitespace, and has not changed.
 For updating/uninstalling the software without deleting your projects, see
 [removal and storage ownership](REMOVAL_STORAGE.md).
 
-- Only explicit creation/configuration, confirmed macOS Trash and approved
-  discovery actions write state. No new review lifecycle, classifier, references,
-  evidence acquisition or import UI.
+- Only explicit project, discovery, evidence, review, population and reference
+  actions write their respective state. Viewing pages does not run those actions.
+  No classifier engine or production import UI is implemented.
 - Catalogue cursors refer to a live revision, not a persisted population. If
   another process changes relevant project records, Refresh/reapply filters to
   restart pagination. The browser does not silently mix revisions.

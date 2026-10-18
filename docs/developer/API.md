@@ -30,6 +30,12 @@ configuration. They are not method-blind review interfaces. See
 [local API and isolation boundaries](LOCAL_APP_API.md) and
 [guided configuration contract](PROJECT_SETUP_API.md).
 
+Checkpoint 7 adds `Project.references`, `ContextStrategy` and `DerivedDependency`
+as versioned scientific reference/context interfaces. The local controller and
+operational UI remain separate from method-blind review. See
+[reference storage, context and upgrade contracts](REFERENCES.md). This is not a
+classifier engine or assessment-run API; CP8 remains separately gated.
+
 Provider/resolver/parser/prioritizer plugins (explicit object injection); optional
 TF-IDF/logistic implementation and fitted-model representation; advanced knowledge
 queries, non-paper subjects and project vocabulary extensions. Model replacement
