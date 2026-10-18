@@ -24,6 +24,7 @@ FRONTEND.update({'corpustrail/local_app/assets/discovery.html', 'corpustrail/loc
 FRONTEND.add('corpustrail/local_app/assets/evidence.js')
 FRONTEND.update({'corpustrail/local_app/assets/review.html', 'corpustrail/local_app/assets/review.js'})
 FRONTEND.update({'corpustrail/local_app/assets/populations.html', 'corpustrail/local_app/assets/populations.js'})
+FRONTEND.update({'corpustrail/local_app/assets/references.html', 'corpustrail/local_app/assets/references.js'})
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
 # Checkpoint 2 delegates writes to unchanged scientific/configuration services.
@@ -74,6 +75,20 @@ POPULATION_HASHES = {
     'src/corpustrail/project/service.py': 'b29af05e5ab4d06eaec6783f67ec3cf491e6bc855a8a7d4eed6ef3c706d5a194',
     'src/corpustrail/operational/schema/038_candidate_populations.sql': '2994a7ebbb615febd6137ab29c9d97e3012b38dd5003a668769ebf979e7c1242',
     'src/corpustrail/operational/schema_manifest.json': 'b11e186a2736f509f7fc567f4dd688ff3a9cd5f4219b3677b779c27deb8a6a64'}
+# CP7 is a new reviewed scientific boundary, not a broad override of CP1–6.
+REFERENCE_COMMIT = '5b2e603fdf4825502c89cd22edc670531a27728e'
+REFERENCE_HASHES = {
+    'src/corpustrail/references/__init__.py': 'b341b07854df3b1d6af6eaca360851bbd5c07de26f45448db3a94fb82efd833e',
+    'src/corpustrail/references/context.py': '40a03313d722bded22a98af0593ceb6efdf6e9cfccaa6e5bfadceeadff60f204',
+    'src/corpustrail/references/contracts.py': 'f89d415f2598d3f54eae004156f034774589f30470901be9c9bf658fb84c75f4',
+    'src/corpustrail/references/evidence.py': '849802da896427a5c98cec344f7ef99bb143268f9a44db3d9da155411644bb70',
+    'src/corpustrail/references/service.py': '938a75274f55975bfd241fbb29a4cf75ef19a058755501b32e5c5e900fa82b2d',
+    'src/corpustrail/references/storage.py': 'a7493eaf5bb385550c427c7794cc5973ca28f6c8c2ec690e4fb53c2a89325b12',
+    'src/corpustrail/application/references.py': 'b711214a3afec322a5f8dd287ddf14d18ebae7f78b3df9b24cb32e3ec3acbf12',
+    'src/corpustrail/operational/schema/039_reference_collections.sql': 'bc48d9c686705dabfec0b00922571541dd0abf241bc480f74af67b3101f9bace',
+    'src/corpustrail/operational/schema_manifest.json': '0a59b4b011019c10f24aac6c6cf7de91ae47b72c18d7ba1a3734f5cb8f152f12',
+    'src/corpustrail/project/service.py': '6ece7df51295f150b94cf7ee1b1b1899f423f014b2ff82d3a4d4c268b1c623cb',
+    'src/corpustrail/_internal/database.py': '8712383fcba6c5be8544e206a03d7876bf44c3443dece87be8a1c06e53f4198d'}
 
 
 def git(root, *args):
@@ -105,11 +120,28 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
         xml_compatibility = bool(changed & XML_COMPATIBILITY_EXTRA_PATHS)
         allowed = CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS
+        references = (root/'src/corpustrail/references/service.py').is_file()
+        if references:
+            if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',REFERENCE_COMMIT,expected]).returncode:
+                raise ValueError('References must descend from their reviewed implementation')
+            for name,expected_hash in REFERENCE_HASHES.items():
+                path=root/name
+                frozen=subprocess.check_output(['git','-C',str(root),'show',REFERENCE_COMMIT+':'+name])
+                if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash
+                        or hashlib.sha256(frozen).hexdigest()!=expected_hash):
+                    raise ValueError('Reference source differs from the frozen reviewed implementation')
+            allowed |= set(REFERENCE_HASHES) | {'src/corpustrail/local_app/assets/references.html',
+                                                'src/corpustrail/local_app/assets/references.js'}
         populations = (root/'src/corpustrail/populations/service.py').is_file()
         if populations:
             if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',POPULATION_COMMIT,expected]).returncode:
                 raise ValueError('Populations must descend from their reviewed implementation')
             for name, expected_hash in POPULATION_HASHES.items():
+                if references and name in REFERENCE_HASHES:
+                    historical=subprocess.check_output(['git','-C',str(root),'show',POPULATION_COMMIT+':'+name])
+                    if hashlib.sha256(historical).hexdigest()!=expected_hash:
+                        raise ValueError('Historical population implementation hash differs')
+                    expected_hash=REFERENCE_HASHES[name]
                 path=root/name
                 if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash:
                     raise ValueError('Population source differs from the frozen reviewed implementation')
@@ -183,14 +215,14 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         checkpoint3 = (root/'src/corpustrail/application/discovery.py').is_file()
         checkpoint4 = (root/'src/corpustrail/application/evidence.py').is_file()
         scientific = {'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py', 'src/corpustrail/evidence/service.py'}
-        return {**previous, 'name': 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
+        return {**previous, 'name': 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
                 'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
                 'application_source_unchanged': not bool(changed),
                 'configuration_writes_supported': True,
                 'application_paths_changed_since_accepted_checkpoint1': sorted(changed),
-                'scientific_source_unchanged': not bool(changed & scientific) and not guided_review,
-                'scientific_service_source_unchanged': not bool(changed & scientific) and not guided_review,
-                'scientific_execution_source_unchanged': not xml_compatibility and not guided_review,
+                'scientific_source_unchanged': not bool(changed & scientific) and not guided_review and not references,
+                'scientific_service_source_unchanged': not bool(changed & scientific) and not guided_review and not references,
+                'scientific_execution_source_unchanged': not xml_compatibility and not guided_review and not references,
                 'discovery_scientific_execution_source_unchanged': True,
                 'xml_compatibility': {'schema':'corpustrail-xml-compatibility-code-review/v1',
                     'implementation_commit_sha':XML_COMPATIBILITY_COMMIT,
@@ -211,10 +243,17 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     'schema_migrations':False,
                     'notice':'Versioned guided lifecycle; build identity is source.commit_sha, not this historical implementation receipt.'} if guided_review else None,
                 'populations': {'schema':'corpustrail-population-code-review/v1',
-                    'implementation_commit_sha':POPULATION_COMMIT,'source_sha256':POPULATION_HASHES,
+                    'implementation_commit_sha':POPULATION_COMMIT,
+                    'source_sha256':{name:REFERENCE_HASHES.get(name,value) if references else value for name,value in POPULATION_HASHES.items()},
+                    'pre_reference_source_sha256':POPULATION_HASHES,
                     'population_schema':'corpustrail-candidate-population/v1','policy':'exact-canonical-union/v1',
                     'migration':38,'read_compatible_schema':37,'upgrade':'explicit_with_backup',
                     'production_importers':False,'membership_authority_unchanged':True} if populations else None,
+                'references':{'schema':'corpustrail-reference-code-review/v1','implementation_commit_sha':REFERENCE_COMMIT,
+                    'source_sha256':REFERENCE_HASHES,'reference_schema':'corpustrail-reference-set/v1',
+                    'context_schema':'corpustrail-selected-reference-context/v1','eligibility_policy':'explicit-human-unconflicted/v1',
+                    'selection_strategy':'canonical-reference-order/v1','migration':39,'read_compatible_schema':[37,38],
+                    'upgrade':'explicit_with_backup','real_engines':False,'membership_authority_unchanged':True} if references else None,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
                           'The source/build SHA identifies this development artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):

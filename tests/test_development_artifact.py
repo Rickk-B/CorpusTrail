@@ -127,7 +127,10 @@ class DevelopmentArtifactTests(unittest.TestCase):
         source = (ROOT / '.github/workflows/standalone.yml').read_text(encoding='utf-8')
         artifact = source.split('  development-artifact:', 1)[1]
         self.assertRegex(artifact, r'needs:\s*\[acceptance, project-lifecycle, browser-acceptance, browser-macos-smoke\]')
-        self.assertIn('python tools/browser_acceptance.py --visual compare', source)
+        self.assertIn('python tools/browser_acceptance.py --visual "$BROWSER_VISUAL_MODE"', source)
+        self.assertRegex(source,r'BROWSER_VISUAL_MODE: (?:capture|compare)\n')
+        for job in ('browser-acceptance','browser-macos-smoke'):
+            self.assertIn("needs."+job+".outputs.visual_mode == 'compare'",artifact)
         self.assertNotIn('--approve-baselines', source)
         self.assertIn("os: ['macos-15', 'windows-latest']", source)
         self.assertIn("ref: '${{ github.sha }}'", artifact)
@@ -219,7 +222,29 @@ class DevelopmentArtifactTests(unittest.TestCase):
 
     def test_population_review_hashes_match_current_scientific_source(self):
         for name,expected in TOOL['POPULATION_HASHES'].items():
+            if name in TOOL['REFERENCE_HASHES']:
+                historical=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['POPULATION_COMMIT']+':'+name]) if (ROOT/'.git').exists() else None
+                if historical is not None:self.assertEqual(hashlib.sha256(historical).hexdigest(),expected)
+                expected=TOOL['REFERENCE_HASHES'][name]
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+
+    def test_reference_review_hashes_match_exact_scientific_source(self):
+        for name,expected in TOOL['REFERENCE_HASHES'].items():
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+
+    def test_reference_boundary_requires_frozen_commit_and_hashes(self):
+        accepted=self.implementation;hashes={}
+        for name in ('src/corpustrail/references/service.py','src/corpustrail/operational/schema/039_reference_collections.sql'):
+            path=self.root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('reviewed_reference_fixture = True\n',encoding='utf-8')
+            hashes[name]=hashlib.sha256(path.read_bytes()).hexdigest()
+        self.commit();reviewed=TOOL['git'](self.root,'rev-parse','HEAD');globals_=TOOL['check_implementation'].__globals__
+        with patch.dict(globals_,{'REFERENCE_COMMIT':reviewed,'REFERENCE_HASHES':hashes}):
+            receipt=TOOL['check_implementation'](self.root,accepted,reviewed,distribution=accepted,accepted_checkpoint1=accepted)
+            self.assertEqual(receipt['references']['migration'],39);self.assertFalse(receipt['references']['real_engines'])
+            for name in hashes:
+                path=self.root/name;path.write_text('unreviewed_override = True\n',encoding='utf-8');self.commit()
+                with self.assertRaisesRegex(ValueError,'frozen reviewed'):TOOL['check_implementation'](self.root,accepted,TOOL['git'](self.root,'rev-parse','HEAD'),distribution=accepted,accepted_checkpoint1=accepted)
+                path.write_text('reviewed_reference_fixture = True\n',encoding='utf-8');self.commit()
 
     def test_population_boundary_requires_exact_hashes_and_reviewed_lineage(self):
         accepted=self.implementation;hashes={}

@@ -31,6 +31,7 @@ python tools/browser_acceptance.py --suite evidence --viewports desktop --output
 python tools/browser_acceptance.py --suite discovery --viewports desktop --output /tmp/ct-browser-discovery
 python tools/browser_acceptance.py --suite review --viewports desktop --output /tmp/ct-browser-review
 python tools/browser_acceptance.py --suite population --viewports desktop --output /tmp/ct-browser-population
+python tools/browser_acceptance.py --suite reference --viewports desktop --output /tmp/ct-browser-reference
 python tools/browser_acceptance.py --suite project --viewports desktop --output /tmp/ct-browser-project
 python tools/browser_acceptance.py --output /tmp/ct-browser-full
 python tools/browser_acceptance.py --visual compare --output /tmp/ct-browser-compare
@@ -252,3 +253,30 @@ acceptance remains important for subjective UX and platform-specific differences
 Current limitations: headless Chromium/WebKit, no Windows browser job,
 no axe/WCAG certification, no live providers, no native-browser Trash execution,
 and no assertion that screenshots establish scientific validity or perfect UX.
+
+## CP7 reference/context acceptance
+
+The existing fixture/runner now covers explicit human reference batches,
+current-membership source-event lineage without implicit reference population,
+successor corrections, historical versions, conflicts, exact selected passages,
+held-out labels, restart, bounded version/member/provenance pages, stale batch
+refusal and explicit schema-38 backups/upgrades. Actual services/stores are used;
+no reference or membership API result is mocked. The separate installed-service
+scale tool exercises 2,000 distinct canonical papers; browser paging uses a smaller
+synthetic collection to assert that pages replace rather than accumulate records.
+
+Synthetic reference form timestamps are fixed only at `application.references.now`.
+Those tests also replace operation UUID generation with a tab-local deterministic
+counter; the script is test-only and never enters packaged assets. This stabilizes
+same-paper contradictory assignment ordering without repainting scientific data.
+Search helpers await the actual completed search and requested title, not a prior
+single-row result. All clock patches restore through fixture cleanup. Raw technical
+reference/context provenance panels follow the existing privacy-mask policy;
+human labels, rationale, counts, warnings and exact displayed passages are unmasked
+and checked against real stored records.
+
+The explicit CI capture-review phase cannot produce a development wheel. Baseline
+approval still requires a passing complete three-viewport capture, distinct paths,
+matching environment/source provenance and direct visual inspection. Restore strict
+`compare` before final delivery. No tolerance, diagnostic deadline, navigation
+timeout, unique-path safeguard or failure-preservation rule is relaxed by CP7.

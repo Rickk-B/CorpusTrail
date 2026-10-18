@@ -236,3 +236,38 @@ by review/read-only/authority/trust regression tests, not a claim that arbitrary
 future changes in the allowed files are scientifically safe. The earlier
 CI/distribution commit must remain an ancestor with unchanged application source.
 An unrelated future checkpoint requires explicit review of this gate.
+
+## Checkpoint 7 reference/context provenance
+
+The CP7 scientific foundation is separately committed at
+`35d668330c52fe56af6ae7641d6645d917b40aaa`. The complete scientific/application
+boundary is frozen at `5b2e603fdf4825502c89cd22edc670531a27728e`.
+`checkpoint.references` records exact source hashes, additive migration 039,
+schema-37/38 read compatibility, explicit backed-up upgrades, reference/context
+schemas, eligibility policy and selection strategy. It explicitly records that
+no real classifier/embedding engine is implemented. Inherited assignment inspection
+preserves the original assignment/version attribution; contexts preserve exact
+selected input and selector-source hashes.
+
+Only the three explicitly frozen project/database/manifest integration paths
+receive new CP7 hashes over the historical CP6 boundary. The builder separately
+verifies their original CP6 bytes from the historical commit. Original Guided
+Review, membership authority, identity, discovery, XML security and JATS rendering
+checks remain in force. A new source file cannot ride a broad scientific exception.
+Both the current source and the recorded CP7 implementation commit must match
+the exact reference hash map. The actual artifact still uses **source.commit_sha**
+and **source.tree_sha**, not either historical foundation commit.
+
+New visual states require an explicit capture/review phase. The workflow's
+`BROWSER_VISUAL_MODE` is `capture` only while collecting a complete review set.
+A capture-only run cannot deliver a wheel: both Linux and macOS job outputs must
+say `compare`, as well as all required job results being successful. No workflow
+approves baselines. The final delivery candidate must restore `compare` and pass
+strict Linux Chromium, macOS Chromium and macOS WebKit comparisons. Developer
+bundle retention remains 90 days (repository maximum applies), browser evidence
+seven days; neither configuration extends previously uploaded artifacts.
+
+CP7 implementation and build traceability do not constitute formal researcher
+acceptance. CP1–6 acceptance and their earlier receipts remain historical evidence.
+Native MacBook discovery transport and the historical navigation-timeout cause
+remain separate open investigations, not fixes claimed by CP7.

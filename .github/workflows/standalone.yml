@@ -6,6 +6,10 @@ permissions:
 concurrency:
   group: acceptance-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+# Explicit baseline-review phase only. Capture cannot deliver a development wheel.
+# Restore compare after reviewing this source's complete platform/engine evidence.
+env:
+  BROWSER_VISUAL_MODE: capture
 jobs:
   acceptance:
     runs-on: ubuntu-latest
@@ -45,6 +49,9 @@ jobs:
           /tmp/ct-ml/bin/python -I -m corpustrail.tutorial /tmp/ct-tutorial-ml --prioritize
       - name: Independent wheel and sdist install/acceptance
         run: python tools/smoke_install.py --dependency-wheels /tmp/ct-dependency-wheels
+      - name: Two thousand exact synthetic references / actual scientific services
+        if: matrix.python == '3.13'
+        run: /tmp/ct-core/bin/python -I tools/reference_acceptance.py --project "$RUNNER_TEMP/reference-scale" --papers 2000
       - name: Check code-only release population
         run: python tools/release_manifest.py
   project-lifecycle:
@@ -71,6 +78,7 @@ jobs:
           python -I -m unittest discover -s tests -p test_guided_review.py -v
           python -I -m unittest discover -s tests -p test_populations.py -v
           python -I -m unittest discover -s tests -p test_population_app.py -v
+          python -I -m unittest discover -s tests -p 'test_reference*.py' -v
           python -I -m unittest discover -s tests -p test_discovery_app.py -v
           python -I -m unittest discover -s tests -p test_discovery_transport_diagnostics.py -v
           python -I -m unittest discover -s tests -p test_evidence_app.py -v
@@ -95,7 +103,12 @@ jobs:
     name: Offline Chromium / reviewed Linux visual baselines
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    outputs:
+      visual_mode: '${{ steps.visual-mode.outputs.mode }}'
     steps:
+      - name: Record explicit visual phase
+        id: visual-mode
+        run: echo "mode=$BROWSER_VISUAL_MODE" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
@@ -113,7 +126,7 @@ jobs:
       - name: Actual packaged application / offline scientific fixtures / visual checks
         run: |
           python -m unittest browser_tests.test_infrastructure -v
-          python tools/browser_acceptance.py --visual compare --output browser-acceptance
+          python tools/browser_acceptance.py --visual "$BROWSER_VISUAL_MODE" --output browser-acceptance
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -126,7 +139,12 @@ jobs:
     name: Full macOS Chromium and WebKit / offline acceptance
     runs-on: macos-15
     timeout-minutes: 25
+    outputs:
+      visual_mode: '${{ steps.visual-mode.outputs.mode }}'
     steps:
+      - name: Record explicit visual phase
+        id: visual-mode
+        run: echo "mode=$BROWSER_VISUAL_MODE" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
@@ -141,10 +159,10 @@ jobs:
           python -m pip install --no-deps dist/*.whl
           python -m playwright install chromium webkit
       - name: Complete Chromium / reviewed macOS visual comparisons
-        run: python tools/browser_acceptance.py --browser chromium --visual compare --output browser-acceptance/chromium
+        run: python tools/browser_acceptance.py --browser chromium --visual "$BROWSER_VISUAL_MODE" --output browser-acceptance/chromium
       - name: Complete WebKit / reviewed macOS visual comparisons
         if: success() || failure()
-        run: python tools/browser_acceptance.py --browser webkit --visual compare --output browser-acceptance/webkit
+        run: python tools/browser_acceptance.py --browser webkit --visual "$BROWSER_VISUAL_MODE" --output browser-acceptance/webkit
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -157,7 +175,9 @@ jobs:
     needs: [acceptance, project-lifecycle, browser-acceptance, browser-macos-smoke]
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      startsWith(github.ref, 'refs/heads/development/')
+      startsWith(github.ref, 'refs/heads/development/') &&
+      needs.browser-acceptance.outputs.visual_mode == 'compare' &&
+      needs.browser-macos-smoke.outputs.visual_mode == 'compare'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -208,4 +228,4 @@ jobs:
           ARTIFACT_URL: '${{ steps.upload.outputs.artifact-url }}'
         run: |
           printf '\n[Download validated development wheel](%s)\n\nNot a public release. Artifact source/build commit: `%s`.\n\nCheckpoint 1 implementation commit: `%s`.\n\nPrevious CI/distribution commit: `%s`.\n' "$ARTIFACT_URL" "$GITHUB_SHA" "$CHECKPOINT_IMPLEMENTATION_SHA" "$CHECKPOINT_DISTRIBUTION_SHA" >> "$GITHUB_STEP_SUMMARY"
-          printf '\nAccepted Checkpoint 1 visual baseline: `%s`. This wheel includes Checkpoint 2 configuration, Checkpoint 3 discovery, Checkpoint 4 evidence acquisition and Checkpoint 5 guided review with separate authorized corpus publication. It is built from the source SHA above.\n' "$ACCEPTED_CHECKPOINT1_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nAccepted Checkpoint 1 visual baseline: `%s`. This wheel includes guided configuration, discovery, evidence acquisition, human review, frozen candidate populations and Checkpoint 7 reference/context provenance. Reference labels do not publish membership; no classifier engine runs. It is built from the source SHA above.\n' "$ACCEPTED_CHECKPOINT1_SHA" >> "$GITHUB_STEP_SUMMARY"
