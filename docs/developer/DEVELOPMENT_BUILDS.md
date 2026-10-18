@@ -28,6 +28,44 @@ boundary: ancestry, a strict path allowlist and exact scientific hashes are chec
 As always, `source.commit_sha` and `source.tree_sha` identify the actual final build,
 not that historical foundation commit. No receipt implies researcher acceptance.
 
+### Researcher acceptance — 18 October 2026
+
+The researcher formally accepted **Checkpoint 6 — Origin-independent candidate
+populations** on 18 October 2026. This records the researcher's communicated
+decision, not an acceptance granted independently by an agent. Checkpoints 1–6
+are now researcher-accepted.
+
+The accepted software delivery is:
+
+- Branch: `development/v0.1.0a3-read-only-local-ui`.
+- Source commit: `d4715166dcdc1ff708bc0d1f6224334f2c84c8c9`.
+- Source tree: `784d5b95c90094024a35dad5b6915abca70f297b`.
+- [Acceptance run 39122248446](https://github.com/Rickk-B/CorpusTrail/actions/runs/39122248446),
+  attempt 1: all 12 jobs passed. Linux Chromium, macOS Chromium and macOS WebKit
+  each passed 36/36 executions and 145/145 strict visual comparisons.
+- Wheel: `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 265,495 bytes.
+- Wheel SHA-256: `ca9b59c7c19db4526f1526af52f3548108bfdc3d898f49e425e786b3bfdd19a8`.
+
+Development-bundle retention was restored to the requested 90 days, bounded by
+the verified repository maximum of 90 days. The delivered bundle was created at
+`2026-10-18T11:32:01Z` and reports expiry at `2027-01-16T11:11:43Z`: exactly
+90 days after run creation, or 89 days 23 hours 39 minutes 42 seconds after artifact
+creation. This is not a claim of 90 days from upload or an extension of older
+artifacts. The original delivery, build receipt and verification evidence remain
+historical provenance; this later acceptance record does not alter that delivery.
+
+Acceptance does **not** close these issues:
+
+- The native MacBook Europe PMC discovery transport failure remains causally
+  unresolved and requires further investigation. Hosted success is not proof of
+  native resolution.
+- The historical macOS Chromium navigation timeout remains causally unexplained.
+  Diagnostics were hardened and final hosted acceptance passed; neither fact
+  establishes that its initiating cause was fixed.
+
+Checkpoint 7 has not begun. Its implementation requires a separate prompt and
+authorization; recording this acceptance does not start it.
+
 ## Chosen workflow and approval boundary
 
 Use the existing **Standalone alpha acceptance** GitHub Actions workflow. Its
