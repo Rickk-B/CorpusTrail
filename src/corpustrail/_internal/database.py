@@ -123,9 +123,12 @@ def validate_database(db, bootstrap: bytes, project_id: str, *, allow_prefix=Fal
             "SELECT version,name,code_sha256 FROM schema_migrations ORDER BY version")]
         expected = [{"version": x[0]["version"], "name": x[0]["name"],
                      "code_sha256": x[0]["sha256"]} for x in migrations()]
-        compatible = compatible_prefix is not None and len(rows) == compatible_prefix and rows == expected[:compatible_prefix]
-        if compatible and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name LIKE 'ct_population_%'").fetchone():
+        prefixes = compatible_prefix if isinstance(compatible_prefix,tuple) else (compatible_prefix,)
+        compatible = len(rows) in prefixes and rows == expected[:len(rows)]
+        if compatible and len(rows)<38 and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name LIKE 'ct_population_%'").fetchone():
             raise ContractError('population tables require their complete registered schema history')
+        if len(rows)<39 and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name LIKE 'ct_reference_%'").fetchone():
+            raise ContractError('reference tables require their complete registered schema history')
         if not compatible and rows != (expected[:len(rows)] if allow_prefix and len(rows) >= 32 else expected):
             raise ContractError("database schema history differs; no implicit migration")
         previous = None
@@ -140,7 +143,7 @@ def validate_database(db, bootstrap: bytes, project_id: str, *, allow_prefix=Fal
         raise ContractError("not a compatible standalone project database") from exc
 
 
-def upgrade_database(path, bootstrap, project_id, backup_path, created_at):
+def upgrade_database(path, bootstrap, project_id, backup_path, created_at, *, expected_config_event=None):
     """Explicit additive upgrade of a marked candidate, with exclusive SQLite backup.
 
     The writer lock protects the snapshot and migration together. Historical databases
@@ -150,6 +153,8 @@ def upgrade_database(path, bootstrap, project_id, backup_path, created_at):
     timestamp(created_at)
     with connection(path, write=True) as db:
         validate_database(db, bootstrap, project_id, allow_prefix=True)
+        if expected_config_event is not None and latest_config(db)[0]!=expected_config_event:
+            raise ContractError('configuration changed before upgrade; no backup or migration was performed')
         count = db.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0]
         pending = migrations()[count:]
         if not pending:

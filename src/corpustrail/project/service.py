@@ -54,14 +54,14 @@ class Project:
         config = ProjectConfig.from_dict(json.loads(body))
         project = cls(target, config)
         with connection(project.database_path) as db:
-            # Accepted Checkpoints 1–5 remain openable without a write/upgrade.
-            # Population operations alone require the explicit additive upgrade.
-            validate_database(db, body, config.project_id, compatible_prefix=37)
+            # Accepted pre-population and CP6 projects remain read-compatible;
+            # new reference writes require an explicit backed-up additive upgrade.
+            validate_database(db, body, config.project_id, compatible_prefix=(37,38))
         project.config  # Validate latest configuration, without creating files.
         return project
 
     @classmethod
-    def upgrade(cls, root, *, backup, created_at=None):
+    def upgrade(cls, root, *, backup, created_at=None, expected_config_event=None):
         """Explicit candidate-only schema upgrade; open/status never migrate."""
         from corpustrail._internal.database import upgrade_database
         target = Path(root).resolve()
@@ -71,7 +71,8 @@ class Project:
         destination = confined(target, backup)
         if destination == project.database_path or destination == target / BOOTSTRAP:
             raise ContractError("backup cannot replace a live project artifact")
-        upgrade_database(project.database_path, body, config.project_id, destination, created_at or now())
+        upgrade_database(project.database_path, body, config.project_id, destination, created_at or now(),
+            expected_config_event=expected_config_event)
         return cls.open(target)
 
     @property
@@ -125,6 +126,11 @@ class Project:
     def populations(self):
         from corpustrail.populations import PopulationService
         return PopulationService(self)
+
+    @property
+    def references(self):
+        from corpustrail.references import ReferenceService
+        return ReferenceService(self)
 
     @property
     def reviews(self):

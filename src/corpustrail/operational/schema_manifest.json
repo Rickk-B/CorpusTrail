@@ -230,6 +230,12 @@
       "version": 38,
       "sha256": "sha256:2994a7ebbb615febd6137ab29c9d97e3012b38dd5003a668769ebf979e7c1242",
       "origin_path": null
+    },
+    {
+      "name": "039_reference_collections.sql",
+      "version": 39,
+      "sha256": "sha256:bc48d9c686705dabfec0b00922571541dd0abf241bc480f74af67b3101f9bace",
+      "origin_path": null
     }
   ]
 }
