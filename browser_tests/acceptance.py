@@ -106,6 +106,16 @@ class BrowserAcceptance(unittest.TestCase):
         # quiet interval instead of trusting that stale load-state flag.
         settle_reads(self)
 
+    def open_paper_provenance(self):
+        # Bibliographic status renders before the independent evidence read.
+        # Its history/eligibility text expands the panel above this native
+        # summary. A pointer press across that reflow can land on the panel
+        # instead; await actual rendered history and completed reads first.
+        expect(self.page.locator('#evidence-history li').first).to_be_visible()
+        self.settle_reads()
+        self.page.locator('#advanced > summary').click()
+        expect(self.page.locator('#advanced')).to_have_attribute('open', '')
+
     def open_project(self):
         self.visit('/projects')
         expect(self.page.locator('#project-list article')).to_have_count(1)
@@ -403,7 +413,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(len(self.fixture.transport.calls),4)
         self.page.locator('#result-papers a').filter(has_text='Discovered glass scaffold').first.click()
         expect(self.page.locator('#paper-status')).to_contain_text('Awaiting corpus decision')
-        self.page.locator('#advanced summary').first.click()
+        self.open_paper_provenance()
         expect(self.page.locator('#provenance-sources')).to_contain_text(re.compile('Crossref|OpenAlex'))
         self.visit('/discovery');self.page.locator('#history button').click()
         self.page.get_by_role('button',name='Prepare a new search from these settings').click()

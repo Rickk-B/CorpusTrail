@@ -11,6 +11,28 @@ from .visual import approve, compare
 
 
 class VisualInfrastructureTests(unittest.TestCase):
+    def test_provenance_click_waits_for_rendered_history_and_completed_reads(self):
+        from unittest.mock import patch
+        from .acceptance import BrowserAcceptance
+        case=object.__new__(BrowserAcceptance)
+        case.page=Mock()
+        case.settle_reads=Mock()
+        order=Mock()
+        rendered=Mock()
+        opened=Mock()
+        with patch('browser_tests.acceptance.expect',side_effect=(rendered,opened)):
+            order.attach_mock(rendered,'rendered')
+            order.attach_mock(case.settle_reads,'settle')
+            order.attach_mock(case.page.locator.return_value,'target')
+            order.attach_mock(opened,'opened')
+            case.open_paper_provenance()
+        self.assertEqual([call[0] for call in order.mock_calls],
+            ['rendered.to_be_visible','settle','target.click','opened.to_have_attribute'])
+        self.assertEqual(case.page.locator.call_args_list,
+            [unittest.mock.call('#evidence-history li'),unittest.mock.call('#advanced > summary'),
+             unittest.mock.call('#advanced')])
+        opened.to_have_attribute.assert_called_once_with('open','')
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='ct-visual-unit-');self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name)
