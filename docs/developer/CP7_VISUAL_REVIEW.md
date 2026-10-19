@@ -92,3 +92,31 @@ The final workflow must compare strictly against these identities. Its outcome a
 any delivered wheel belong to their exact final source/run receipt, not this capture
 run. No native Europe PMC transport resolution, model performance or researcher
 acceptance is inferred from fixtures or visual approval.
+
+
+## Controlled fixture-path review — 19 October 2026
+
+Evidence run [39305469937, attempt 1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39305469937) uses source `99fd5545358f29ec81879cb1c43829abae68bc70`. It is a complete passing capture, not strict acceptance; the unchanged compare-only delivery gate prevents an evidence-phase wheel.
+
+The test-only macOS root is the canonical `/private/tmp`, not a per-user TMPDIR alias. Exclusive TemporaryDirectory creation, truthful actual locations, cleanup ownership, confinement and separate long-path/keyboard coverage remain. Production code, styles, masks, timeouts and tolerances are unchanged. Local narrow/wide/mixed-glyph probes retain consistent geometry, but are not native macOS proof.
+
+Each change below was directly inspected against its old image, new image and full-size diagnostic diff. Padding for unequal-sized diagnostic diffs does not alter original captures or strict dimension rejection. Changes are confined to actual path wrapping/privacy-rectangle heights and consequent page flow; controls, text, focus/accessibility checks and scientific/authority notices remain intact. No unexplained or broader-scope difference is approved.
+
+| Namespace | Image | Old → new dimensions | Review rationale |
+| --- | --- | --- | --- |
+| darwin-chromium | `desktop-wizard-summary.png` | 1440×900 → 1440×900 | Storage row changes from 48 to 24 pixels; subsequent notices, actions and footer move up 24 pixels within the unchanged 1440x900 canvas. All scientific settings, authority wording and controls remain identical and readable. |
+| darwin-chromium | `laptop-wizard-summary.png` | 1280×891 → 1280×867 | Storage row changes from 48 to 24 pixels; downstream content moves up 24 pixels and page height becomes 867 rather than 891. No setting, authority notice, control or footer is clipped or lost. |
+| darwin-chromium | `narrow-wizard.png` | 390×1105 → 390×1057 | Actual project-location wrapping changes from 120 to 72 pixels; ownership notice, actions and footer move up 48 pixels. Textarea focus outline, input values, disabled Back and active Next/Cancel remain unchanged and visible. |
+| darwin-chromium | `narrow-wizard-summary.png` | 390×1531 → 390×1507 | Storage location changes from 96 to 72 pixels; downstream authority/scope notices, actions and footer move up 24 pixels. All selected scientific settings and explicit authority language remain intact. |
+| darwin-chromium | `narrow-projects.png` | 390×1540 → 390×1444 | Approved-root wrapping changes from 96 to 48 pixels and project locations from 96/72 to 72/48 pixels, accounting for the complete 96-pixel page reduction. Active-project distinction, close-before-removal warning, confinement explanation and both project cards/actions remain intact. |
+| darwin-chromium | `narrow-trash-confirmation.png` | 390×1345 → 390×1321 | Location wrapping changes from 96 to 72 pixels; all downstream content moves up 24 pixels. Project-data/external-file warnings, exact-name attestation, focused confirmation input and Cancel/Move controls remain readable and unchanged. |
+| darwin-webkit | `desktop-wizard-summary.png` | 1440×900 → 1440×900 | Storage row changes from 48 to 24 pixels; subsequent notices, actions and footer move up 24 pixels within the unchanged 1440x900 canvas. All scientific settings, authority wording and controls remain identical and readable. |
+| darwin-webkit | `laptop-wizard-summary.png` | 1280×891 → 1280×867 | Storage row changes from 48 to 24 pixels; downstream content moves up 24 pixels and page height becomes 867 rather than 891. No setting, authority notice, control or footer is clipped or lost. |
+| darwin-webkit | `narrow-wizard.png` | 390×1105 → 390×1057 | Actual project-location wrapping changes from 120 to 72 pixels; ownership notice, actions and footer move up 48 pixels. Textarea focus outline, input values, disabled Back and active Next/Cancel remain unchanged and visible. |
+| darwin-webkit | `narrow-wizard-summary.png` | 390×1531 → 390×1507 | Storage location changes from 96 to 72 pixels; downstream authority/scope notices, actions and footer move up 24 pixels. All selected scientific settings and explicit authority language remain intact. |
+| darwin-webkit | `narrow-projects.png` | 390×1539 → 390×1443 | Approved-root wrapping changes from 96 to 48 pixels and project locations from 96/72 to 72/48 pixels, accounting for the complete 96-pixel page reduction. Active-project distinction, close-before-removal warning, confinement explanation and both project cards/actions remain intact. |
+| darwin-webkit | `narrow-trash-confirmation.png` | 390×1345 → 390×1321 | Location wrapping changes from 96 to 72 pixels; all downstream content moves up 24 pixels. Project-data/external-file warnings, exact-name attestation, focused confirmation input and Cancel/Move controls remain readable and unchanged. |
+
+Decision-record SHA-256: `adb5efadbcb062f0915e0184f9355ec444424add74e0c03d1413aaa233cd6e23`. Each manifest records the exact capture report, source, prior manifest and retained-image inventory. Every unselected image remains byte-for-byte unchanged. Original artifacts, old/new images, full-size diffs and the individual decision record are retained in durable task evidence.
+
+This is agent technical visual review under explicit researcher authorization, not formal CP7 researcher acceptance. Final delivery still requires all strict Linux Chromium, macOS Chromium and WebKit gates against the exact final source. Native MacBook Europe PMC causation remains unresolved; CP8, visual refresh, production imports and model integrations are not begun.
