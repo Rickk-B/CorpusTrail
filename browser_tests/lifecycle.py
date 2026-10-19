@@ -12,12 +12,14 @@ class RequestLedger:
         self.origin = origin
         self.clock = clock
         self.started = clock()
+        self.last_activity = self.started
         self.pending = {}
         self.recent = deque(maxlen=30)
         self.sequence = 0
         self.unmatched_completions = 0
 
     def begin(self, request):
+        self.last_activity = self.clock()
         self.sequence += 1
         parsed = urlsplit(request.url)
         # Only fixed application route vocabulary survives; IDs and unknown
@@ -36,12 +38,14 @@ class RequestLedger:
             'response_status': None}
 
     def response(self, response):
+        self.last_activity = self.clock()
         record = self.pending.get(response.request)
         if record is not None:
             record['response_status'] = response.status
             record['response_seconds'] = round(self.clock()-self.started,3)
 
     def end(self, request, event):
+        self.last_activity = self.clock()
         record = self.pending.pop(request, None)
         if record is None:
             self.unmatched_completions += 1
@@ -65,10 +69,17 @@ def settle_reads(case):
         case.page.wait_for_timeout(50)  # Pump real Playwright events, not a sleep.
         if case.pending_requests:
             quiet = None
-        elif quiet is None:
-            quiet = time.monotonic()
-        elif time.monotonic()-quiet >= .5:
-            return
+        else:
+            # Credit only continuously observed quiet, after pumping queued
+            # events. A request that starts and finishes in one pump still
+            # resets this boundary. Never remove unfinished requests here.
+            activity = getattr(getattr(case, 'request_ledger', None), 'last_activity', None)
+            if isinstance(activity, (int, float)):
+                quiet = activity if quiet is None else max(quiet, activity)
+            elif quiet is None:
+                quiet = time.monotonic()
+            if time.monotonic()-quiet >= .5:
+                return
     case.navigation_timeouts.append(case.request_ledger.snapshot())
     case.fail('Local application requests did not finish within the bounded navigation wait')
 

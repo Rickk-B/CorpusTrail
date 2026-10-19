@@ -251,6 +251,48 @@ class VisualInfrastructureTests(unittest.TestCase):
         self.assertTrue(pending)
         self.assertEqual(case.navigation_timeouts,[{'pending_count':1}])
 
+    def test_navigation_wait_credits_observed_quiet_after_pumping_events(self):
+        from unittest.mock import patch
+        from .lifecycle import RequestLedger, settle_reads
+        clock=[0.0]
+        ledger=RequestLedger('http://127.0.0.1:1234',clock=lambda:clock[0])
+        clock[0]=2.0
+        pumps=[]
+        def pump(milliseconds):
+            pumps.append(milliseconds);clock[0]+=milliseconds/1000
+        case=types.SimpleNamespace(pending_requests=ledger.pending,request_ledger=ledger,
+            page=types.SimpleNamespace(wait_for_timeout=pump),fail=self.fail)
+        with patch('browser_tests.lifecycle.time.monotonic',side_effect=lambda:clock[0]):
+            settle_reads(case)
+        self.assertEqual(pumps,[50])  # Drain events even when prior quiet is sufficient.
+        self.assertGreaterEqual(clock[0]-ledger.last_activity,.5)
+
+    def test_navigation_wait_new_and_same_pump_requests_reset_observed_quiet(self):
+        from unittest.mock import patch
+        from .lifecycle import RequestLedger, settle_reads
+        for complete_in_same_pump in (False,True):
+            with self.subTest(complete_in_same_pump=complete_in_same_pump):
+                clock=[0.0];events=[]
+                ledger=RequestLedger('http://127.0.0.1:1234',clock=lambda:clock[0])
+                # Request objects, like Playwright's, must be stable dictionary keys.
+                request=Mock(url='http://127.0.0.1:1234/api/v1/review',method='GET')
+                clock[0]=2.0
+                def pump(milliseconds):
+                    clock[0]+=milliseconds/1000
+                    if not events:
+                        ledger.begin(request);events.append('begin')
+                    if ledger.pending and (complete_in_same_pump or clock[0]>=2.4):
+                        ledger.response(types.SimpleNamespace(request=request,status=200))
+                        ledger.end(request,'finished');events.append('finished')
+                case=types.SimpleNamespace(pending_requests=ledger.pending,request_ledger=ledger,
+                    page=types.SimpleNamespace(wait_for_timeout=pump),fail=self.fail)
+                with patch('browser_tests.lifecycle.time.monotonic',side_effect=lambda:clock[0]):
+                    settle_reads(case)
+                self.assertEqual(events,['begin','finished'])
+                self.assertGreaterEqual(clock[0]-ledger.last_activity,.5)
+                self.assertFalse(ledger.pending)
+                self.assertGreaterEqual(clock[0],2.55 if complete_in_same_pump else 2.9)
+
     def test_candidate_paths_and_symlinks_are_confined(self):
         self.candidate(screenshots=[{'path':'../outside.png'}])
         with self.assertRaises(ValueError):approve(self.root,self.root/'approved',reviewed=True)
