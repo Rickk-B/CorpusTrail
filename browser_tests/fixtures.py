@@ -30,13 +30,19 @@ SCOPE = 'Broad-topic collection of invented porous materials; not question-speci
 XML = b'<article><front><article-meta><article-id pub-id-type="doi">10.1234/evidence.1</article-id><article-id pub-id-type="pmc">PMC123</article-id><abstract><p>Invented acquired abstract.</p></abstract></article-meta></front><body><sec><title>Methods</title><p>Invented structured scientific fixture text.</p></sec></body></article>'
 INERT_JATS_DOCTYPE = b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Archiving and Interchange DTD v1.3 20210610//EN" "JATS-archivearticle1-3.dtd">'
 FOOTNOTE = 'Invented table footnote: calibrated measurements retain uncertainty, labels and scientific context. ' * 8
+MACOS_FIXTURE_PARENT = Path('/private/tmp')
 
 
 def fixture_directory(*, long_path=False, parent=None):
-    # macOS's longer platform temp root put random basename glyphs at a
-    # desktop line-wrap boundary. Shorten real test data, never displayed text.
-    # Keep the reviewed Linux data shape and native narrow-screen wrapping.
-    prefix = 'ct-browser-' if sys.platform == 'darwin' else 'ct-browser-disposable-'
+    # Keep a short, canonical real parent on macOS, independent of per-user
+    # TMPDIR aliases/length. Never change process/system temp settings or show
+    # an alias instead of the actual registered path. TemporaryDirectory still
+    # exclusively creates/owns each private directory and its cleanup.
+    if parent is None and sys.platform == 'darwin':
+        parent = MACOS_FIXTURE_PARENT
+        if parent.is_symlink() or not parent.is_dir() or parent.resolve(strict=True) != parent:
+            raise RuntimeError('Canonical macOS browser-fixture parent unavailable')
+    prefix = 'ct-browser-disposable-'
     if long_path:
         prefix += 'W' * 128  # Separate nonvisual coverage of legitimate wrapping.
     return tempfile.TemporaryDirectory(prefix=prefix, dir=parent)

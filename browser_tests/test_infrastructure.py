@@ -15,7 +15,7 @@ class VisualInfrastructureTests(unittest.TestCase):
         from unittest.mock import patch
         from .fixtures import fixture_directory
         marker=self.root/'parent-marker';marker.write_bytes(b'preserve synthetic parent')
-        for platform,prefix in [('darwin','ct-browser-'),('linux','ct-browser-disposable-')]:
+        for platform,prefix in [('darwin','ct-browser-disposable-'),('linux','ct-browser-disposable-')]:
             with self.subTest(platform=platform),patch('browser_tests.fixtures.sys.platform',platform):
                 with fixture_directory(parent=self.root) as one,fixture_directory(parent=self.root) as two:
                     self.assertNotEqual(one,two)
@@ -30,6 +30,30 @@ class VisualInfrastructureTests(unittest.TestCase):
                     self.assertLess(len(Path(long).name.encode()),255)
                     self.assertEqual(Path(long).resolve().parent,self.root.resolve())
                 self.assertEqual(marker.read_bytes(),b'preserve synthetic parent')
+
+    def test_macos_fixture_parent_is_explicit_canonical_and_does_not_change_temp_settings(self):
+        from unittest.mock import patch
+        from .fixtures import fixture_directory
+        before=tempfile.tempdir
+        parent=self.root.resolve()
+        marker=self.root/'parent-marker';marker.write_bytes(b'preserve synthetic parent')
+        with patch('browser_tests.fixtures.sys.platform','darwin'),patch('browser_tests.fixtures.MACOS_FIXTURE_PARENT',parent):
+            with fixture_directory() as one,fixture_directory() as two:
+                self.assertEqual(Path(one).parent,parent)
+                self.assertEqual(Path(two).parent,parent)
+                self.assertNotEqual(one,two)
+                self.assertFalse(Path(one).is_symlink())
+                self.assertIs(tempfile.tempdir,before)
+            self.assertFalse(Path(one).exists());self.assertFalse(Path(two).exists())
+            self.assertEqual(marker.read_bytes(),b'preserve synthetic parent')
+        missing=self.root/'not-created'
+        with patch('browser_tests.fixtures.sys.platform','darwin'),patch('browser_tests.fixtures.MACOS_FIXTURE_PARENT',missing):
+            with self.assertRaisesRegex(RuntimeError,'Canonical macOS'):fixture_directory()
+        self.assertFalse(missing.exists())
+        link=self.root/'parent-alias';link.symlink_to(self.root,target_is_directory=True)
+        with patch('browser_tests.fixtures.sys.platform','darwin'),patch('browser_tests.fixtures.MACOS_FIXTURE_PARENT',link):
+            with self.assertRaisesRegex(RuntimeError,'Canonical macOS'):fixture_directory()
+        self.assertEqual(marker.read_bytes(),b'preserve synthetic parent')
 
     def test_geometry_uses_the_exact_capture_mask_visibility_engine(self):
         from tools.browser_acceptance import Runtime,PRIVACY_MASK
