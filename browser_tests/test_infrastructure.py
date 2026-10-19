@@ -11,6 +11,70 @@ from .visual import approve, compare
 
 
 class VisualInfrastructureTests(unittest.TestCase):
+    def test_geometry_uses_the_exact_capture_mask_visibility_engine(self):
+        from tools.browser_acceptance import Runtime,PRIVACY_MASK
+        page=Mock();page.evaluate.return_value={'viewport':[1280,800],'content':[1280,2844]}
+        page.locator.return_value.filter.return_value.evaluate_all.return_value=[[80,1002,1120,24]]
+        geometry=Runtime.capture_geometry(page)
+        page.locator.assert_called_once_with(PRIVACY_MASK)
+        page.locator.return_value.filter.assert_called_once_with(visible=True)
+        self.assertEqual(geometry['masks'],[[80,1002,1120,24]])
+
+    def test_navigation_click_completes_prior_reads_and_keeps_failed_waits_visible(self):
+        from .acceptance import BrowserAcceptance
+        case=object.__new__(BrowserAcceptance);case.page=Mock();case.settle_reads=Mock()
+        order=Mock();order.attach_mock(case.settle_reads,'settle');order.attach_mock(case.page,'page')
+        case.click_after_reads('#review-finish')
+        self.assertEqual([call[0] for call in order.mock_calls],['settle','page.locator','page.locator().click'])
+        case.page.reset_mock();case.settle_reads.side_effect=AssertionError('unfinished read')
+        with self.assertRaisesRegex(AssertionError,'unfinished read'):case.click_after_reads('#review-finish')
+        case.page.locator.assert_not_called()
+
+    def capture_double(self,*,changed_geometry=False,read_failure=False):
+        from unittest.mock import patch
+        from tools.browser_acceptance import Runtime
+        runtime=object.__new__(Runtime);runtime.output=self.root;runtime.viewport_name='desktop'
+        (self.root/'screenshots').mkdir()
+        runtime.environment={'browser':'controlled'};runtime.mode='capture';runtime.screenshots=[]
+        page=Mock();page.evaluate.return_value=1
+        pending={'real-read'};events=[]
+        def ready():
+            events.append('readiness')
+            if read_failure:raise AssertionError('unfinished read')
+            pending.clear()
+        def screenshot(**options):
+            self.assertFalse(pending,'Cannot measure/mask an unfinished render')
+            self.assertEqual(options['mask_color'],'#e2ecee')
+            events.append('capture');Image.new('RGB',(20,20),'white').save(options['path'])
+        page.screenshot.side_effect=screenshot
+        before={'content':[1280,2844],'masks':[[0,1002,10,24]]}
+        after={'content':[1280,2804],'masks':[[0,962,10,24]]} if changed_geometry else before
+        case=types.SimpleNamespace(page=page,settle_reads=ready,assertEqual=self.assertEqual)
+        with patch.object(runtime,'capture_geometry',side_effect=(before,after)):
+            if read_failure or changed_geometry:
+                with self.assertRaisesRegex(AssertionError,'unfinished read|geometry changed'):
+                    runtime.snapshot(case,'controlled-readiness')
+            else:runtime.snapshot(case,'controlled-readiness')
+        return page,events,runtime
+
+    def test_capture_waits_for_prior_reads_before_measuring_and_masking(self):
+        page,events,runtime=self.capture_double()
+        self.assertEqual(events,['readiness','capture'])
+        self.assertEqual(len(runtime.screenshots),1)
+        self.assertIn('delete window.__ctScreenshotNodes',page.evaluate.call_args[0][0])
+
+    def test_capture_does_not_bypass_unfinished_reads(self):
+        page,events,runtime=self.capture_double(read_failure=True)
+        self.assertEqual(events,['readiness']);page.screenshot.assert_not_called()
+        self.assertEqual(runtime.screenshots,[])
+
+    def test_changed_mask_geometry_fails_without_retry_and_restores_text(self):
+        page,events,runtime=self.capture_double(changed_geometry=True)
+        self.assertEqual(events,['readiness','capture']);page.screenshot.assert_called_once()
+        self.assertIn('delete window.__ctScreenshotNodes',page.evaluate.call_args[0][0])
+        self.assertTrue((self.root/'screenshots/desktop-controlled-readiness.png').exists())
+        self.assertEqual(runtime.screenshots,[])
+
     def test_provenance_click_waits_for_rendered_history_and_completed_reads(self):
         from unittest.mock import patch
         from .acceptance import BrowserAcceptance

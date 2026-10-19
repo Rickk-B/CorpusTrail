@@ -60,12 +60,30 @@ class Runtime:
                 raise ValueError('Renderer differs from its reviewed platform/engine baseline. Capture and review explicitly; never silently update.')
         for folder in ('screenshots','failures','traces','diagnostics'):(output/folder).mkdir(parents=True)
 
+    @staticmethod
+    def capture_geometry(page,subject=None):
+        # Coordinates only: never inspect/log private masked text or attributes.
+        geometry=page.evaluate('''subject => {
+          const box=e=>{const r=e.getBoundingClientRect();return [r.x+scrollX,r.y+scrollY,r.width,r.height];};
+          return {viewport:[innerWidth,innerHeight],
+            content:subject?box(document.querySelector(subject)):[document.documentElement.scrollWidth,document.documentElement.scrollHeight]};
+        }''',subject)
+        # Use the SAME visibility engine as the actual mask. Raw client rects
+        # can exist inside closed details after Chromium has laid them out.
+        geometry['masks']=page.locator(PRIVACY_MASK).filter(visible=True).evaluate_all('''nodes=>nodes.map(e=>{
+          const r=e.getBoundingClientRect();return [r.x+scrollX,r.y+scrollY,r.width,r.height];})''')
+        return geometry
+
     def snapshot(self,case,name,full_page=True,subject=None,anchor=None):
         if self.viewport_name in LIMITED and name not in LIMITED[self.viewport_name]:return
         path=self.output/'screenshots'/(self.viewport_name+'-'+name+'.png')
         if path.exists() or path.is_symlink():
             raise AssertionError('Screenshot path already exists; use a distinct capture name: '+path.name)
         page=case.page
+        # The frame's networkidle event may precede a fresh chained read. In
+        # particular, evidence history renders before its paper-detail refresh.
+        # Complete actual routed reads before measuring the page or its masks.
+        case.settle_reads()
         if self.environment['browser']=='webkit':
             case.assertEqual(page.evaluate('document.getAnimations().filter(a=>a.playState==="running").length'),0,
                 'Pinned WebKit screenshot adapter requires the reduced-motion page to have no running animations')
@@ -106,10 +124,15 @@ class Runtime:
             page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
         masks=page.locator(PRIVACY_MASK).filter(visible=True)
         try:
+            page.wait_for_function('document.fonts.status === "loaded"')
+            page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
+            geometry=self.capture_geometry(page,subject)
             if subject:
                 page.locator(subject).screenshot(path=str(path),animations='disabled',caret='hide',mask=[masks],mask_color='#e2ecee')
             else:
                 page.screenshot(path=str(path),full_page=full_page,animations='disabled',caret='hide',mask=[masks],mask_color='#e2ecee')
+            case.assertEqual(geometry,self.capture_geometry(page,subject),
+                'Page or privacy-mask geometry changed during capture; preserve the failure, never retry or approve it')
         finally:
             if old:page.evaluate('''() => {for(const [n,text] of window.__ctScreenshotNodes)n.textContent=text;delete window.__ctScreenshotNodes;}''')
         record={'name':name,'viewport':self.viewport_name,'path':str(path.relative_to(self.output)),'subject':subject or 'page'}

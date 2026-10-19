@@ -116,6 +116,12 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.locator('#advanced > summary').click()
         expect(self.page.locator('#advanced')).to_have_attribute('open', '')
 
+    def click_after_reads(self,selector):
+        # Do not navigate while a preceding UI action's read is intercepted.
+        # Keep orphaned/unfinished requests visible; never clear them on unload.
+        self.settle_reads()
+        self.page.locator(selector).click()
+
     def open_project(self):
         self.visit('/projects')
         expect(self.page.locator('#project-list article')).to_have_count(1)
@@ -1018,7 +1024,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.locator('#review-save-next').click()
         expect(self.page.locator('#review-message')).to_contain_text('Human observation saved')
         self.page.locator('#review-show-summary').click()
-        self.page.locator('#review-finish').click()
+        self.click_after_reads('#review-finish')
         expect(self.page.locator('#dashboard-review-result')).to_contain_text('Finishing did not change corpus membership')
         self.page.locator('#dashboard-review-summary').click()
         expect(self.page.locator('#review-authority-status')).to_contain_text('not authorized')
