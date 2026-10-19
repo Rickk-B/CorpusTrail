@@ -32,6 +32,16 @@ INERT_JATS_DOCTYPE = b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journ
 FOOTNOTE = 'Invented table footnote: calibrated measurements retain uncertainty, labels and scientific context. ' * 8
 
 
+def fixture_directory(*, long_path=False, parent=None):
+    # macOS's longer platform temp root put random basename glyphs at a
+    # desktop line-wrap boundary. Shorten real test data, never displayed text.
+    # Keep the reviewed Linux data shape and native narrow-screen wrapping.
+    prefix = 'ct-browser-' if sys.platform == 'darwin' else 'ct-browser-disposable-'
+    if long_path:
+        prefix += 'W' * 128  # Separate nonvisual coverage of legitimate wrapping.
+    return tempfile.TemporaryDirectory(prefix=prefix, dir=parent)
+
+
 def fingerprint(root):
     return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in root.rglob('*') if p.is_file()}
@@ -110,9 +120,10 @@ class FixtureTransport:
 
 
 class ApplicationFixture:
-    def __init__(self, *, project_id=None):
+    def __init__(self, *, project_id=None, long_path=False):
         self.stack = ExitStack()
         self.project_id=project_id or 'browser-'+uuid.uuid4().hex
+        self.long_path=long_path
         try:
             self._setup()
         except BaseException:
@@ -129,7 +140,7 @@ class ApplicationFixture:
             if path.is_file() and path.suffix in {'.py','.html','.css','.js'}:
                 if installed.joinpath(*path.relative_to(source).parts).read_bytes()!=path.read_bytes():
                     raise AssertionError('Installed package differs from checkout. Rebuild and force-reinstall its wheel.')
-        self.temp = self.stack.enter_context(tempfile.TemporaryDirectory(prefix='ct-browser-disposable-'))
+        self.temp = self.stack.enter_context(fixture_directory(long_path=self.long_path))
         self.base = Path(self.temp).resolve()
         self.root = self.base / 'projects'
         self.errors = []

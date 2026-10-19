@@ -11,6 +11,26 @@ from .visual import approve, compare
 
 
 class VisualInfrastructureTests(unittest.TestCase):
+    def test_fixture_directories_are_unique_confined_and_keep_parent_contents(self):
+        from unittest.mock import patch
+        from .fixtures import fixture_directory
+        marker=self.root/'parent-marker';marker.write_bytes(b'preserve synthetic parent')
+        for platform,prefix in [('darwin','ct-browser-'),('linux','ct-browser-disposable-')]:
+            with self.subTest(platform=platform),patch('browser_tests.fixtures.sys.platform',platform):
+                with fixture_directory(parent=self.root) as one,fixture_directory(parent=self.root) as two:
+                    self.assertNotEqual(one,two)
+                    for name in (one,two):
+                        self.assertEqual(Path(name).resolve().parent,self.root.resolve())
+                        self.assertTrue(Path(name).name.startswith(prefix))
+                        self.assertFalse(Path(name).is_symlink())
+                    self.assertEqual(marker.read_bytes(),b'preserve synthetic parent')
+                self.assertFalse(Path(one).exists());self.assertFalse(Path(two).exists())
+                with fixture_directory(parent=self.root,long_path=True) as long:
+                    self.assertIn('W'*128,Path(long).name)
+                    self.assertLess(len(Path(long).name.encode()),255)
+                    self.assertEqual(Path(long).resolve().parent,self.root.resolve())
+                self.assertEqual(marker.read_bytes(),b'preserve synthetic parent')
+
     def test_geometry_uses_the_exact_capture_mask_visibility_engine(self):
         from tools.browser_acceptance import Runtime,PRIVACY_MASK
         page=Mock();page.evaluate.return_value={'viewport':[1280,800],'content':[1280,2844]}

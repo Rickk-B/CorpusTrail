@@ -20,7 +20,8 @@ class BrowserAcceptance(unittest.TestCase):
         # every run still has a private root, lock directory and browser context.
         self.fixture = ApplicationFixture(project_id='browser-guided-fixture' if 'review' in self._testMethodName else
             'browser-population-fixture' if 'population' in self._testMethodName else
-            'browser-reference-fixture' if 'reference' in self._testMethodName else None)
+            'browser-reference-fixture' if 'reference' in self._testMethodName else None,
+            long_path='long_paths' in self._testMethodName)
         self.addCleanup(self.fixture.close)
         self.context = self.runtime.browser.new_context(viewport=self.runtime.viewport,
             device_scale_factor=1, locale='en-US', timezone_id='UTC', color_scheme='light',
@@ -256,6 +257,38 @@ class BrowserAcceptance(unittest.TestCase):
         search('Journal search fixture 7',1)  # Missing journal, still searchable by title.
         search('',7)
         search('Legitimately unmatched journal',0);self.layout();self.snapshot('journal-no-results')
+        self.assertEqual(before,fingerprint(self.fixture.root))
+        self.assertEqual(self.fixture.transport.calls,[])
+
+    def test_project_long_paths_wrap_and_keyboard_navigation(self):
+        # Behavior coverage, separate from the fixed reviewed visual fixture.
+        # The displayed location must still be the complete actual directory.
+        before=fingerprint(self.fixture.root)
+        self.page.get_by_role('link',name='Create New Project',exact=True).click()
+        expect(self.page.locator('#progress')).to_have_text('Step 1 of 6')
+        self.page.get_by_label('Project name',exact=True).fill('Disposable browser project')
+        self.page.get_by_label('Brief scientific topic description').fill('A synthetic browser-only topic.')
+        location=self.page.locator('#intended-location')
+        expected='Will be saved at: '+str(self.fixture.root/'disposable-browser-project')
+        expect(location).to_have_text(expected)
+        geometry=location.evaluate('''e=>{
+          const r=e.getBoundingClientRect(),s=getComputedStyle(e),range=document.createRange();
+          range.selectNodeContents(e);
+          return {height:r.height,lineHeight:parseFloat(s.lineHeight),overflow:e.scrollWidth-e.clientWidth,
+            wrap:s.overflowWrap,whitespace:s.whiteSpace,
+            contained:[...range.getClientRects()].every(x=>x.left>=r.left-1&&x.right<=r.right+1&&x.top>=r.top-1&&x.bottom<=r.bottom+1)};
+        }''')
+        self.assertGreater(geometry['height'],geometry['lineHeight'])
+        self.assertLessEqual(geometry['overflow'],1)
+        self.assertTrue(geometry['contained'])
+        self.assertEqual((geometry['wrap'],geometry['whitespace']),('anywhere','pre-wrap'))
+        self.layout()
+        self.page.get_by_label('Project folder name').focus()
+        self.page.keyboard.press('Alt+Tab' if self.runtime.environment['browser']=='webkit' else 'Tab')
+        expect(self.page.get_by_role('button',name='Next',exact=True)).to_be_focused()
+        self.page.keyboard.press('Enter')
+        expect(self.page.locator('#progress')).to_have_text('Step 2 of 6')
+        self.layout()
         self.assertEqual(before,fingerprint(self.fixture.root))
         self.assertEqual(self.fixture.transport.calls,[])
 
