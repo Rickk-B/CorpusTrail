@@ -73,6 +73,8 @@ jobs:
         with:
           python-version: '${{ matrix.python }}'
       - name: Core installation and real-process guards (no native dependency)
+        # Fail at the first failed native command, including on Windows.
+        shell: bash
         run: |
           python -m pip install --upgrade 'pip==26.2'
           python -m pip install --no-deps .
@@ -107,6 +109,7 @@ jobs:
     timeout-minutes: 15
     outputs:
       visual_mode: '${{ steps.visual-mode.outputs.mode }}'
+      acceptance: '${{ steps.browser-report.outputs.acceptance }}'
     steps:
       - name: Record explicit visual phase
         id: visual-mode
@@ -126,8 +129,9 @@ jobs:
           python -m playwright install --with-deps chromium
           sudo apt-get install -y fonts-dejavu-core
       - name: Actual packaged application / offline scientific fixtures / visual checks
+        id: browser-report
         run: |
-          python -m unittest browser_tests.test_infrastructure -v
+          python -m unittest browser_tests.test_infrastructure browser_tests.test_path_visual_debt -v
           python tools/browser_acceptance.py --visual "$BROWSER_VISUAL_MODE" --output browser-acceptance
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
@@ -143,6 +147,8 @@ jobs:
     timeout-minutes: 25
     outputs:
       visual_mode: '${{ steps.visual-mode.outputs.mode }}'
+      chromium_acceptance: '${{ steps.chromium-report.outputs.acceptance }}'
+      webkit_acceptance: '${{ steps.webkit-report.outputs.acceptance }}'
     steps:
       - name: Record explicit visual phase
         id: visual-mode
@@ -161,10 +167,12 @@ jobs:
           python -m pip install --no-deps dist/*.whl
           python -m playwright install chromium webkit
       - name: Complete Chromium / reviewed macOS visual comparisons
-        run: python tools/browser_acceptance.py --browser chromium --visual "$BROWSER_VISUAL_MODE" --output browser-acceptance/chromium
+        id: chromium-report
+        run: python tools/browser_acceptance.py --browser chromium --visual "$BROWSER_VISUAL_MODE" --allow-cp7-path-reflow --output browser-acceptance/chromium
       - name: Complete WebKit / reviewed macOS visual comparisons
+        id: webkit-report
         if: success() || failure()
-        run: python tools/browser_acceptance.py --browser webkit --visual "$BROWSER_VISUAL_MODE" --output browser-acceptance/webkit
+        run: python tools/browser_acceptance.py --browser webkit --visual "$BROWSER_VISUAL_MODE" --allow-cp7-path-reflow --output browser-acceptance/webkit
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
@@ -215,8 +223,12 @@ jobs:
           "$RUNNER_TEMP/ct-development-core/bin/corpustrail" --version > "$RUNNER_TEMP/development-version.txt"
       - name: Assemble source identity, checksums and validation receipt
         id: bundle
+        env:
+          LINUX_BROWSER_ACCEPTANCE: '${{ needs.browser-acceptance.outputs.acceptance }}'
+          MACOS_CHROMIUM_ACCEPTANCE: '${{ needs.browser-macos-smoke.outputs.chromium_acceptance }}'
+          MACOS_WEBKIT_ACCEPTANCE: '${{ needs.browser-macos-smoke.outputs.webkit_acceptance }}'
         run: |
-          python tools/development_artifact.py bundle --expected-commit "$GITHUB_SHA" --implementation-commit "$CHECKPOINT_IMPLEMENTATION_SHA" --distribution-commit "$CHECKPOINT_DISTRIBUTION_SHA" --accepted-checkpoint1 "$ACCEPTED_CHECKPOINT1_SHA" --validation-dir "$RUNNER_TEMP" --output-dir "$RUNNER_TEMP/corpustrail-development-artifact"
+          python tools/development_artifact.py bundle --expected-commit "$GITHUB_SHA" --implementation-commit "$CHECKPOINT_IMPLEMENTATION_SHA" --distribution-commit "$CHECKPOINT_DISTRIBUTION_SHA" --accepted-checkpoint1 "$ACCEPTED_CHECKPOINT1_SHA" --validation-dir "$RUNNER_TEMP" --output-dir "$RUNNER_TEMP/corpustrail-development-artifact" --browser-acceptance-json "[$LINUX_BROWSER_ACCEPTANCE,$MACOS_CHROMIUM_ACCEPTANCE,$MACOS_WEBKIT_ACCEPTANCE]"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         id: upload
         with:

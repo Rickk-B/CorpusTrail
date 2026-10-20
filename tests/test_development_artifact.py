@@ -108,6 +108,47 @@ class DevelopmentArtifactTests(unittest.TestCase):
         (self.validation / 'development-tutorial.json').write_text('{"network_used":true}', encoding='utf-8')
         with self.assertRaises(ValueError): self.bundle()
 
+    def browser_receipts(self):
+        return [{'schema':'corpustrail-browser-gate/v1','source':self.sha,'renderer':name,
+            'accepted':True,'functional_passed':True,'complete':True,'executions':51,
+            'comparisons':184,'strict_passed':184,'strict_visual_passed':True,'exceptions':[],
+            'report_sha256':'0'*64} for name in ('linux-chromium','darwin-chromium','darwin-webkit')]
+
+    def path_exception(self):
+        value={'policy':'researcher-approved-cp7-fixture-path-reflow/v1','verified':True,
+            'capture':'narrow-wizard.png','strict_comparison_passed':False,
+            'all_other_pixels_accounted':True,'expected_sha256':'1'*64,'actual_sha256':'2'*64}
+        value['evidence_sha256']=hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        return value
+
+    def test_delivery_receipt_keeps_strict_failure_distinct_from_approved_exception(self):
+        records=self.browser_receipts();records[1].update(strict_passed=183,strict_visual_passed=False,exceptions=[self.path_exception()])
+        TOOL['validate_browser_acceptance'](records,self.sha)
+        TOOL['bundle'](self.root,self.sha,self.validation,self.output,implementation=self.implementation,
+            context=self.context,browser_acceptance=records)
+        result=json.loads((self.output/'build-provenance.json').read_text())
+        self.assertEqual(result['validation']['browser_acceptance'],records)
+        self.assertFalse(result['validation']['all_strict_visual_comparisons_passed'])
+
+    def test_failed_incomplete_wrong_source_or_unexplained_browser_results_block_delivery(self):
+        import copy
+        base=self.browser_receipts()
+        for changes in ({'accepted':False},{'functional_passed':False},{'complete':False},
+                {'source':'0'*40},{'strict_passed':183},{'strict_visual_passed':False},
+                {'comparisons':185},{'executions':0}):
+            value=copy.deepcopy(base);value[1].update(changes)
+            with self.subTest(changes=changes),self.assertRaises(ValueError):TOOL['validate_browser_acceptance'](value,self.sha)
+        with self.assertRaises(ValueError):TOOL['validate_browser_acceptance'](base[:2],self.sha)
+        base[2]=base[1]
+        with self.assertRaises(ValueError):TOOL['validate_browser_acceptance'](base,self.sha)
+
+    def test_linux_unknown_capture_and_tampered_exception_are_refused(self):
+        import copy
+        for renderer,change in ((0,{}),(1,{'capture':'narrow-reference-context.png'}),(1,{'actual_sha256':'3'*64})):
+            value=self.browser_receipts();entry=copy.deepcopy(self.path_exception());entry.update(change)
+            value[renderer].update(strict_passed=183,strict_visual_passed=False,exceptions=[entry])
+            with self.assertRaises(ValueError):TOOL['validate_browser_acceptance'](value,self.sha)
+
     def test_existing_bundle_and_multiple_wheels_never_overwritten(self):
         self.bundle()
         before = (self.output / 'build-provenance.json').read_bytes()

@@ -1,0 +1,3 @@
+# Frozen package/resource hashes identify canonical Git bytes on every platform.
+# Never apply checkout or check-in newline conversion to scientific package data.
+/src/corpustrail/** -text

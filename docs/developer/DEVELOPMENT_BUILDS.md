@@ -1,5 +1,45 @@
 # Development checkpoint wheels — not public releases
 
+## CP7 amended technical acceptance — 19 October 2026
+
+The researcher explicitly permits demonstrably harmless fixture-location path
+wrapping/reflow as documented visual debt, not a strict visual pass. This amends
+technical acceptance priorities only; it does not modify the authoritative plan,
+grant CP7 researcher acceptance, reopen accepted CP6, or begin CP8/visual refresh.
+
+The exception is restricted to macOS Chromium/WebKit desktop/narrow wizard,
+Projects and trash-confirmation, plus desktop/laptop/narrow wizard-summary.
+It is not automatic approval of those images. Linux is unchanged. Baselines,
+masking, thresholds, timeouts and actual displayed paths are not changed.
+
+The runner retains each original image and failed strict result. An explicitly
+enabled path check verifies the real confined fixture paths and DOM containment,
+then accounts for the complete original raster: only repeated existing path-mask
+rows and consequent viewport-floor background can change multiplicity. Every
+other pixel retains the existing noise budgets. Unexpected content, layout,
+functional, privacy or request failures still fail. Full functional scenarios
+continue only after an individually recorded path proof; none are skipped.
+Reports separate functional completion, strict comparisons and verified exceptions.
+The resulting outcome is `ACCEPTED_WITH_PATH_EXCEPTION`, never “all strict passed”.
+
+Delivery requires all genuine scientific/package/lifecycle gates and complete
+browser inventories. Exact-source browser summaries, original report hashes and
+each exceptional image/proof hash are included in the development build receipt;
+missing, wrong-source, incomplete, unexplained or Linux exceptions are refused.
+An emitted wheel remains subject to post-run artifact and individual image review.
+
+Windows verification is independently repaired: repository-scoped `.gitattributes`
+preserves the canonical package bytes without global Git changes or migration/hash
+edits. Controlled autocrlf checkout and diagnostic packaging reproduce the hash
+failure without that policy and preserve all 39 SQL hashes with it. Original
+failed Windows installed bytes were not retained, so the historical mechanism is
+not inferred across earlier checkpoints. Lifecycle commands use fail-closed bash
+on the existing runners so a later successful native command cannot hide a failure.
+
+The one newly authorized hosted attempt and its actual result must be reported
+separately. The requested 90-day development and seven-day browser retention remain
+unchanged. Native MacBook Europe PMC transport causation remains unresolved.
+
 ## Checkpoint 2 provenance
 
 The guided-project build descends from accepted Checkpoint 1 visual baseline

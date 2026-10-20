@@ -47,12 +47,15 @@ for names in LIMITED.values():
 
 
 class Runtime:
-    def __init__(self,browser,output,mode,suite,viewports,engine='chromium'):
+    def __init__(self,browser,output,mode,suite,viewports,engine='chromium',allow_path_reflow=False):
         from browser_tests.visual import rendering_environment
         self.browser=browser;self.output=output;self.mode=mode;self.suite=suite;self.viewports=viewports
         self.environment=rendering_environment(browser.version,engine)
         self.baseline_directory=baseline_directory(self.environment)
         self.screenshots=[];self.cases=[];self.comparisons=[]
+        self.allow_path_reflow=allow_path_reflow and mode=='compare'
+        if allow_path_reflow and self.environment['platform']!='darwin':
+            raise ValueError('CP7 path exception applies only to macOS; Linux stays unchanged')
         self.baselines=None
         if mode=='compare':
             self.baselines=json.loads((self.baseline_directory/'manifest.json').read_text(encoding='utf-8'))
@@ -145,7 +148,16 @@ class Runtime:
                 raise AssertionError('Reviewed baseline missing or hash changed: '+path.name)
             result=compare(expected,path,self.output/'failures'/(path.stem+'-diff.png'))
             self.comparisons.append({**record,**result})
-            case.assertTrue(result['passed'],'Visual regression '+path.name+': '+json.dumps(result))
+            exception={'verified':False}
+            if not result['passed'] and getattr(self,'allow_path_reflow',False):
+                from browser_tests.path_visual_debt import CAPTURES,path_reflow_evidence
+                if path.name in CAPTURES and case._testMethodName=='test_project_wizard_settings_and_confirmation':
+                    exception=path_reflow_evidence(expected,path,environment=self.environment,capture=path.name,
+                        paths=case.fixture_path_checks(name),viewport_height=self.viewport['height'])
+                    self.comparisons[-1]['path_exception']=exception
+            # Strict failure remains in comparisons. Only a separately proved,
+            # researcher-approved path exception permits remaining assertions.
+            case.assertTrue(result['passed'] or exception['verified'],'Visual regression '+path.name+': '+json.dumps(result))
 
     def redact(self,value,case):
         for token in case.tokens:value=value.replace(token,'<redacted-session>')
@@ -222,7 +234,19 @@ class Runtime:
         # unittest tracebacks are synthetic but should not leak local home paths.
         logs=logs.replace(str(ROOT),'<source>').replace(sys.prefix,'<test-environment>')
         logs=re.sub(r'/tmp/ct-browser-disposable-[^/\s]+','<disposable-root>',logs)
-        value={'schema':'corpustrail-browser-acceptance/v1','passed':passed,'mode':self.mode,'suite':self.suite,
+        functional_passed=passed
+        exceptions=[c['path_exception'] for c in self.comparisons if c.get('path_exception',{}).get('verified')]
+        strict_passed=all(c['passed'] for c in self.comparisons) if self.mode=='compare' else None
+        complete=(self.suite=='all' and self.viewports==list(VIEWPORTS) and self.mode=='compare'
+            and {Path(s['path']).name for s in self.screenshots}==set(self.baselines['images_sha256']))
+        if self.mode=='compare':
+            passed=passed and all(c['passed'] or c.get('path_exception',{}).get('verified') for c in self.comparisons)
+            if self.suite=='all' and self.viewports==list(VIEWPORTS):passed=passed and complete
+        value={'schema':'corpustrail-browser-acceptance/v1','passed':passed,
+            'functional_passed':functional_passed,'strict_visual_passed':strict_passed,
+            'path_only_exceptions':exceptions,'complete_comparison_inventory':complete,
+            'acceptance_basis':'researcher-approved-path-exception' if exceptions else 'unchanged-visual-policy',
+            'mode':self.mode,'suite':self.suite,
             'viewports':self.viewports,'viewport_sizes':{k:VIEWPORTS[k] for k in self.viewports},
             'environment':self.environment,'os':platform.system()+' '+platform.release(),
             'runtime':{'python':platform.python_version(),'openssl':ssl.OPENSSL_VERSION,
@@ -235,9 +259,11 @@ class Runtime:
                 'Scientific providers are offline fixtures; native Trash is covered separately.',
                 'Pixel comparisons require the exact reviewed platform/engine renderer; paths/raw IDs are masked.']}
         (self.output/'report.json').write_text(json.dumps(value,indent=2)+'\n',encoding='utf-8')
-        (self.output/'summary.txt').write_text(('PASS' if passed else 'FAIL')+'\n'+logs,encoding='utf-8')
+        outcome='ACCEPTED_WITH_PATH_EXCEPTION' if passed and exceptions else 'PASS' if passed else 'FAIL'
+        (self.output/'summary.txt').write_text(outcome+'\n'+logs,encoding='utf-8')
         cards=''.join('<figure><figcaption>'+html.escape(x['viewport']+' — '+x['name'])+'</figcaption><a href="'+html.escape(x['path'])+'"><img alt="'+html.escape(x['name'])+'" loading="lazy" src="'+html.escape(x['path'])+'" width="640"></a></figure>' for x in self.screenshots)
-        (self.output/'index.html').write_text('<!doctype html><html lang="en"><meta charset="utf-8"><title>CorpusTrail browser acceptance</title><h1>'+('PASS' if passed else 'FAIL')+'</h1><p>Offline '+html.escape(self.environment['browser'])+' acceptance, not native user acceptance.</p><a href="report.json">Structured results</a><pre>'+html.escape(logs)+'</pre>'+cards+'</html>',encoding='utf-8')
+        (self.output/'index.html').write_text('<!doctype html><html lang="en"><meta charset="utf-8"><title>CorpusTrail browser acceptance</title><h1>'+outcome+'</h1><p>Offline '+html.escape(self.environment['browser'])+' acceptance, not native user acceptance. Strict visual pass: '+str(strict_passed)+'. Verified path-only exceptions: '+str(len(exceptions))+'.</p><a href="report.json">Structured results</a><pre>'+html.escape(logs)+'</pre>'+cards+'</html>',encoding='utf-8')
+        return value
 
 
 def main():
@@ -249,6 +275,7 @@ def main():
     parser.add_argument('--output',type=Path,help='New output directory; existing reports are never overwritten')
     parser.add_argument('--approve-baselines',type=Path,help='Explicitly approve a passing complete capture report after image review')
     parser.add_argument('--reviewed',action='store_true')
+    parser.add_argument('--allow-cp7-path-reflow',action='store_true',help='Explicit macOS path-only exception; strict failures remain reported')
     args=parser.parse_args()
     sys.path.insert(0,str(ROOT))
     if args.approve_baselines:
@@ -283,7 +310,7 @@ def execute(args):
             env.update(FONTCONFIG_FILE=str(ROOT/'browser_tests'/'fonts.conf'),XDG_CACHE_HOME=cache)
         browser=getattr(driver,args.browser).launch(env=env)
         try:
-            runtime=Runtime(browser,args.output,args.visual,args.suite,args.viewports,args.browser)
+            runtime=Runtime(browser,args.output,args.visual,args.suite,args.viewports,args.browser,args.allow_cp7_path_reflow)
             BrowserAcceptance.runtime=runtime
             methods=unittest.defaultTestLoader.getTestCaseNames(BrowserAcceptance)
             if args.suite=='smoke':methods=[m for m in methods if 'evidence' in m or 'home' in m or 'review' in m or 'journal' in m or 'population' in m]
@@ -293,9 +320,18 @@ def execute(args):
                 tests=unittest.TestSuite(BrowserAcceptance(m) for m in methods)
                 result=unittest.TextTestRunner(stream=logs,verbosity=2).run(tests)
                 passed=passed and result.wasSuccessful()
-            runtime.report(passed,logs.getvalue())
+            report=runtime.report(passed,logs.getvalue());passed=report['passed']
+            if os.environ.get('GITHUB_OUTPUT'):
+                summary={'schema':'corpustrail-browser-gate/v1','source':report['source_sha'],'renderer':runtime.environment['platform']+'-'+args.browser,
+                    'accepted':passed,'functional_passed':report['functional_passed'],'strict_visual_passed':report['strict_visual_passed'],
+                    'complete':report['complete_comparison_inventory'],'executions':len(report['cases']),
+                    'comparisons':len(report['comparisons']),'strict_passed':sum(c['passed'] for c in report['comparisons']),
+                    'exceptions':report['path_only_exceptions'],
+                    'report_sha256':hashlib.sha256((args.output/'report.json').read_bytes()).hexdigest()}
+                with Path(os.environ['GITHUB_OUTPUT']).open('a',encoding='utf-8') as output:output.write('acceptance='+json.dumps(summary,separators=(',',':'))+'\n')
         finally:browser.close()
-    print(('PASS' if passed else 'FAIL')+' browser acceptance in '+str(round(time.monotonic()-started,1))+'s; report '+str(args.output/'index.html'))
+    outcome='ACCEPTED_WITH_PATH_EXCEPTION' if passed and report['path_only_exceptions'] else 'PASS' if passed else 'FAIL'
+    print(outcome+' browser acceptance in '+str(round(time.monotonic()-started,1))+'s; report '+str(args.output/'index.html'))
     return 0 if passed else 1
 
 

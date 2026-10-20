@@ -1,5 +1,23 @@
 # Real browser acceptance (Checkpoint 4 testing follow-up)
 
+## Explicit CP7 path-only visual debt
+
+The researcher's 19 October 2026 amendment permits the fixed macOS fixture-path
+family documented in `DEVELOPMENT_BUILDS.md`, only with per-image proof. The
+macOS workflow enables `--allow-cp7-path-reflow`. Originals and strict comparison
+failures remain visible in `report.json`; no baseline, mask, crop, tolerance or
+timeout changes. The proof accounts for repeated rows through the existing path
+mask and resulting reflow; all other pixels retain the original noise budgets.
+DOM checks require actual expected paths, readable contained text and accessible
+controls; the separate long-path keyboard scenario remains mandatory.
+
+`functional_passed`, `strict_visual_passed` and `path_only_exceptions` are separate
+outcomes. `passed` means the explicitly amended gate, not universal strict success.
+Only a verified exception allows subsequent assertions/captures to continue.
+`ACCEPTED_WITH_PATH_EXCEPTION` is reported explicitly; unrelated failures remain
+blocking. Linux never enables this exception. The exact-source per-engine report
+and exception/image hashes are carried into any delivered wheel receipt.
+
 This opt-in suite uses Python Playwright's synchronous library with the existing
 `unittest` framework. There is no second JavaScript test stack, production browser
 dependency, browser binary in a wheel, database migration or test HTTP endpoint.

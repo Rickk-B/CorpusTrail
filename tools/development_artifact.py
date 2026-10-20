@@ -312,7 +312,40 @@ def installed_version(name):
         return None
 
 
-def bundle(root, expected, validation_dir, output_dir, *, implementation, context, distribution=None, accepted_checkpoint1=None):
+def validate_browser_acceptance(records,expected):
+    """Current delivery gates: functional completeness, strict results, exact debt."""
+    renderers={'linux-chromium','darwin-chromium','darwin-webkit'}
+    if not isinstance(records,list) or len(records)!=3 or {r.get('renderer') for r in records}!=renderers:
+        raise ValueError('Three distinct browser acceptance receipts are required')
+    captures={v+'-'+n+'.png' for v in ('desktop','narrow') for n in ('wizard','projects','trash-confirmation')}
+    captures.update(v+'-wizard-summary.png' for v in ('desktop','laptop','narrow'))
+    for record in records:
+        if (record.get('schema')!='corpustrail-browser-gate/v1' or record.get('source')!=expected
+                or not all(record.get(k) is True for k in ('accepted','functional_passed','complete'))
+                or not isinstance(record.get('executions'),int) or record['executions']<=0
+                or not isinstance(record.get('comparisons'),int) or record['comparisons']<=0
+                or not re.fullmatch('[0-9a-f]{64}',record.get('report_sha256',''))):
+            raise ValueError('Incomplete, failed or wrong-source browser acceptance')
+        exceptions=record.get('exceptions');strict=record.get('strict_passed')
+        if not isinstance(exceptions,list) or not isinstance(strict,int) or not 0<=strict<=record['comparisons'] or strict+len(exceptions)!=record['comparisons']:
+            raise ValueError('Every failed visual comparison needs exact exception evidence')
+        if record.get('strict_visual_passed') is not (len(exceptions)==0):
+            raise ValueError('Strict visual result must remain truthful')
+        if record['renderer']=='linux-chromium' and exceptions:raise ValueError('Linux has no visual exception')
+        if len({e.get('capture') for e in exceptions})!=len(exceptions):raise ValueError('Repeated visual exception')
+        for entry in exceptions:
+            if (entry.get('policy')!='researcher-approved-cp7-fixture-path-reflow/v1' or entry.get('verified') is not True
+                    or entry.get('capture') not in captures or entry.get('strict_comparison_passed') is not False
+                    or entry.get('all_other_pixels_accounted') is not True
+                    or any(not re.fullmatch('[0-9a-f]{64}',entry.get(k,'')) for k in ('expected_sha256','actual_sha256','evidence_sha256'))):
+                raise ValueError('Unapproved or unproved visual exception')
+            body={k:v for k,v in entry.items() if k!='evidence_sha256'}
+            if hashlib.sha256(json.dumps(body,sort_keys=True,separators=(',',':')).encode()).hexdigest()!=entry['evidence_sha256']:
+                raise ValueError('Visual exception evidence hash differs')
+    return records
+
+
+def bundle(root, expected, validation_dir, output_dir, *, implementation, context, distribution=None, accepted_checkpoint1=None,browser_acceptance=None):
     source = check_source(root, expected)
     checkpoint = check_implementation(root, implementation, expected, distribution=distribution, accepted_checkpoint1=accepted_checkpoint1)
     wheels = list((root / 'dist').glob('*.whl'))
@@ -335,6 +368,7 @@ def bundle(root, expected, validation_dir, output_dir, *, implementation, contex
         raise ValueError('only a development branch can publish a development artifact')
     if any(not re.fullmatch(r'[0-9]+', context[key]) for key in ('run_id', 'run_attempt')):
         raise ValueError('numeric workflow run identity is required')
+    if browser_acceptance is not None:validate_browser_acceptance(browser_acceptance,expected)
     name = 'corpustrail-dev-' + source['version'] + '-' + expected + '-run-' + context['run_id'] + '-' + context['run_attempt']
     output_dir.mkdir(parents=True, exist_ok=False)  # Never overwrite a prior bundle.
     files = {}
@@ -351,6 +385,9 @@ def bundle(root, expected, validation_dir, output_dir, *, implementation, contex
               'created_at': datetime.now(timezone.utc).isoformat(), 'files_sha256': files,
               'notice': 'Not a GitHub Release or PyPI package. Verify the source SHA against the workflow run. '
                         'The receipt is not a cryptographic attestation. No real provider/model calls were used.'}
+    if browser_acceptance is not None:
+        record['validation']['browser_acceptance']=browser_acceptance
+        record['validation']['all_strict_visual_comparisons_passed']=all(r['strict_visual_passed'] for r in browser_acceptance)
     (output_dir / 'build-provenance.json').write_text(json.dumps(record, indent=2) + '\n', encoding='utf-8')
     (output_dir / 'SHA256SUMS').write_text(''.join(f'{value}  {key}\n' for key, value in sorted(files.items())) +
         hashlib.sha256((output_dir / 'build-provenance.json').read_bytes()).hexdigest() + '  build-provenance.json\n', encoding='utf-8')
@@ -366,6 +403,7 @@ def main():
     parser.add_argument('--accepted-checkpoint1')
     parser.add_argument('--validation-dir', type=Path)
     parser.add_argument('--output-dir', type=Path)
+    parser.add_argument('--browser-acceptance-json',help='Three exact-source browser gate receipts, required for CI delivery')
     args = parser.parse_args()
     if args.action == 'check-source':
         print(json.dumps({'source': check_source(ROOT, args.expected_commit),
@@ -375,13 +413,15 @@ def main():
         return
     if args.validation_dir is None or args.output_dir is None:
         parser.error('bundle requires --validation-dir and --output-dir')
+    if args.browser_acceptance_json is None:parser.error('bundle requires explicit browser acceptance receipts')
+    browser_acceptance=validate_browser_acceptance(json.loads(args.browser_acceptance_json),args.expected_commit)
     # Explicit allowlist only; never dump environment, token, actor or Git identity.
     context = {key: os.environ[env] for key, env in (
         ('repository', 'GITHUB_REPOSITORY'), ('ref', 'GITHUB_REF'),
         ('run_id', 'GITHUB_RUN_ID'), ('run_attempt', 'GITHUB_RUN_ATTEMPT'))}
     name = bundle(ROOT, args.expected_commit, args.validation_dir, args.output_dir,
                   implementation=args.implementation_commit, distribution=args.distribution_commit, context=context,
-                  accepted_checkpoint1=args.accepted_checkpoint1)
+                  accepted_checkpoint1=args.accepted_checkpoint1,browser_acceptance=browser_acceptance)
     with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as handle:
         handle.write('artifact_name=' + name + '\n')
     print(name)

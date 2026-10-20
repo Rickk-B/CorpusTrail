@@ -145,6 +145,33 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertLessEqual(result['overflow'],1,result)
         self.assertEqual((result['unnamed'],result['anonymous'],result['escaped']),(0,0,0),result)
 
+    def fixture_path_checks(self,name):
+        """Private local checks; publish hashes/geometry, never pathname bytes."""
+        import hashlib
+        root=self.fixture.root
+        project=root/'disposable-browser-project'
+        if name=='wizard':
+            fields=[(self.page.locator('#intended-location'),'Will be saved at: '+str(root/self.page.locator('#folder').input_value()))]
+        elif name=='wizard-summary':fields=[(self.page.locator('#summary dl dd').last,str(project))]
+        elif name=='trash-confirmation':fields=[(self.page.locator('#trash-location'),str(project))]
+        elif name=='projects':
+            fields=[(self.page.locator('#root-location'),'Projects location: '+str(root))]
+            for node in self.page.locator('#project-list .project-location').all():
+                text=node.inner_text()
+                self.assertIn(text,{str(project),str(root/'materials')},'Unexpected fixture project location')
+                fields.append((node,text))
+        else:raise AssertionError('No path exception for this capture')
+        checks=[]
+        for node,expected in fields:
+            text=node.inner_text();self.assertEqual(text,expected)
+            geometry=node.evaluate('''e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e),range=document.createRange();
+              range.selectNodeContents(e);return {height:r.height,line_height:parseFloat(s.lineHeight),
+                overflow:e.scrollWidth-e.clientWidth,contained:[...range.getClientRects()].every(t=>
+                  t.left>=r.left-1&&t.right<=r.right+1&&t.top>=r.top-1&&t.bottom<=r.bottom+1)};}''')
+            checks.append({**geometry,'truthful':True,'text_sha256':hashlib.sha256(text.encode()).hexdigest()})
+        self.layout()
+        return checks
+
     def test_home_catalogue_readonly(self):
         before=fingerprint(self.fixture.root)
         if self.runtime.environment['browser']=='webkit':
