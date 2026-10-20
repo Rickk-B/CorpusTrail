@@ -14,6 +14,20 @@ Existing schema-37 projects remain usable without writes; population storage nee
 an explicit backed-up additive upgrade. There are no new production dependencies
 or production file-format importers.
 
+## Appearance and status cues
+
+The presentation refresh uses warm offwhite reading surfaces, muted olive actions,
+roomier article cards and visible keyboard focus. It uses packaged CSS and system
+fonts only; no remote font, framework or service is required. Navigation selection
+uses a sage background. Scientific badges retain explicit text: a selected page
+or card does not mean a publication is included, reviewed or trusted evidence.
+Warnings and destructive actions remain distinct from primary actions.
+
+The refresh changes presentation, not navigation, review authority, provenance or
+scientific behavior. Researcher aesthetic approval is separate from functional
+acceptance. The existing narrowly verified macOS fixture-path wrapping exception
+remains visual debt, never a strict comparison pass.
+
 ## Launch
 
 Activate the environment containing this development build, then run:

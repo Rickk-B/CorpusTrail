@@ -144,6 +144,28 @@ class BrowserAcceptance(unittest.TestCase):
         }''')
         self.assertLessEqual(result['overflow'],1,result)
         self.assertEqual((result['unnamed'],result['anonymous'],result['escaped']),(0,0,0),result)
+        # Presentation-only contract: check the actual packaged theme tokens,
+        # including secondary text, warning text and keyboard/control boundaries.
+        contrast=self.page.evaluate('''() => {
+          const s=getComputedStyle(document.documentElement);
+          const color=name=>s.getPropertyValue('--'+name).trim();
+          const luminance=hex=>{
+            const rgb=hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255)
+              .map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
+            return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
+          };
+          const ratio=(a,b)=>{const x=luminance(color(a)),y=luminance(color(b));
+            return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+          return {
+            text:['canvas','surface','selection'].every(b=>ratio('ink',b)>=4.5),
+            secondary:['canvas','surface'].every(b=>ratio('muted',b)>=4.5),
+            actions:['canvas','surface','selection'].every(b=>ratio('accent',b)>=4.5),
+            warnings:['canvas','surface'].every(b=>ratio('warning',b)>=4.5&&ratio('danger',b)>=4.5),
+            boundaries:['canvas','surface'].every(b=>ratio('control-border',b)>=3),
+            primary:ratio('surface','accent')>=4.5
+          };
+        }''')
+        self.assertTrue(all(contrast.values()),contrast)
 
     def fixture_path_checks(self,name):
         """Private local checks; publish hashes/geometry, never pathname bytes."""
