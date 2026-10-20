@@ -1,5 +1,32 @@
 # Development checkpoint wheels — not public releases
 
+## CP7 researcher acceptance — 20 October 2026
+
+The researcher formally accepted Checkpoint 7 on 20 October 2026. This records
+the researcher's decision, not an acceptance granted by an agent. Checkpoints
+1–7 are researcher-accepted; CP8 has not begun. The separately authorized visual
+refresh is presentation-only and awaits researcher aesthetic review.
+
+Accepted delivery on `development/v0.1.0a3-read-only-local-ui`:
+
+- Commit: `25c4313a2fd4357b4c48888d51944dbeb5d4ba02`.
+- Tree: `4d1738586bd442c3ec89f9b573fd70cb8a7c0d8d`.
+- [Run 39395042968](https://github.com/Rickk-B/CorpusTrail/actions/runs/39395042968),
+  attempt 1: all 12 jobs passed. Each browser completed 51/51 functional cases.
+  Linux and macOS Chromium passed 184/184 strict comparisons. macOS WebKit passed
+  183/184 strict comparisons with one separately verified, researcher-approved
+  narrow-wizard path-wrapping exception; it was not an all-strict visual pass.
+- Wheel: `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 295,127 bytes.
+- SHA-256: `f521e544be497ed16446fb7960e64d96e547f096c206bc965bf21277795b3a44`.
+
+Development bundle `12252148614` was created at `2026-10-20T09:04:18Z` and reports
+expiry `2027-01-18T08:40:03Z`: 90 days from run creation, not upload. Browser
+evidence retains its separate seven-day policy. Historical receipts remain intact.
+
+Acceptance does not establish a cause or fix for the native MacBook Europe PMC
+transport failure or the historical macOS Chromium navigation timeout. Both
+remain separate unresolved investigations.
+
 ## CP7 amended technical acceptance — 19 October 2026
 
 The researcher explicitly permits demonstrably harmless fixture-location path
