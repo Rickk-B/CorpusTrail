@@ -1,4 +1,5 @@
 """Real reference/context stores; invented publications and no external services."""
+from contextlib import closing
 from dataclasses import replace
 import json
 import os
@@ -203,9 +204,31 @@ class ReferenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ContractError,'backed-up'):opened.references.preview(**self.fields())
             new=Project.upgrade(path,backup='backups/before-references.sqlite3',created_at=AT)
             self.assertTrue(new.references.ready())
-            with sqlite3.connect(path/'backups/before-references.sqlite3') as db:
+            with closing(sqlite3.connect(path/'backups/before-references.sqlite3')) as db:
                 self.assertEqual(db.execute('SELECT MAX(version) FROM schema_migrations').fetchone()[0],38)
+            with self.assertRaisesRegex(sqlite3.ProgrammingError,'closed'):
+                db.execute('SELECT 1')
             self.assertEqual(old.config,new.config)
+
+    def test_backup_inspection_connection_closes_when_assertion_fails(self):
+        real_connect=sqlite3.connect;assert_equal=self.assertEqual;connections=[]
+        def tracked_connect(database,*args,**kwargs):
+            db=real_connect(database,*args,**kwargs)
+            if Path(database).name=='before-references.sqlite3':connections.append(db)
+            return db
+        def interrupted_assertion(actual,expected,*args,**kwargs):
+            if isinstance(actual,int) and actual==expected==38:
+                raise AssertionError('Controlled backup inspection assertion failure')
+            return assert_equal(actual,expected,*args,**kwargs)
+        # Keep real handles alive to expose leaks even on platforms that allow
+        # unlinking an open file. Exercise the actual upgrade test's failure path.
+        with patch('sqlite3.connect',side_effect=tracked_connect),patch.object(self,'assertEqual',side_effect=interrupted_assertion):
+            with self.assertRaisesRegex(AssertionError,'Controlled backup inspection assertion failure'):
+                self.test_schema_38_opens_without_write_then_explicit_backup_preserves_old_data()
+        self.assertTrue(connections)
+        for db in connections:
+            with self.assertRaisesRegex(sqlite3.ProgrammingError,'closed'):
+                db.execute('SELECT 1')
 
     def test_paginated_inherited_assignment_provenance_and_label_filter(self):
         first=self.commit();items=self.service.members(first['version_id'])['items']
