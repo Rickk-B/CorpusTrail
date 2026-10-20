@@ -27,6 +27,50 @@ Acceptance does not establish a cause or fix for the native MacBook Europe PMC
 transport failure or the historical macOS Chromium navigation timeout. Both
 remain separate unresolved investigations.
 
+## Warm presentation refresh — engineering visual review, 20 October 2026
+
+This is a presentation refresh after CP7 acceptance, not CP8. Production changes
+are confined to the shared packaged stylesheet: warm offwhite/beige surfaces,
+muted olive actions, neutral scientific-status chips, clearer selection/focus,
+roomier article cards and body-font scientific reading areas. Existing navigation,
+text, provenance access, scientific services and authority boundaries are unchanged.
+There is no new dependency, remote font, framework or mandatory service.
+
+Reference candidates came from clean source
+`5a337676c89a27fa96113274f6a1577e6344d1c7`,
+[capture run 39430696450](https://github.com/Rickk-B/CorpusTrail/actions/runs/39430696450),
+attempt 1. All three engines completed 51/51 functional executions and produced
+184 distinct captures each. Scientific/package and lifecycle gates passed; the
+wheel job was correctly skipped because capture is not strict acceptance.
+
+Engineering review inspected the complete image inventories/overview sheets and
+representative full-size originals, previous references and full-size diffs across
+desktop, laptop and narrow layouts. Coverage included discovery/results, corpus
+lists, evidence/reading and mismatch warnings, active/completed review and explicit
+publication, project setup/removal, populations and references. The 184 images in
+each platform/engine namespace change intentionally with the shared theme. Exact
+before/after image hashes and dimensions are retained in the review evidence;
+each approval manifest records its capture source, report hash and renderer.
+No reference was approved merely because generation succeeded. Native controls
+and platform focus rendering remain native; no custom dropdown was introduced.
+
+The new contrast checks cover text/actions/warnings at 4.5:1 and control-boundary
+tokens at 3:1. An initial 2.91:1 canvas/control-border result was corrected before
+approval. An independent Linux image comparison also exposed an incidental hover
+on Stop after current provider after scrolling. The test now moves the pointer to
+the canvas gutter and asserts the intended resting state, without changing CSS
+states or scientific behavior. All 12 focused captures then matched the hosted
+Linux candidates with unchanged strict thresholds. Both macOS candidates already
+show that same resting progress state. The reviewed stylesheet is unchanged from
+the capture source.
+
+The workflow is restored byte-for-byte to the accepted compare-mode configuration
+before final delivery. Baseline namespaces, approval guards, strict tolerances,
+privacy masks, timeouts and the narrowly approved macOS path-only exception are
+unchanged. Any exception actually used remains a separate failed strict comparison,
+never an all-strict pass. Development/browser retention remains 90/seven days.
+Researcher aesthetic approval remains pending; CP8 and phone support are unstarted.
+
 ## CP7 amended technical acceptance — 19 October 2026
 
 The researcher explicitly permits demonstrably harmless fixture-location path
@@ -130,8 +174,9 @@ Acceptance does **not** close these issues:
   Diagnostics were hardened and final hosted acceptance passed; neither fact
   establishes that its initiating cause was fixed.
 
-Checkpoint 7 has not begun. Its implementation requires a separate prompt and
-authorization; recording this acceptance does not start it.
+At the time of that CP6 acceptance, Checkpoint 7 had not begun and required
+separate authorization. The later CP7 acceptance above supersedes that historical
+development status without changing the earlier delivery or its provenance.
 
 ## Chosen workflow and approval boundary
 

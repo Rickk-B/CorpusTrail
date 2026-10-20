@@ -482,6 +482,10 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#provider-progress li').first).to_have_text(
             'OpenAlex: running · 0 observations preserved · 1 request attempts started')
         self.page.locator('#job-section').scroll_into_view_if_needed()
+        # Capture the resting progress state. Scrolling can otherwise place
+        # Stop under the old Run-click pointer and unintentionally test hover.
+        self.page.mouse.move(0,0)
+        self.assertFalse(self.page.locator('#cancel').evaluate("e=>e.matches(':hover')"))
         self.snapshot('discovery-progress',full_page=False,anchor='#job-section')
         self.fixture.transport.gate.set()
         expect(self.page.locator('#job-status')).to_contain_text('4/4 providers finished',timeout=15000)
