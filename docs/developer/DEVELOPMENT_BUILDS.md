@@ -95,6 +95,21 @@ state may change; unaffected references retain their exact bytes. A capture run
 collects evidence only and cannot deliver a development wheel. Final delivery still
 requires the existing strict gates and separately disclosed path-only exception.
 
+[Capture run 39565182720](https://github.com/Rickk-B/CorpusTrail/actions/runs/39565182720),
+attempt 1, completed all 51 browser scenarios and 184 distinct screenshots per
+engine. All scientific/package and lifecycle jobs passed; its development-wheel
+job was correctly skipped in capture mode. Against the existing references, 178
+Linux Chromium images, 178 macOS Chromium images and 161 macOS WebKit images
+already matched strictly. Each of the remaining 6, 6 and 23 images, respectively,
+was reviewed against its original, replacement and complete raster difference.
+Every difference was confined to one control changing from an incidental hover
+appearance to the intended resting appearance, with unchanged page dimensions,
+text and surrounding scientific/status content. The reviewed update contains only
+those 35 images and their per-engine approval manifests; the other 517 reference
+images retain their exact bytes. The source stylesheet and its useful hover and
+keyboard-focus states remain unchanged. The workflow has been restored exactly
+to compare mode for final acceptance; this capture run is not delivery.
+
 ## CP7 amended technical acceptance — 19 October 2026
 
 The researcher explicitly permits demonstrably harmless fixture-location path
