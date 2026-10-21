@@ -85,7 +85,7 @@ class IsolationTests(unittest.TestCase):
         manifest = json.loads(root.joinpath("schema_manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["historical_count"], 31)
         self.assertEqual(manifest["origin_commit"], "1911f29dc2de0430d2f3c28324a672b78c5f150e")
-        self.assertEqual([x["version"] for x in manifest["migrations"]], list(range(1, 40)))
+        self.assertEqual([x["version"] for x in manifest["migrations"]], list(range(1, 41)))
         for entry in manifest["migrations"]:
             self.assertEqual("sha256:" + hashlib.sha256(root.joinpath("schema", entry["name"]).read_bytes()).hexdigest(), entry["sha256"])
             self.assertEqual(entry["origin_path"] is None, entry["version"] >= 32)
@@ -95,7 +95,7 @@ class IsolationTests(unittest.TestCase):
         from corpustrail.curation import ReviewService
         self.assertTrue(IdentityService and ReviewService)
         # Other tests may explicitly fit the optional model. Check a fresh interpreter.
-        code = 'import sys; from corpustrail.project import Project; from corpustrail.export import ExportService; from corpustrail.prioritization import PrioritizationService; from corpustrail.knowledge import KnowledgeStore,KnowledgeView,Registry; from corpustrail.curation.http import make_server; assert not set(sys.modules)&'+repr(set(('anthropic','openai','asreview','sklearn','yaml','upe_core','upe_relevance','search_databases')))
+        code = 'import sys; from corpustrail.project import Project; from corpustrail.classification import ClassificationService; from corpustrail.export import ExportService; from corpustrail.prioritization import PrioritizationService; from corpustrail.knowledge import KnowledgeStore,KnowledgeView,Registry; from corpustrail.curation.http import make_server; assert not set(sys.modules)&'+repr(set(('anthropic','openai','asreview','sklearn','yaml','upe_core','upe_relevance','search_databases')))
         subprocess.run([sys.executable,'-B','-c',code],check=True,capture_output=True)
 
     def test_cli_version_and_invalid_init(self):

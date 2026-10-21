@@ -13,6 +13,7 @@ TOOLS = {'tools/smoke_install.py', 'tools/smoke_asreview.py', 'tools/release_man
          'tools/validation-constraints.txt', 'tools/audit_release.py', 'tools/verify_git_identity.py'}
 TOOLS.update({'tools/discovery_environment_diagnostic.py','tools/repository_audit.py'})
 TOOLS.update({'tools/reference_acceptance.py','tools/reference_storage_benchmark.py'})
+TOOLS.add('tools/classification_acceptance.py')
 FIXTURE_DATA = {'examples/synthetic-materials/records.json', 'examples/synthetic-discovery/responses.json',
                 'examples/synthetic-discovery/article.xml'}
 EXCLUDED = ['docs/PHASE* engineering archives', 'docs/*_smoke*.json build/runtime receipts',

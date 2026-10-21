@@ -28,7 +28,9 @@ global-exclude __pycache__ *.pyc *.sqlite3 *~
 include docs/developer/BROWSER_TESTING.md
 include docs/developer/POPULATIONS.md docs/developer/GUIDED_REVIEW.md
 include docs/developer/REFERENCES.md
+include docs/developer/CLASSIFICATION.md
 include tools/reference_acceptance.py tools/reference_storage_benchmark.py
+include tools/classification_acceptance.py
 include docs/developer/DISCOVERY_TRANSPORT_DIAGNOSTICS.md docs/developer/SECURITY_PUBLICATION_REVIEW.md
 include docs/developer/BROWSER_ACCEPTANCE_VERIFICATION.md
 include docs/developer/EVIDENCE_DIAGNOSTICS.md
