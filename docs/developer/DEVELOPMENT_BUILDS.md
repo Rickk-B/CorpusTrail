@@ -1,5 +1,26 @@
 # Development checkpoint wheels — not public releases
 
+## CP8 implementation — generic assessment infrastructure
+
+Checkpoints 1–7 remain researcher-accepted. The warm visual refresh was approved
+on 21 October 2026 and technically delivered from
+`d624a5a9b95e965ed22384fdbb579a18d778d157`,
+[run 39572900265](https://github.com/Rickk-B/CorpusTrail/actions/runs/39572900265),
+attempt 1: all 12 jobs passed; every browser completed 51/51 scenarios and 184/184
+strict comparisons, with no path exception used. The delivered wheel was 295,651
+bytes with SHA-256 `bca35a2ebbab34bb815d53e97dcdd51d651319cc6d0b35517b4f2d225397ce5e`.
+
+CP8 adds the [generic classifier contracts and storage](CLASSIFICATION.md), with
+additive migration 040 and explicit backed-up upgrades. Offline fixtures exercise
+full-set and bounded-context requests, independent/contradictory results, typed
+uncertainty/scores, failure recovery and frozen validation roles. They establish
+architecture, not real model interoperability or scientific performance. No real
+engine is registered by default. CP9's results/audit/assisted-curation UI has not
+begun. Researcher acceptance of CP8 remains pending; exact technical delivery is
+identified by the workflow-produced source/run/wheel receipt, not package version
+alone. The native MacBook Europe PMC failure and historical macOS navigation-timeout
+cause remain separate unresolved investigations.
+
 ## CP7 researcher acceptance — 20 October 2026
 
 The researcher formally accepted Checkpoint 7 on 20 October 2026. This records

@@ -236,6 +236,12 @@
       "version": 39,
       "sha256": "sha256:bc48d9c686705dabfec0b00922571541dd0abf241bc480f74af67b3101f9bace",
       "origin_path": null
+    },
+    {
+      "name": "040_classifier_assessments.sql",
+      "version": 40,
+      "sha256": "sha256:5194cf72c8ea2bfe72d87d456c84ce892efea00cf89b18318d897a4bf75a8fa1",
+      "origin_path": null
     }
   ]
 }

@@ -62,6 +62,11 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
                      'docs/user/REFERENCES.md', 'docs/developer/REFERENCES.md',
                      'src/corpustrail/references/service.py', 'src/corpustrail/references/context.py',
                      'src/corpustrail/operational/schema/039_reference_collections.sql',
+                     'docs/developer/CLASSIFICATION.md',
+                     'src/corpustrail/classification/contracts.py', 'src/corpustrail/classification/registry.py',
+                     'src/corpustrail/classification/service.py', 'src/corpustrail/classification/inputs.py',
+                     'src/corpustrail/classification/storage.py', 'src/corpustrail/classification/validation.py',
+                     'src/corpustrail/operational/schema/040_classifier_assessments.sql',
                      'src/corpustrail/local_app/assets/references.html', 'src/corpustrail/local_app/assets/references.js',
                      'src/corpustrail/resources/origins.json'):
         if not (source / required).is_file():

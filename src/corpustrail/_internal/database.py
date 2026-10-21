@@ -129,6 +129,8 @@ def validate_database(db, bootstrap: bytes, project_id: str, *, allow_prefix=Fal
             raise ContractError('population tables require their complete registered schema history')
         if len(rows)<39 and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name LIKE 'ct_reference_%'").fetchone():
             raise ContractError('reference tables require their complete registered schema history')
+        if len(rows)<40 and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name LIKE 'ct_classifier_%'").fetchone():
+            raise ContractError('classifier tables require their complete registered schema history')
         if not compatible and rows != (expected[:len(rows)] if allow_prefix and len(rows) >= 32 else expected):
             raise ContractError("database schema history differs; no implicit migration")
         previous = None

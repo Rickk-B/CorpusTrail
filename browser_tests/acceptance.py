@@ -681,6 +681,50 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(initial,{p:project.reviews.history(p) for p in self.fixture.papers});self.assertEqual(self.fixture.transport.calls,[])
         self.assertEqual(project.reviews.membership(pid)['state'],'included')
 
+    def exercise_classification_boundary(self, project, version, context, held):
+        """Actual CP8 services; no result API mocks or new assisted-review UI."""
+        import uuid
+        from corpustrail.classification import ClassificationService, EngineRegistry, ValidationProtocol
+        from corpustrail.curation.guided import GuidedReviewService
+        from tools.classification_acceptance import StreamingFixture
+        target = context['input']['target']['paper_id']
+        fields = {'request_id': uuid.uuid4().hex, 'name': 'Synthetic classifier target', 'actor': 'fixture',
+                  'sources': [{'kind': 'selection', 'paper_ids': [target]}]}
+        preview = project.populations.preview(**fields)
+        population = project.populations.create(**fields, expected_preview_sha256=preview['preview_sha256'], created_at=AT)
+        session = GuidedReviewService(project).create(command_id=uuid.uuid4().hex, reviewer_id='fixture_reviewer',
+            selection=population['version_id'], population_sha256=population['members_sha256'],
+            config_event_id=project.configuration_history()[-1]['event_id'], mode='method-blind')
+        handle = session['session_id'].split(':')[1]
+        token = self.page.locator('meta[name="corpustrail-session"]').get_attribute('content')
+        headers = {'X-CorpusTrail-Session': token}
+        url = self.fixture.origin + '/api/v1/review/sessions/' + handle
+        before = self.context.request.get(url, headers=headers).json()
+        registry = EngineRegistry(); engines = [StreamingFixture('synthetic.browser-a'), StreamingFixture('synthetic.browser-b')]
+        for engine in engines: registry.register(engine)
+        service = ClassificationService(project, registry=registry); runs = []
+        for mode, engine in zip(('full_set', 'bounded_context'), engines):
+            command = {'request_id': uuid.uuid4().hex, 'name': 'Offline browser contract fixture', 'actor': 'fixture',
+                'created_at': AT, 'config_event_id': project.configuration_history()[-1]['event_id'],
+                'population_version_id': population['version_id'], 'reference_version_id': version['version_id'],
+                'engine_id': engine.identity, 'engine_version': 'fixture/v1', 'input_mode': mode,
+                'evidence_basis': 'frozen_context' if mode == 'bounded_context' else 'metadata',
+                'context_ids': (context['context_id'],) if mode == 'bounded_context' else (),
+                'validation': ValidationProtocol(held_out_population_version=held['version_id'])}
+            preview = service.prepare(**command)
+            plan = service.commit_plan(**command, expected_preview_sha256=preview['preview_sha256'])
+            rid = service.start_run(plan['plan_id'], request_id=uuid.uuid4().hex, actor='fixture', created_at=AT)['run_id']
+            self.assertEqual(service.execute(rid, expected_revision=service.inspect_run(rid)['revision'], clock=lambda: AT)['status'], 'completed')
+            self.assertTrue(service.verify_run(rid)['verified']); runs.append(rid)
+        self.assertEqual(before, self.context.request.get(url, headers=headers).json())
+        for forbidden in ('assessment-run:', 'synthetic.browser', 'reference-assignment:'):
+            self.assertNotIn(forbidden, json.dumps(before))
+        self.restart(); self.open_project(); self.visit('/review#' + handle)
+        expect(self.page.locator('#review-workspace')).to_be_visible()
+        for rid in runs: self.assertTrue(self.fixture.project.classification.verify_run(rid)['verified'])
+        self.assertEqual(project.reviews.membership(target)['state'], 'not_reviewed')
+        self.assertEqual(self.fixture.transport.calls, [])
+
     def test_reference_context_conflicts_and_exact_passage_persistence(self):
         from .fixtures import XML
         from corpustrail.references import ContextStrategy
@@ -722,6 +766,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Verify Stored Context Integrity',exact=True).click()
         expect(self.page.locator('#context-status')).to_contain_text('Integrity verified');self.layout();self.snapshot('reference-context-restarted')
         self.assertEqual(initial,{p:project.reviews.history(p) for p in self.fixture.papers});self.assertEqual(self.fixture.transport.calls,[])
+        self.exercise_classification_boundary(project, version, context, held)
 
     def test_reference_large_pages_do_not_accumulate_in_browser(self):
         import uuid

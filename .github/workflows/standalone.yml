@@ -51,9 +51,9 @@ jobs:
           /tmp/ct-ml/bin/python -I -m corpustrail.tutorial /tmp/ct-tutorial-ml --prioritize
       - name: Independent wheel and sdist install/acceptance
         run: python tools/smoke_install.py --dependency-wheels /tmp/ct-dependency-wheels
-      - name: Two thousand exact synthetic references / actual scientific services
+      - name: Two thousand exact synthetic references and classifier inputs / actual scientific services
         if: matrix.python == '3.13'
-        run: /tmp/ct-core/bin/python -I tools/reference_acceptance.py --project "$RUNNER_TEMP/reference-scale" --papers 2000
+        run: /tmp/ct-core/bin/python -I tools/classification_acceptance.py --project "$RUNNER_TEMP/reference-scale" --papers 2000
       - name: Check code-only release population
         run: python tools/release_manifest.py
   project-lifecycle:
@@ -83,6 +83,7 @@ jobs:
           python -I -m unittest discover -s tests -p test_populations.py -v
           python -I -m unittest discover -s tests -p test_population_app.py -v
           python -I -m unittest discover -s tests -p 'test_reference*.py' -v
+          python -I -m unittest discover -s tests -p test_classification.py -v
           python -I -m unittest discover -s tests -p test_discovery_app.py -v
           python -I -m unittest discover -s tests -p test_discovery_transport_diagnostics.py -v
           python -I -m unittest discover -s tests -p test_evidence_app.py -v
@@ -242,4 +243,4 @@ jobs:
           ARTIFACT_URL: '${{ steps.upload.outputs.artifact-url }}'
         run: |
           printf '\n[Download validated development wheel](%s)\n\nNot a public release. Artifact source/build commit: `%s`.\n\nCheckpoint 1 implementation commit: `%s`.\n\nPrevious CI/distribution commit: `%s`.\n' "$ARTIFACT_URL" "$GITHUB_SHA" "$CHECKPOINT_IMPLEMENTATION_SHA" "$CHECKPOINT_DISTRIBUTION_SHA" >> "$GITHUB_STEP_SUMMARY"
-          printf '\nAccepted Checkpoint 1 visual baseline: `%s`. This wheel includes guided configuration, discovery, evidence acquisition, human review, frozen candidate populations and Checkpoint 7 reference/context provenance. Reference labels do not publish membership; no classifier engine runs. It is built from the source SHA above.\n' "$ACCEPTED_CHECKPOINT1_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nAccepted Checkpoint 1 visual baseline: `%s`. This wheel includes guided configuration, discovery, evidence acquisition, human review, frozen candidate populations, reference/context provenance and Checkpoint 8 generic assessment infrastructure. Only deterministic offline test engines are exercised; no real model integration or scientific performance is claimed. Reference labels and assessments do not publish membership. It is built from the source SHA above.\n' "$ACCEPTED_CHECKPOINT1_SHA" >> "$GITHUB_STEP_SUMMARY"

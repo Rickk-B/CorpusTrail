@@ -199,6 +199,23 @@ def project_use(path):
 
 
 @contextmanager
+def operation_use(path, operation):
+    """One process per named operation, while retaining the shared project lease.
+
+    Anchors use the existing private OS lock directory and are never unlinked.
+    A dead process releases its kernel lock; it does not erase durable progress.
+    """
+    if not isinstance(operation, str) or not operation or len(operation) > 200:
+        raise ProjectUseError('A bounded operation identity is required.')
+    with project_use(path):
+        lease = _acquire_key(('operation', *directory_identity(path), operation), True)
+        try:
+            yield
+        finally:
+            lease.close()
+
+
+@contextmanager
 def creation_use(path):
     with acquire_project_use(path, _creation=True) as lease:
         yield lease

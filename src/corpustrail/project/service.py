@@ -54,9 +54,9 @@ class Project:
         config = ProjectConfig.from_dict(json.loads(body))
         project = cls(target, config)
         with connection(project.database_path) as db:
-            # Accepted pre-population and CP6 projects remain read-compatible;
-            # new reference writes require an explicit backed-up additive upgrade.
-            validate_database(db, body, config.project_id, compatible_prefix=(37,38))
+            # Accepted projects remain read-compatible; new classification writes
+            # require an explicit backed-up additive upgrade.
+            validate_database(db, body, config.project_id, compatible_prefix=(37,38,39))
         project.config  # Validate latest configuration, without creating files.
         return project
 
@@ -131,6 +131,11 @@ class Project:
     def references(self):
         from corpustrail.references import ReferenceService
         return ReferenceService(self)
+
+    @property
+    def classification(self):
+        from corpustrail.classification import ClassificationService
+        return ClassificationService(self)
 
     @property
     def reviews(self):

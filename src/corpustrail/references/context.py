@@ -190,6 +190,21 @@ def checked(db,cid):
     return header,body
 
 
+def verify_in_connection(db,cid):
+    """Reuse frozen integrity checks within an existing read/write snapshot.
+
+    Opening a second reader from a writer can deadlock after SQLite cache spill.
+    This helper does not open a connection or change scientific context semantics.
+    """
+    header,body=checked(db,cid)
+    decisions=[json.loads(r[0]) for r in db.execute('SELECT payload_json FROM ct_reference_context_items WHERE context_id=? ORDER BY position',(cid,))]
+    if content_hash(decisions)!=header['decisions_sha256'] or len(decisions)!=header['decision_count']:
+        raise ContractError('context decision manifest changed')
+    storage.stored(db,header['reference_version_id'])
+    for did in header['dependency_ids']:dependency(db,did)
+    return header,body
+
+
 def inspect(project,cid,*,offset=0,limit=20,verify=False):
     page(offset,limit)
     with connection(project.database_path) as db:
@@ -209,11 +224,7 @@ def inspect(project,cid,*,offset=0,limit=20,verify=False):
                 value={**value,'text':text}
             items.append(value)
         if verify:
-            decisions=[json.loads(r[0]) for r in db.execute('SELECT payload_json FROM ct_reference_context_items WHERE context_id=? ORDER BY position',(cid,))]
-            if content_hash(decisions)!=header['decisions_sha256'] or len(decisions)!=header['decision_count']:
-                raise ContractError('context decision manifest changed')
-            storage.stored(db,header['reference_version_id'])
-            for did in header['dependency_ids']:dependency(db,did)
+            verify_in_connection(db,cid)
         return {'context_id':cid,**header,'input':json.loads(body),'items':items,'verified':bool(verify),
             'next_offset':offset+limit if offset+limit<header['decision_count'] else None}
 

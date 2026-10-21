@@ -1,5 +1,21 @@
 # Release notes
 
+## 0.1.0a3.dev0 — CP8 development infrastructure (unreleased)
+
+- Generic, explicitly registered offline engine protocol; immutable assessment
+  plans and exact population/reference/evidence/context inputs.
+- Bounded execution, append-only outcomes/failures, retry and interruption receipts,
+  explicit parent lineage, pagination and integrity inspection.
+- Frozen validation roles and held-out-label protections, typed score semantics,
+  unvalidated calibration provenance and deterministic audit-selection contracts.
+- Additive migration 040; older accepted projects open read-only without migration
+  and upgrade only explicitly with a retained backup.
+- Deterministic synthetic fixtures only: no real model, scientific performance
+  claim, automatic corpus membership, production importer or CP9 curation UI.
+
+The researcher-approved warm appearance and existing workflows are preserved.
+CP8 researcher acceptance remains pending; no public release is created.
+
 ## 0.1.0a2 — experimental model adapters (2026-10-03)
 
 **Real OpenAI-compatible model-server interoperability has not yet been validated
