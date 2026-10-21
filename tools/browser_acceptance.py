@@ -64,6 +64,28 @@ class Runtime:
         for folder in ('screenshots','failures','traces','diagnostics'):(output/folder).mkdir(parents=True)
 
     @staticmethod
+    def prepare_resting_pointer(case):
+        # A click leaves the pointer over a control. Later scrolling and the
+        # screenshot driver's temporary full-page viewport can change :hover
+        # independently of the scientific/rendered state. Capture the resting
+        # page intentionally, using real pointer movement, not CSS suppression.
+        # Keyboard focus and its visible feedback must survive this operation.
+        page=case.page
+        focused=page.evaluate_handle('document.activeElement')
+        visible=page.evaluate('document.activeElement.matches(":focus-visible")')
+        try:
+            page.mouse.move(0,0)  # Canvas origin is outside the app's controls.
+            page.wait_for_function('''() => ![...document.querySelectorAll(
+              'a:hover,button:hover,summary:hover,input:hover,select:hover,textarea:hover,[role="button"]:hover'
+            )].some(e=>e.getClientRects().length)''')
+            case.assertEqual(page.evaluate('e=>document.activeElement===e',focused),True,
+                'Resting pointer must not move keyboard focus')
+            case.assertEqual(page.evaluate('document.activeElement.matches(":focus-visible")'),visible,
+                'Resting pointer must preserve visible keyboard focus')
+        finally:
+            focused.dispose()
+
+    @staticmethod
     def capture_geometry(page,subject=None):
         # Coordinates only: never inspect/log private masked text or attributes.
         geometry=page.evaluate('''subject => {
@@ -127,6 +149,7 @@ class Runtime:
             page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
         masks=page.locator(PRIVACY_MASK).filter(visible=True)
         try:
+            self.prepare_resting_pointer(case)
             page.wait_for_function('document.fonts.status === "loaded"')
             page.evaluate('() => new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
             geometry=self.capture_geometry(page,subject)
@@ -138,7 +161,8 @@ class Runtime:
                 'Page or privacy-mask geometry changed during capture; preserve the failure, never retry or approve it')
         finally:
             if old:page.evaluate('''() => {for(const [n,text] of window.__ctScreenshotNodes)n.textContent=text;delete window.__ctScreenshotNodes;}''')
-        record={'name':name,'viewport':self.viewport_name,'path':str(path.relative_to(self.output)),'subject':subject or 'page'}
+        record={'name':name,'viewport':self.viewport_name,'path':str(path.relative_to(self.output)),
+                'subject':subject or 'page','pointer_state':'resting-outside-controls/v1'}
         self.screenshots.append(record)
         if self.mode=='compare':
             from browser_tests.visual import compare

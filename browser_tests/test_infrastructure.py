@@ -64,6 +64,30 @@ class VisualInfrastructureTests(unittest.TestCase):
         page.locator.return_value.filter.assert_called_once_with(visible=True)
         self.assertEqual(geometry['masks'],[[80,1002,1120,24]])
 
+    def test_resting_pointer_uses_normal_movement_and_preserves_keyboard_focus(self):
+        from tools.browser_acceptance import Runtime
+        page=Mock();page.evaluate.return_value=True
+        case=types.SimpleNamespace(page=page,assertEqual=self.assertEqual)
+        Runtime.prepare_resting_pointer(case)
+        page.mouse.move.assert_called_once_with(0,0)
+        self.assertIn('button:hover',page.wait_for_function.call_args[0][0])
+        self.assertEqual(page.evaluate.call_count,3)
+        page.evaluate_handle.return_value.dispose.assert_called_once_with()
+        page.screenshot.assert_not_called()
+
+    def test_resting_pointer_fails_closed_if_hover_or_keyboard_state_is_wrong(self):
+        from tools.browser_acceptance import Runtime
+        for mode in ('hover','focus','focus-visible'):
+            with self.subTest(mode=mode):
+                page=Mock();page.evaluate.return_value=True
+                case=types.SimpleNamespace(page=page,assertEqual=self.assertEqual)
+                if mode=='hover':page.wait_for_function.side_effect=AssertionError('hover persists')
+                elif mode=='focus':page.evaluate.side_effect=[True,False]
+                else:page.evaluate.side_effect=[True,True,False]
+                with self.assertRaises(AssertionError):Runtime.prepare_resting_pointer(case)
+                page.evaluate_handle.return_value.dispose.assert_called_once_with()
+                page.screenshot.assert_not_called()
+
     def test_navigation_click_completes_prior_reads_and_keeps_failed_waits_visible(self):
         from .acceptance import BrowserAcceptance
         case=object.__new__(BrowserAcceptance);case.page=Mock();case.settle_reads=Mock()

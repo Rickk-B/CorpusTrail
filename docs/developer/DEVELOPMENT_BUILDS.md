@@ -5,7 +5,8 @@
 The researcher formally accepted Checkpoint 7 on 20 October 2026. This records
 the researcher's decision, not an acceptance granted by an agent. Checkpoints
 1–7 are researcher-accepted; CP8 has not begun. The separately authorized visual
-refresh is presentation-only and awaits researcher aesthetic review.
+refresh is presentation-only. The researcher approved its appearance on
+21 October 2026; that decision does not substitute for technical build validation.
 
 Accepted delivery on `development/v0.1.0a3-read-only-local-ui`:
 
@@ -69,7 +70,30 @@ before final delivery. Baseline namespaces, approval guards, strict tolerances,
 privacy masks, timeouts and the narrowly approved macOS path-only exception are
 unchanged. Any exception actually used remains a separate failed strict comparison,
 never an all-strict pass. Development/browser retention remains 90/seven days.
-Researcher aesthetic approval remains pending; CP8 and phone support are unstarted.
+The researcher approved this appearance on 21 October 2026. CP8 and phone support
+are unstarted. The first final run, 39435442602, did not deliver a wheel: Linux
+and macOS Chromium passed 51/51 executions and 184/184 strict comparisons, while
+ten WebKit scenarios stopped at visual assertions. The original failed evidence
+and accepted CP7 delivery remain historical records, not replaced by a new build.
+
+### Resting interaction-state verification — 21 October 2026
+
+Controlled synthetic checks reproduced the warm control palette changing only
+with normal pointer hover. They also demonstrated that a narrow full-page driver
+capture can clear hover between pre-call style measurement and the returned image.
+All ten preserved WebKit differences contain the matching hover/resting surface
+and border colour transitions. The precise historical driver-event sequence is
+not recoverable from those images alone; this is not a scientific-service defect.
+
+The shared test capture boundary now moves the real pointer to the canvas origin
+after scrolling, verifies no visible interactive element remains hovered, and
+asserts keyboard focus and focus-visible state are preserved. Normal hover and
+keyboard feedback are exercised separately through actual user input in every
+engine/viewport. No stylesheet, feedback rule, mask, tolerance, timeout or privacy
+policy changes. Only directly reviewed references with an incidental interaction
+state may change; unaffected references retain their exact bytes. A capture run
+collects evidence only and cannot deliver a development wheel. Final delivery still
+requires the existing strict gates and separately disclosed path-only exception.
 
 ## CP7 amended technical acceptance — 19 October 2026
 

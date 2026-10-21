@@ -260,6 +260,17 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.keyboard.press('Alt+Tab' if self.runtime.environment['browser']=='webkit' else 'Tab')
         focus=self.page.evaluate('''() => {const e=document.activeElement,c=getComputedStyle(e);return {tag:e.tagName,outline:c.outlineStyle,width:parseFloat(c.outlineWidth)};}''')
         self.assertNotEqual(focus['tag'],'BODY');self.assertNotEqual(focus['outline'],'none');self.assertGreater(focus['width'],0)
+        # Resting visual captures must not achieve stability by removing actual
+        # hover/focus feedback. Exercise both through normal user input in every
+        # engine/viewport, separately from the reviewed resting screenshots.
+        action=self.page.get_by_role('link',name='Create New Project',exact=True)
+        action.hover()
+        expect(action).to_have_css('background-color','rgb(63, 80, 58)')
+        self.runtime.prepare_resting_pointer(self)
+        expect(action).to_have_css('background-color','rgb(82, 99, 76)')
+        action.hover()
+        expect(action).to_have_css('background-color','rgb(63, 80, 58)')
+        self.runtime.prepare_resting_pointer(self)
 
     def test_project_journal_search_and_filters(self):
         import hashlib

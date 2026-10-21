@@ -78,7 +78,9 @@ class PathVisualDebtTests(unittest.TestCase):
         runtime.viewport_name='narrow';runtime.viewport={'width':390,'height':100};runtime.screenshots=[];runtime.comparisons=[]
         runtime.baseline_directory=baselines;runtime.baselines={'images_sha256':{'narrow-wizard.png':hashlib.sha256(target.read_bytes()).hexdigest()}}
         runtime.allow_path_reflow=True
-        page=Mock();page.evaluate.return_value=0;page.screenshot.side_effect=lambda **kw:Path(kw['path']).write_bytes(self.after.read_bytes())
+        page=Mock()
+        page.evaluate.side_effect=lambda script,*args: True if 'document.activeElement' in script else 0
+        page.screenshot.side_effect=lambda **kw:Path(kw['path']).write_bytes(self.after.read_bytes())
         case=types.SimpleNamespace(page=page,settle_reads=Mock(),assertEqual=self.assertEqual,assertTrue=self.assertTrue,
             fixture_path_checks=lambda _:self.paths,_testMethodName='test_project_wizard_settings_and_confirmation')
         with patch('tools.browser_acceptance.sys.platform','darwin'),patch.object(runtime,'capture_geometry',return_value={'stable':True}):

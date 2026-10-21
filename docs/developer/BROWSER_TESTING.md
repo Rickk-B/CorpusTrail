@@ -156,6 +156,14 @@ images. Capture-only output never substitutes for the final strict delivery gate
 
 ## Visual baselines and review
 
+Ordinary reference captures use an explicit resting pointer state, established
+after capture scrolling by normal mouse movement to the canvas origin. The runner
+waits until no visible interactive control is hovered and verifies that keyboard
+focus and its visible feedback are unchanged. Full-page driver viewport changes
+must not select an incidental hover state. Real hover feedback is tested separately
+in the existing three-viewport application scenario; it is not disabled in CSS or
+removed from the product. Each screenshot record identifies this capture policy.
+
 Playwright **1.63.0** pins Chromium/WebKit and Pillow **12.3.0** performs comparisons. Linux
 CI is Ubuntu 24.04. A test-process Fontconfig file selects installed DejaVu Sans;
 production CSS and CSP are not bypassed. Strong test-process family binding and a
