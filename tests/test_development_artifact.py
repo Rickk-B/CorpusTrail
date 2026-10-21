@@ -269,11 +269,43 @@ class DevelopmentArtifactTests(unittest.TestCase):
                 historical=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['POPULATION_COMMIT']+':'+name]) if (ROOT/'.git').exists() else None
                 if historical is not None:self.assertEqual(hashlib.sha256(historical).hexdigest(),expected)
                 expected=TOOL['REFERENCE_HASHES'][name]
+            if name in TOOL['CLASSIFICATION_HASHES']:
+                expected=TOOL['CLASSIFICATION_HASHES'][name]
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
 
     def test_reference_review_hashes_match_exact_scientific_source(self):
         for name,expected in TOOL['REFERENCE_HASHES'].items():
+            if name in TOOL['CLASSIFICATION_HASHES']:
+                if (ROOT/'.git').exists():
+                    original=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['REFERENCE_COMMIT']+':'+name])
+                    self.assertEqual(hashlib.sha256(original).hexdigest(),expected)
+                expected=TOOL['CLASSIFICATION_HASHES'][name]
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+
+    def test_classification_hashes_match_exact_scientific_source(self):
+        for name,expected in TOOL['CLASSIFICATION_HASHES'].items():
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+
+    def test_classification_boundary_preserves_integrity_and_requires_frozen_lineage(self):
+        accepted=self.implementation;hashes={}
+        for name in ('src/corpustrail/classification/service.py','src/corpustrail/operational/schema/040_classifier_assessments.sql'):
+            path=self.root/name;path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_text('reviewed_classifier_fixture = True\n',encoding='utf-8')
+            hashes[name]=hashlib.sha256(path.read_bytes()).hexdigest()
+        self.commit();reviewed=TOOL['git'](self.root,'rev-parse','HEAD')
+        with patch.dict(TOOL['check_implementation'].__globals__,{'CLASSIFICATION_COMMIT':reviewed,'CLASSIFICATION_HASHES':hashes}):
+            receipt=TOOL['check_implementation'](self.root,accepted,reviewed,distribution=accepted,accepted_checkpoint1=accepted)
+            self.assertEqual(receipt['classification']['migration'],40)
+            self.assertFalse(receipt['classification']['real_model_integration'])
+            self.assertEqual(receipt['classification']['assessment_authority'],'non_authoritative')
+            with patch.dict(TOOL['check_implementation'].__globals__,{'CLASSIFICATION_COMMIT':'0'*40}):
+                with self.assertRaisesRegex(ValueError,'reviewed implementation'):
+                    TOOL['check_implementation'](self.root,accepted,reviewed,distribution=accepted,accepted_checkpoint1=accepted)
+            for name in hashes:
+                path=self.root/name;path.write_text('unreviewed_classifier_override = True\n',encoding='utf-8');self.commit()
+                with self.assertRaisesRegex(ValueError,'frozen reviewed'):
+                    TOOL['check_implementation'](self.root,accepted,TOOL['git'](self.root,'rev-parse','HEAD'),distribution=accepted,accepted_checkpoint1=accepted)
+                path.write_text('reviewed_classifier_fixture = True\n',encoding='utf-8');self.commit()
 
     def test_reference_boundary_requires_frozen_commit_and_hashes(self):
         accepted=self.implementation;hashes={}

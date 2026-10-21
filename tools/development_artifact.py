@@ -89,6 +89,23 @@ REFERENCE_HASHES = {
     'src/corpustrail/operational/schema_manifest.json': '0a59b4b011019c10f24aac6c6cf7de91ae47b72c18d7ba1a3734f5cb8f152f12',
     'src/corpustrail/project/service.py': '6ece7df51295f150b94cf7ee1b1b1899f423f014b2ff82d3a4d4c268b1c623cb',
     'src/corpustrail/_internal/database.py': '8712383fcba6c5be8544e206a03d7876bf44c3443dece87be8a1c06e53f4198d'}
+# CP8 freezes its additive implementation independently. Earlier migration and
+# review/reference bytes remain checked against their historical commits below.
+CLASSIFICATION_COMMIT = 'e81366d007ab44595880e47d340016b59e76e07a'
+CLASSIFICATION_HASHES = {
+    'src/corpustrail/classification/__init__.py': '5d7387aa598078823c523ed5aa08d2c32c95a413914103a2bce4de370adc4566',
+    'src/corpustrail/classification/contracts.py': 'e8dbe40f574b2a2f8850e37e9e46b3ae2241ddae1701dd6ea13ece8d2c7f20e2',
+    'src/corpustrail/classification/inputs.py': '351fbf6dfcc7d95064f3073b7a1be978a86ad3106790e084d5d98758a577e599',
+    'src/corpustrail/classification/registry.py': '33db203c45124a0f85078cd9923d93f7d96b0de447182b342bacb131921cfcb6',
+    'src/corpustrail/classification/service.py': 'b5428ef150875dd0ad97495189bad08a3fe6b0087964b7148e0deb5461a8980c',
+    'src/corpustrail/classification/storage.py': 'a4d6ffc00e475e3efd07ea63b75cc35a82faa3f4d3c85d705c37242a53cec4d8',
+    'src/corpustrail/classification/validation.py': '2ed15fee344f62f4e88e2eab5ba8db96aa8f482d6688f2e9b3e811e17be4ae39',
+    'src/corpustrail/references/context.py': 'f6cdfbd647f532854e3b992d3ade6294e33fe4b75f49856c8a9eb3b4f18713ab',
+    'src/corpustrail/_internal/database.py': '83bc0e264ca00eb1c59405c99140cab7f62ee4d0c6ee78c34c0c1ffb505cfcc9',
+    'src/corpustrail/project/service.py': '6acbd3f81f337f3badcd5bfe2f3da9ffc5cd2a44a97efac3c7ac883892261270',
+    'src/corpustrail/application/project_use.py': 'f1ca74ed6e16c5594884f360fcadbb2157dc53ba0832fb07ed950ef9fdcbf064',
+    'src/corpustrail/operational/schema_manifest.json': '0a1875d21a89a494a28a730326a72a8e7ddf1805cdd23e1b30a727af6471d231',
+    'src/corpustrail/operational/schema/040_classifier_assessments.sql': '5194cf72c8ea2bfe72d87d456c84ce892efea00cf89b18318d897a4bf75a8fa1'}
 
 
 def git(root, *args):
@@ -120,6 +137,17 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
         xml_compatibility = bool(changed & XML_COMPATIBILITY_EXTRA_PATHS)
         allowed = CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS
+        classification = (root/'src/corpustrail/classification/service.py').is_file()
+        if classification:
+            if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',CLASSIFICATION_COMMIT,expected]).returncode:
+                raise ValueError('Classification must descend from its reviewed implementation')
+            for name,expected_hash in CLASSIFICATION_HASHES.items():
+                path=root/name
+                frozen=subprocess.check_output(['git','-C',str(root),'show',CLASSIFICATION_COMMIT+':'+name])
+                if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash
+                        or hashlib.sha256(frozen).hexdigest()!=expected_hash):
+                    raise ValueError('Classification source differs from the frozen reviewed implementation')
+            allowed |= set(CLASSIFICATION_HASHES)
         references = (root/'src/corpustrail/references/service.py').is_file()
         if references:
             if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',REFERENCE_COMMIT,expected]).returncode:
@@ -127,7 +155,8 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
             for name,expected_hash in REFERENCE_HASHES.items():
                 path=root/name
                 frozen=subprocess.check_output(['git','-C',str(root),'show',REFERENCE_COMMIT+':'+name])
-                if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash
+                current_hash=CLASSIFICATION_HASHES.get(name,expected_hash) if classification else expected_hash
+                if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=current_hash
                         or hashlib.sha256(frozen).hexdigest()!=expected_hash):
                     raise ValueError('Reference source differs from the frozen reviewed implementation')
             allowed |= set(REFERENCE_HASHES) | {'src/corpustrail/local_app/assets/references.html',
@@ -142,6 +171,8 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     if hashlib.sha256(historical).hexdigest()!=expected_hash:
                         raise ValueError('Historical population implementation hash differs')
                     expected_hash=REFERENCE_HASHES[name]
+                if classification and name in CLASSIFICATION_HASHES:
+                    expected_hash=CLASSIFICATION_HASHES[name]
                 path=root/name
                 if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash:
                     raise ValueError('Population source differs from the frozen reviewed implementation')
@@ -215,7 +246,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         checkpoint3 = (root/'src/corpustrail/application/discovery.py').is_file()
         checkpoint4 = (root/'src/corpustrail/application/evidence.py').is_file()
         scientific = {'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py', 'src/corpustrail/evidence/service.py'}
-        return {**previous, 'name': 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
+        return {**previous, 'name': 'Checkpoint 8 — generic classifier plans, assessment storage and validation hooks' if classification else 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
                 'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
                 'application_source_unchanged': not bool(changed),
                 'configuration_writes_supported': True,
@@ -244,16 +275,25 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     'notice':'Versioned guided lifecycle; build identity is source.commit_sha, not this historical implementation receipt.'} if guided_review else None,
                 'populations': {'schema':'corpustrail-population-code-review/v1',
                     'implementation_commit_sha':POPULATION_COMMIT,
-                    'source_sha256':{name:REFERENCE_HASHES.get(name,value) if references else value for name,value in POPULATION_HASHES.items()},
+                    'source_sha256':{name:CLASSIFICATION_HASHES.get(name,REFERENCE_HASHES.get(name,value)) if classification else REFERENCE_HASHES.get(name,value) if references else value for name,value in POPULATION_HASHES.items()},
                     'pre_reference_source_sha256':POPULATION_HASHES,
                     'population_schema':'corpustrail-candidate-population/v1','policy':'exact-canonical-union/v1',
                     'migration':38,'read_compatible_schema':37,'upgrade':'explicit_with_backup',
                     'production_importers':False,'membership_authority_unchanged':True} if populations else None,
                 'references':{'schema':'corpustrail-reference-code-review/v1','implementation_commit_sha':REFERENCE_COMMIT,
-                    'source_sha256':REFERENCE_HASHES,'reference_schema':'corpustrail-reference-set/v1',
+                    'source_sha256':{name:CLASSIFICATION_HASHES.get(name,value) if classification else value for name,value in REFERENCE_HASHES.items()},
+                    'pre_classifier_source_sha256':REFERENCE_HASHES,'reference_schema':'corpustrail-reference-set/v1',
                     'context_schema':'corpustrail-selected-reference-context/v1','eligibility_policy':'explicit-human-unconflicted/v1',
                     'selection_strategy':'canonical-reference-order/v1','migration':39,'read_compatible_schema':[37,38],
                     'upgrade':'explicit_with_backup','real_engines':False,'membership_authority_unchanged':True} if references else None,
+                'classification':{'schema':'corpustrail-classifier-code-review/v1',
+                    'implementation_commit_sha':CLASSIFICATION_COMMIT,'source_sha256':CLASSIFICATION_HASHES,
+                    'plan_schema':'corpustrail-assessment-plan/v1','assessment_schema':'corpustrail-immutable-assessment/v1',
+                    'migration':40,'read_compatible_schema':[37,38,39],'upgrade':'explicit_with_backup',
+                    'engine_execution':'explicitly_registered_offline_only','real_model_integration':False,
+                    'scientific_performance_claim':False,'assessment_authority':'non_authoritative',
+                    'membership_authority_unchanged':True,'calibration':'provenance_hooks_not_validated_calibrator',
+                    'cp9_workflow_implemented':False} if classification else None,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
                           'The source/build SHA identifies this development artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):
