@@ -1,5 +1,51 @@
 # Development checkpoint wheels — not public releases
 
+## Current handover
+
+Read this section when starting work and update it at completion/interruption.
+This is the single repository coordination record, not a second specification.
+
+- Researcher-accepted: CP1–9 and the warm presentation refresh. CP10 is now
+  authorized and in progress; it completes the alpha baseline, not beta status.
+- Delivered code: `ad4a5496bea422c56cc8ea3cd512a0887ae442c1`, tree
+  `6c7cccdf3a205d43ea29d11b2f1a8e0a7a1d69e7`,
+  [run 39811534279/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39811534279).
+  This acceptance/handover documentation is later than that delivered software.
+- Current work: expose existing Prioritization, Knowledge, Models and Export
+  services; finish navigation, Explore terminology, practical launcher/user guide,
+  alpha acceptance and exact-source development delivery. No new engine/importer,
+  automatic query generation, RIS, native installer or phone implementation.
+- Open investigations: native MacBook Europe PMC transport causation and the
+  historical macOS navigation-timeout cause remain unresolved. Hosted success
+  and harness corrections are not proof those native issues are fixed.
+- Explicit decisions: manual use needs no model; assessments/Knowledge assertions
+  are not membership; human confirmation remains separate. Existing narrowly
+  approved macOS fixture-path visual debt must be reported when used, never called
+  a strict pass. Development bundles request 90 days; browser evidence seven.
+- Delivery uses standard public runners under the existing zero-additional-charge
+  approval. No release, PyPI/main/tag/billing/security changes or artifact deletion.
+  Mac coordination documents are maintained separately by the researcher.
+
+## CP9 researcher acceptance — 22 October 2026
+
+The researcher formally accepted CP9 in the instruction authorizing CP10.
+This records that decision; it does not grant CP10 acceptance.
+
+- Accepted commit: `ad4a5496bea422c56cc8ea3cd512a0887ae442c1`.
+- Tree: `6c7cccdf3a205d43ea29d11b2f1a8e0a7a1d69e7`.
+- [Run 39811534279](https://github.com/Rickk-B/CorpusTrail/actions/runs/39811534279),
+  attempt 1: all 12 jobs passed. Each renderer completed 66/66 functional
+  executions and 235/235 strict comparisons; no path exception was used.
+- [Development bundle 12441927551](https://github.com/Rickk-B/CorpusTrail/actions/runs/39811534279/artifacts/12441927551):
+  `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 353,066 bytes,
+  SHA-256 `75cc672dc353d26a0c0d5ef8fc8806f28259616737f4084988b2c4a55d50353a`.
+- Created `2026-10-22T16:39:28Z`, expires `2027-01-20T16:09:24Z`:
+  90 days from run creation, not upload. Browser retention remains separate.
+
+Exact-attempt metadata and complete logs confirm all passes; the stale generic
+Python 3.13 status observed during delivery remains preserved as historical
+evidence. Synthetic fixtures establish architecture, not scientific performance.
+
 ## CP9 implementation — curation methods, audits and iterative correction
 
 CP8 acceptance below is preserved with its exact source/delivery identity.
