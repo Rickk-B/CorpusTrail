@@ -56,7 +56,7 @@ class Project:
         with connection(project.database_path) as db:
             # Accepted projects remain read-compatible; new classification writes
             # require an explicit backed-up additive upgrade.
-            validate_database(db, body, config.project_id, compatible_prefix=(37,38,39))
+            validate_database(db, body, config.project_id, compatible_prefix=(37,38,39,40))
         project.config  # Validate latest configuration, without creating files.
         return project
 

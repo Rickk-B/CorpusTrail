@@ -23,7 +23,8 @@ from corpustrail.application.project_use import leased_server_factory
 ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; charset=utf-8',
           'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8',
           'evidence.js': 'text/javascript; charset=utf-8', 'review.js':'text/javascript; charset=utf-8',
-          'populations.js': 'text/javascript; charset=utf-8','references.js':'text/javascript; charset=utf-8'}
+          'populations.js': 'text/javascript; charset=utf-8','references.js':'text/javascript; charset=utf-8',
+          'curation.js':'text/javascript; charset=utf-8'}
 
 
 def _query(value, allowed):
@@ -40,7 +41,7 @@ def _number(value):
 
 
 @leased_server_factory
-def make_server(project=None, *, port=8766, controller=None, discovery=None, evidence=None):
+def make_server(project=None, *, port=8766, controller=None, discovery=None, evidence=None, curation=None):
     """Reads never write; only controller-enabled project POSTs can configure."""
     if type(port) is not int or not 0 <= port <= 65535:
         raise ContractError('port must be between 0 and 65535')
@@ -61,6 +62,9 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
     populations = PopulationController() if controller is not None else None
     from corpustrail.application.references import ReferenceController
     references = ReferenceController() if controller is not None else None
+    if controller is not None and curation is None:
+        from corpustrail.application.curation import CurationController
+        curation = CurationController()
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
@@ -103,7 +107,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/review','/populations','/references'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/review','/populations','/references','/curation','/curation/review'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
                     active = controller.active_handle is not None if controller is not None else project is not None
@@ -117,13 +121,16 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                         return self.error(409,'project_required','Open a project before using candidate populations.')
                     if path == '/references' and (not active or references is None):
                         return self.error(409,'project_required','Open a project before using reference collections.')
-                    page = 'home.html' if home else 'projects.html' if setup else 'references.html' if path=='/references' else 'populations.html' if path=='/populations' else 'review.html' if path=='/review' else 'discovery.html' if path == '/discovery' else 'index.html'
+                    if path.startswith('/curation') and (not active or curation is None):
+                        return self.error(409,'project_required','Open a project before using curation.')
+                    page = 'home.html' if home else 'projects.html' if setup else 'curation.html' if path=='/curation' else 'references.html' if path=='/references' else 'populations.html' if path=='/populations' else 'review.html' if path in {'/review','/curation/review'} else 'discovery.html' if path == '/discovery' else 'index.html'
                     html = assets.joinpath(page).read_text(encoding='utf-8')
                     html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active else 'hidden')
                     html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
                     html = html.replace('REVIEW_NAV_HIDDEN', '' if active and review is not None else 'hidden')
                     html = html.replace('POPULATIONS_NAV_HIDDEN', '' if active and populations is not None else 'hidden')
                     html = html.replace('REFERENCES_NAV_HIDDEN', '' if active and references is not None else 'hidden')
+                    html = html.replace('CURATION_NAV_HIDDEN', '' if active and curation is not None else 'hidden')
                     html = html.replace('EVIDENCE_WORKFLOW_HIDDEN', '' if active and evidence is not None else 'hidden')
                     html = html.replace('PROJECT_BROWSER_STATUS', 'Local project workspace' if evidence is not None else 'Read-only project browser')
                     return self.send(200, html, 'text/html; charset=utf-8')
@@ -146,6 +153,54 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     query = _query(route.query, {'handle'})
                     result = controller.settings(query.get('handle'))
                     return self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
+                if curation is not None and path.startswith('/api/v1/curation/'):
+                    from corpustrail.application.references import handle
+                    from corpustrail.classification.curation import CurationService
+                    from corpustrail.models.contracts import safe_data
+                    from corpustrail.application.projects import ProjectController
+                    with controller.use() as current:
+                        query=_query(route.query,{'offset','limit','cutoff','compare','primary','overlay','revision','section','index'})
+                        paging={k:_number(v) for k,v in query.items() if k in {'offset','limit'}}
+                        list_paging={**paging,**({'cutoff':_number(query['cutoff'])} if 'cutoff' in query else {})}
+                        if path=='/api/v1/curation/configuration':
+                            if query:raise ContractError('configuration has no query fields')
+                            result=curation.configuration(current)
+                        elif path=='/api/v1/curation/runs':
+                            if set(query)-{'offset','limit','cutoff'}:raise ContractError('unsupported run list query')
+                            result=curation.runs(current,**list_paging)
+                        elif path in {'/api/v1/curation/audits','/api/v1/curation/history'}:
+                            if set(query)-{'offset','limit','cutoff'}:raise ContractError('unsupported curation list query')
+                            result=(CurationService(current).audits if path.endswith('/audits') else CurationService(current).workflow)(**list_paging)
+                        elif re.fullmatch(r'/api/v1/curation/review/sessions/[0-9a-f]{64}(?:/(summary|document))?',path):
+                            if set(query)-{'offset','limit'}:raise ContractError('unsupported assisted review query')
+                            parts=path.split('/');result=curation.assisted(current,parts[6],section=parts[7] if len(parts)>7 else None,**paging)
+                        elif re.fullmatch(r'/api/v1/curation/runs/[0-9a-f]{64}/papers/[0-9a-f]{64}',path):
+                            if set(query)-{'offset','limit','section','index'}:raise ContractError('unsupported frozen input query')
+                            parts=path.split('/');section=query.get('section','target')
+                            result=curation.paper(current,handle(parts[5],'assessment-run'),handle(parts[7],'ct-paper'),section=section,
+                                **paging,**({'index':_number(query['index'])} if 'index' in query else {}))
+                        elif re.fullmatch(r'/api/v1/curation/runs/[0-9a-f]{64}(?:/(results|validations))?',path):
+                            parts=path.split('/');rid=handle(parts[5],'assessment-run')
+                            if path.endswith('/validations'):
+                                if set(query)-{'offset','limit','cutoff'}:raise ContractError('unsupported validation list query')
+                                result=curation.validations(current,rid,**list_paging)
+                            elif path.endswith('/results'):
+                                if set(query)-{'offset','limit','compare','primary','overlay','revision'}:raise ContractError('unsupported result query')
+                                result=curation.results(current,rid,**paging,
+                                    compare_run_id=handle(query['compare'],'assessment-run') if query.get('compare') else None,
+                                    primary=query.get('primary',''),overlay=query.get('overlay',''),expected_revision=query.get('revision'))
+                            else:
+                                if query:raise ContractError('run detail has no query fields')
+                                result=curation.run(current,rid)
+                        elif re.fullmatch(r'/api/v1/curation/audits/[0-9a-f]{64}(?:/(outcomes|sessions))?',path):
+                            if set(query)-{'offset','limit','cutoff'}:raise ContractError('unsupported audit query')
+                            parts=path.split('/');aid=handle(parts[5],'curation-audit');service=CurationService(current)
+                            operation=service.outcomes if path.endswith('/outcomes') else service.assisted_sessions if path.endswith('/sessions') else service.audit
+                            if operation==service.audit and 'cutoff' in query:raise ContractError('immutable audit detail has no live-list cutoff')
+                            result=operation(aid,**(paging if operation==service.audit else list_paging))
+                        else:return self.error(404,'not_found','Curation resource not found.')
+                        safe_data(result,secrets=ProjectController._secrets(current.config))
+                        return self.send(200,json.dumps(result,ensure_ascii=False,allow_nan=False))
                 if references is not None and path.startswith('/api/v1/references/'):
                     from corpustrail.application.references import handle
                     with controller.use() as current:
@@ -310,6 +365,8 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             routes.update('/api/v1/review/'+name for name in ('create','command'))
             routes.update('/api/v1/populations/'+name for name in ('preview','create','upgrade','verify'))
             routes.update('/api/v1/references/'+name for name in ('preview','commit','upgrade','verify','context_preview','context_commit'))
+            routes.update('/api/v1/curation/'+name for name in ('upgrade','plan_preview','plan_commit','start','execute','recover','cancel','validate','audit_preview','audit_commit','assisted_create','correction_preview','correction_commit'))
+            routes.add('/api/v1/curation/review/command')
             if controller is None or self.path not in routes:
                 return self.readonly()
             self.close_connection = True
@@ -324,6 +381,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             is_review = self.path.startswith('/api/v1/review/')
             is_population = self.path.startswith('/api/v1/populations/')
             is_reference = self.path.startswith('/api/v1/references/')
+            is_curation = self.path.startswith('/api/v1/curation/')
             try:
                 lengths = self.headers.get_all('Content-Length')
                 if (self.headers.get_all('Content-Type') != ['application/json']
@@ -348,10 +406,14 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 from corpustrail.curation.guided import SCHEMA as REVIEW_SCHEMA
                 from corpustrail.application.populations import SCHEMA as POPULATION_SCHEMA
                 from corpustrail.application.references import SCHEMA as REFERENCE_SCHEMA
-                expected_schema = REFERENCE_SCHEMA if is_reference else POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                from corpustrail.application.curation import SCHEMA as CURATION_SCHEMA
+                expected_schema = CURATION_SCHEMA if is_curation else REFERENCE_SCHEMA if is_reference else POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
                 if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if is_reference:
+                if is_curation:
+                    action='review_command' if self.path=='/api/v1/curation/review/command' else self.path.rsplit('/',1)[1]
+                    with controller.use() as current:result=curation.command(current,action,body)
+                elif is_reference:
                     with controller.use() as current: result=references.command(current,self.path.rsplit('/',1)[1],body)
                 elif is_population:
                     with controller.use() as current: result=populations.command(current,self.path.rsplit('/',1)[1],body)
@@ -411,6 +473,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
         def close():
             discovery.close()
             if evidence is not None: evidence.close()
+            if curation is not None: curation.close()
             original_close()
         server.server_close = close
     return server

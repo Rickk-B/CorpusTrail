@@ -6,6 +6,7 @@ make observation+navigation and multi-paper publication atomic and replay-safe.
 Legacy sessions/recording semantics are not reinterpreted. No new database/schema.
 """
 from copy import deepcopy
+from contextlib import nullcontext
 import json
 import re
 
@@ -42,8 +43,14 @@ def _selected(packet, state):
 
 
 class GuidedReviewService:
-    def __init__(self, project):
+    def __init__(self, project, *, _db=None):
         self.project = project
+        self._db = _db
+
+    def _connection(self, *, write=False):
+        # Internal CP9 composition preserves the original scientific rules and
+        # links observations/publications atomically. No HTTP connection input.
+        return nullcontext(self._db) if self._db is not None else connection(self.project.database_path, write=write)
 
     def population(self, selection, *, db=None):
         if isinstance(selection, str) and selection.startswith('population-version:'):
@@ -65,7 +72,7 @@ class GuidedReviewService:
         value = dict(reviewer_id=reviewer_id,selection=selection,population_sha256=population_sha256,
                      config_event_id=config_event_id,mode=mode)
         command = {'id':command_id,'sha256':content_hash({'action':'create','value':value})}
-        with connection(self.project.database_path,write=True) as db:
+        with self._connection(write=True) as db:
             if db.execute('SELECT 1 FROM ct_review_sessions WHERE session_id=?',(session,)).fetchone():
                 _load(db,session)
                 self.project.populations.review_link(db, session)
@@ -108,8 +115,11 @@ class GuidedReviewService:
         if action not in {'draft','save_next','navigate','skip','open','finish','prepare_publication','publish'}:
             raise ContractError('unsupported guided review action')
         command = {'id':command_id,'sha256':content_hash({'action':action,'value':value,'revision':expected_revision})}
-        with connection(self.project.database_path,write=True) as db:
+        with self._connection(write=True) as db:
             packet,state,revision,config = _load(db,session)
+            if self._db is None and db.execute("SELECT 1 FROM sqlite_master WHERE name='ct_curation_sessions'").fetchone():
+                if db.execute('SELECT 1 FROM ct_curation_sessions WHERE session_id=?',(session,)).fetchone():
+                    raise ContractError('Use the operational assisted workflow so assessment and audit links remain atomic.')
             self.project.populations.review_link(db, session)
             if packet['schema']!=GUIDED_SCHEMA: raise ContractError('legacy sessions retain their original recording contract')
             replay = _replay(db,session,command)

@@ -44,6 +44,10 @@ for names in LIMITED.values():
     names.update({'reference-empty','reference-preview','reference-frozen','reference-successor','reference-history',
         'reference-conflict','reference-context-preview','reference-context','reference-context-restarted',
         'reference-stale','reference-upgrade','reference-upgraded','reference-pagination'})
+    names.update({'curation-manual','curation-results','curation-disagreement','curation-audit-preview','curation-audit',
+        'curation-input','curation-correction','curation-successor','curation-plan','curation-reassessment',
+        'curation-assisted','curation-assisted-completed','curation-assisted-confirmed','curation-tail','curation-assisted-audit-preview',
+        'curation-bounded-plan','curation-bounded-input'})
 
 
 class Runtime:
@@ -292,7 +296,7 @@ class Runtime:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population','reference'),default='all')
+    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population','reference','curation'),default='all')
     parser.add_argument('--viewports',nargs='+',choices=tuple(VIEWPORTS),default=list(VIEWPORTS))
     parser.add_argument('--visual',choices=('capture','compare'),default='capture')
     parser.add_argument('--browser',choices=('chromium','webkit'),default='chromium')

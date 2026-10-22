@@ -476,8 +476,11 @@ with operation_use(Path(sys.argv[1]),sys.argv[2]):
         with closing(sqlite3.connect(project.root/'backups/before-classification.sqlite3')) as db:
             self.assertEqual(db.execute('SELECT MAX(version) FROM schema_migrations').fetchone()[0], 39)
         after = scientific_state(updated)
-        after['schema_migrations'] = after['schema_migrations'][:-1]
-        self.assertEqual(after, scientific)
+        self.assertEqual([r[0] for r in after['schema_migrations'][39:]], [40,41])
+        after['schema_migrations'] = after['schema_migrations'][:39]
+        for table,rows in after.items():
+            if table not in scientific: self.assertEqual(rows,[],table)
+        self.assertEqual({table:after[table] for table in scientific}, scientific)
         self.assertEqual(updated.reviews.membership(pid)['state'], 'included')
         self.assertTrue(updated.references.verify(reference)['verified']); self.assertTrue(updated.populations.verify(population)['verified'])
         self.assertEqual({p: h for p, h in fingerprint(project.root).items() if p != project.config.database and not p.startswith('backups/')},

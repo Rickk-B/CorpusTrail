@@ -14,6 +14,8 @@ from unittest.mock import patch
 
 from corpustrail.application.discovery import DiscoveryController
 from corpustrail.application.evidence import EvidenceController
+from corpustrail.application.curation import CurationController
+from corpustrail.classification import EngineRegistry
 from corpustrail.application.projects import ProjectController
 from corpustrail.application.trash import ProjectRemoval
 from corpustrail.curation import ReviewEvent, EvidenceBasis
@@ -130,6 +132,7 @@ class ApplicationFixture:
         self.stack = ExitStack()
         self.project_id=project_id or 'browser-'+uuid.uuid4().hex
         self.long_path=long_path
+        self.curation_registry=EngineRegistry()
         try:
             self._setup()
         except BaseException:
@@ -209,7 +212,8 @@ class ApplicationFixture:
         self.controller._removal_service = ProjectRemoval(self.controller, ConfirmationOnlyTrash())
         self.discovery = DiscoveryController(self.controller, transport_factory=lambda: self.transport)
         self.evidence = EvidenceController(self.controller, transport_factory=lambda: self.transport)
-        self.server = make_server(port=0, controller=self.controller, discovery=self.discovery, evidence=self.evidence)
+        self.curation=CurationController(registry=self.curation_registry,synthetic=True,clock=lambda:AT)
+        self.server = make_server(port=0, controller=self.controller, discovery=self.discovery, evidence=self.evidence,curation=self.curation)
         self.stack.callback(self.server.server_close)
         self.disconnects = 0
         def handler_error(*_):
@@ -239,6 +243,10 @@ class ApplicationFixture:
             worker.join(10)
             if worker.is_alive():
                 raise AssertionError('Cannot restart fixture during an active evidence operation')
+        with self.curation._lock:curation_workers=list(self.curation._workers.values())
+        for worker,_ in curation_workers:
+            worker.join(10)
+            if worker.is_alive():raise AssertionError('Cannot restart fixture during active bounded assessment work')
         self.server.shutdown()
         self.thread.join(10)
         self.server.server_close()
@@ -253,6 +261,11 @@ class ApplicationFixture:
                 self.transport.gate.set()
             self.discovery.close()
             self.evidence.close()
+            self.curation.close()
+            with self.curation._lock:curation_workers=list(self.curation._workers.values())
+            for worker,_ in curation_workers:
+                worker.join(20)
+                if worker.is_alive():raise AssertionError('Controlled assessment fixture did not stop')
             with self.discovery._mutex: discovery_workers = list(self.discovery._workers.values())
             with self.evidence._mutex: evidence_workers = list(self.evidence._workers.values())
             for worker in discovery_workers:

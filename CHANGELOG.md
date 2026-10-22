@@ -1,5 +1,17 @@
 # Release notes
 
+## 0.1.0a3.dev0 — CP9 curation and audit workflow (unreleased)
+
+- Available/manual-only method selection, complete paginated assessment results,
+  disjoint primary totals and explicitly overlapping sufficiency/disagreement/
+  human-status filters; no hidden failures, exclusions or unassessed tail.
+- Immutable random/policy-stratified audits with exact selection provenance,
+  assisted human review and same-transaction observation/authorization links.
+- Explicit human-attested successor references and separately requested new runs;
+  earlier references, assessments and authority remain unchanged.
+- Additive migration 041 with explicit backed-up upgrades; separate assisted and
+  method-blind API allowlists. No production model or importer is introduced.
+
 ## 0.1.0a3.dev0 — CP8 development infrastructure (unreleased)
 
 - Generic, explicitly registered offline engine protocol; immutable assessment

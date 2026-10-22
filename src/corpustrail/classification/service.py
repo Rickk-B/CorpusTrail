@@ -1,5 +1,6 @@
 """Explicit frozen planning and bounded, non-authoritative offline execution."""
 from dataclasses import asdict
+from contextlib import nullcontext
 import json
 import time
 
@@ -15,9 +16,13 @@ from . import inputs, storage
 
 
 class ClassificationService:
-    def __init__(self, project, *, registry=None):
+    def __init__(self, project, *, registry=None, _db=None):
         self.project = project
         self.registry = registry if registry is not None else EngineRegistry()
+        self._db = _db
+
+    def _connection(self, *, write=False):
+        return nullcontext(self._db) if self._db is not None else connection(self.project.database_path, write=write)
 
     def ready(self):
         with connection(self.project.database_path) as db: return storage.ready(db)
@@ -178,7 +183,7 @@ class ClassificationService:
                    'parent_run_id': parent_run_id, 'transfer_sha256': transfer_sha256}
         json_value(command)
         rid = identifier('assessment-run', command)
-        with project_use(self.project.root), connection(self.project.database_path, write=True) as db:
+        with project_use(self.project.root), self._connection(write=True) as db:
             head = storage.plan(db, pid)
             prior = db.execute('SELECT run_id FROM ct_classifier_runs WHERE request_id=?', (request_id,)).fetchone()
             if prior:

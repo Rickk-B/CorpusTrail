@@ -67,6 +67,7 @@ class IsolationTests(unittest.TestCase):
             # including other literals in this same server module.
             if path.relative_to(root).as_posix() == 'local_app/server.py':
                 body = body.replace('/api/v1/review/', '/api/v1/curation/')
+                body = body.replace('/api/v1/curation/review/', '/api/v1/curation/')
             for pattern in forbidden:
                 self.assertIsNone(re.search(pattern, body, re.I), (path, pattern))
         # Historical SQL resources are the one frozen, documented compatibility exception.
@@ -85,7 +86,7 @@ class IsolationTests(unittest.TestCase):
         manifest = json.loads(root.joinpath("schema_manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["historical_count"], 31)
         self.assertEqual(manifest["origin_commit"], "1911f29dc2de0430d2f3c28324a672b78c5f150e")
-        self.assertEqual([x["version"] for x in manifest["migrations"]], list(range(1, 41)))
+        self.assertEqual([x["version"] for x in manifest["migrations"]], list(range(1, 42)))
         for entry in manifest["migrations"]:
             self.assertEqual("sha256:" + hashlib.sha256(root.joinpath("schema", entry["name"]).read_bytes()).hexdigest(), entry["sha256"])
             self.assertEqual(entry["origin_path"] is None, entry["version"] >= 32)

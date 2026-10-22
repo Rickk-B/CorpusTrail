@@ -105,6 +105,10 @@ fieldset:disabled { opacity: .65; }
 .reference-workspace input:not([type=checkbox]), .reference-workspace select { box-sizing: border-box; width: 100%; min-width: 0; }
 .reference-workspace article, .reference-workspace button { overflow-wrap: anywhere; max-width: 100%; }
 .reference-workspace article button { margin: .35rem .35rem .35rem 0; }
+.curation-workspace { overflow-wrap: anywhere; }
+.curation-workspace form { display: grid; gap: .65rem; }
+.curation-workspace input:not([type=checkbox]), .curation-workspace select, .curation-workspace textarea { box-sizing: border-box; width: 100%; min-width: 0; }
+.curation-workspace button { max-width: 100%; overflow-wrap: anywhere; }
 .danger-secondary { margin-left: .6rem; color: var(--danger); background: var(--surface); }
 .danger { color: var(--surface); background: var(--danger); border-color: var(--danger); }
 .danger:not(:disabled):hover { background: #6c302a; color: var(--surface); border-color: #6c302a; }

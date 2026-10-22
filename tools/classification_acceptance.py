@@ -120,6 +120,50 @@ def exercise(project, count):
         'scientific_performance_claim': False}
 
 
+def curation_exercise(project, count):
+    """CP9 bounded SQL views / frozen audit selection over thousands of inputs."""
+    import tracemalloc
+    from corpustrail.application.curation import CurationController
+    from corpustrail.classification.curation import CurationService, AuditSelection
+    from corpustrail.classification.curation_views import CurationReads
+    started=time.perf_counter();tracemalloc.start()
+    registry=EngineRegistry();registry.register(StreamingFixture('synthetic.streaming-a'))
+    service=ClassificationService(project,registry=registry)
+    plan=next(v for v in service.plans()['items'] if v['candidate_count']==count)
+    rid=service.start_run(plan['plan_id'],request_id='9'*32,actor='synthetic-fixture',created_at=AT)['run_id']
+    reads=CurationReads(project);app=CurationController(registry=registry,synthetic=True)
+    offset=0;revision=None;seen=set();pages=0;maximum=0
+    while True:
+        value=app.results(project,rid,offset=offset,limit=100,expected_revision=revision)
+        revision=value['revision'];pages+=1;maximum=max(maximum,len(canonical(value).encode()))
+        if sum(value['primary'].values())!=count or value['primary']['not_assessed']!=count:raise AssertionError('curation primary counts lost unassessed candidates')
+        for item in value['items']:
+            if item['paper_id'] in seen:raise AssertionError('curation pagination repeated a paper')
+            seen.add(item['paper_id'])
+        if value['next_offset'] is None:break
+        offset=value['next_offset']
+    if len(seen)!=count or maximum>1_000_000:raise AssertionError('curation pagination lost data or exceeded the synthetic byte bound')
+    curation=CurationService(project);fields=dict(request_id='8'*32,name='Synthetic large audit',actor='synthetic-fixture',created_at=AT,
+        config_event_id=project.configuration_history()[-1]['event_id'],run_id=rid,compare_run_id=None,selection=AuditSelection('random',37,100))
+    preview=curation.preview_audit(**fields)
+    again=curation.preview_audit(**{**fields,'request_id':'7'*32})
+    if preview['member_manifest_sha256']!=again['member_manifest_sha256']:raise AssertionError('audit selection changed with command identity')
+    audit=curation.commit_audit(**fields,expected_preview_sha256=preview['preview_sha256'])
+    saved=CurationService(Project.open(project.root)).audit(audit['audit_id'],limit=100)
+    if saved['selected_count']!=100 or not curation.verify_audit(audit['audit_id'])['verified']:raise AssertionError('frozen audit failed restart integrity')
+    if reads.results(rid)['primary']['not_assessed']!=count:raise AssertionError('audit implicitly assessed candidates')
+    with connection(project.database_path) as db:
+        if db.execute('SELECT COUNT(*) FROM ct_review_events').fetchone()[0]:raise AssertionError('audit created human review or membership')
+        rows=db.execute('SELECT COUNT(*) FROM ct_curation_audit_members').fetchone()[0]
+    _,peak=tracemalloc.get_traced_memory();tracemalloc.stop();app.close()
+    return {'schema':'corpustrail-curation-scale-measurement/v1','synthetic_only':True,'candidate_count':count,'page_limit':100,
+        'pages':pages,'maximum_response_bytes':maximum,'selected_count':saved['selected_count'],'normalized_member_rows':rows,
+        'member_manifest_sha256':saved['member_manifest_sha256'],'python_peak_traced_bytes':peak,
+        'elapsed_seconds':time.perf_counter()-started,'database_bytes':project.database_path.stat().st_size,
+        'assertions':'disjoint exhaustive totals; accessible unassessed tail; bounded replace-page views; deterministic immutable audit; restart; no human judgment or authority mutation',
+        'scientific_performance_claim':False}
+
+
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--project', type=Path, required=True); parser.add_argument('--papers', type=int, default=2000)
     args = parser.parse_args()
@@ -130,7 +174,8 @@ def main():
     with patch('socket.create_connection', side_effect=AssertionError('scale acceptance must remain offline')):
         reference_result = reference_acceptance.exercise(args.project, args.papers)
         result = exercise(Project.open(args.project), args.papers)
-    print(json.dumps({'reference_acceptance': reference_result, 'classification_acceptance': result}, indent=2))
+        curation = curation_exercise(Project.open(args.project), args.papers)
+    print(json.dumps({'reference_acceptance': reference_result, 'classification_acceptance': result,'curation_acceptance':curation}, indent=2))
 
 
 if __name__ == '__main__': main()

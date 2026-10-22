@@ -38,8 +38,10 @@ class ReviewController:
             populations.append({'selection':key,'label':name,'count':len(ids),'sha256':content_hash(ids)})
         with connection(project.database_path) as db:
             revision,_=latest_config(db)
-            total=db.execute('SELECT COUNT(*) FROM ct_review_sessions').fetchone()[0]
-            rows=db.execute('SELECT session_id FROM ct_review_sessions ORDER BY rowid DESC LIMIT ? OFFSET ?',(limit,offset)).fetchall()
+            assisted_table=db.execute("SELECT 1 FROM sqlite_master WHERE name='ct_curation_sessions'").fetchone()
+            clause=' WHERE NOT EXISTS(SELECT 1 FROM ct_curation_sessions c WHERE c.session_id=ct_review_sessions.session_id)' if assisted_table else ''
+            total=db.execute('SELECT COUNT(*) FROM ct_review_sessions'+clause).fetchone()[0]
+            rows=db.execute('SELECT session_id FROM ct_review_sessions'+clause+' ORDER BY rowid DESC LIMIT ? OFFSET ?',(limit,offset)).fetchall()
             sessions=[]
             for row in rows:
                 packet,state,_,config=_load(db,row[0])
@@ -51,8 +53,9 @@ class ReviewController:
             'authorized_reviewers':list(project.config.review.authorized_reviewers),'populations':populations,
             'sessions':sessions,'total_sessions':total,'next_offset':offset+limit if offset+limit<total else None}
 
-    def view(self, project, handle):
+    def view(self, project, handle, *, assisted=False):
         session=_session(project,handle)
+        self._boundary(project,session,assisted)
         # Reuse the established method-blind frozen evidence allowlist.
         frozen=SessionService(project).view(session)
         with connection(project.database_path) as db:
@@ -94,8 +97,15 @@ class ReviewController:
             # Only controlled contract messages; do not return OS or DB diagnostics.
             raise ProjectCommandError(str(exc),code='review_conflict',status=409) from exc
 
-    def summary_page(self, project, handle, *, offset=0, limit=20):
+    def _boundary(self, project, session, assisted):
+        from corpustrail.classification.curation_views import is_assisted
+        with connection(project.database_path) as db:
+            if is_assisted(db,session) != assisted:
+                raise ProjectCommandError('Use the separate operational assisted route for an assisted session; it is not method-blind review.',status=409)
+
+    def summary_page(self, project, handle, *, offset=0, limit=20, assisted=False):
         _page(offset,limit);session=_session(project,handle)
+        self._boundary(project,session,assisted)
         with connection(project.database_path) as db:
             packet,state,revision,_=_load(db,session)
             if packet['schema']!=GUIDED_SCHEMA: raise ProjectCommandError('Legacy sessions retain their original workflow.')
@@ -122,10 +132,11 @@ class ReviewController:
                 'publication_plan_sha256':state['publication_plan']['sha256'] if state['publication_plan'] else None,
                 'next_offset':offset+limit if offset+limit<len(state['order']) else None}
 
-    def document(self, project, handle, *, offset=0, limit=16000):
+    def document(self, project, handle, *, offset=0, limit=16000, assisted=False):
         if type(offset) is not int or offset<0 or type(limit) is not int or not 1<=limit<=32000:
             raise ProjectCommandError('Choose a valid text segment.')
         session=_session(project,handle)
+        self._boundary(project,session,assisted)
         with connection(project.database_path) as db:
             packet,state,_,_=_load(db,session)
             pid=state['order'][state['index']]

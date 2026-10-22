@@ -1,7 +1,7 @@
 # CP8 assessment infrastructure
 
 Checkpoint 8 implements optional engine contracts and scientific storage. CP9's
-assessment-result, audit and assisted-curation UI is not implemented here. Manual
+assessment-result, audit and assisted-curation UI is documented in [CURATION.md](CURATION.md). Manual
 review remains usable without an engine. The default registry is empty; no real
 classifier, model runtime, embedding index or provider is installed or selected.
 Deterministic engines in tests and development tools are software fixtures only.

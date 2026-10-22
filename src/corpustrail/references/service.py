@@ -1,5 +1,6 @@
 """Explicit reference batches; never writes review or corpus-membership tables."""
 import json
+from contextlib import nullcontext
 
 from corpustrail import __version__
 from corpustrail._internal.database import connection, latest_config
@@ -17,7 +18,10 @@ def definition(config):
 
 
 class ReferenceService:
-    def __init__(self,project):self.project=project
+    def __init__(self,project,*,_db=None):self.project=project;self._db=_db
+
+    def _connection(self,*,write=False):
+        return nullcontext(self._db) if self._db is not None else connection(self.project.database_path,write=write)
 
     def ready(self):
         with connection(self.project.database_path) as db:return storage.ready(db)
@@ -109,7 +113,7 @@ class ReferenceService:
         return {k:v for k,v in data.items() if k not in {'chunks','request_sha256','change_hashes'}}
 
     def preview(self,**fields):
-        with connection(self.project.database_path) as db:
+        with self._connection() as db:
             data,new,operations,parts,_=self._prepare(db,**fields)
             return {**self.public(data),'preview_sha256':content_hash(data),
                 'new_assignments':[{'assignment_id':aid,**{k:value[k] for k in ('paper_id','label','human_attested','validation_state')}} for aid,value in list(new.items())[:20]],
@@ -117,7 +121,7 @@ class ReferenceService:
 
     def commit(self,*,expected_preview_sha256,**fields):
         command_id(fields['request_id'])
-        with connection(self.project.database_path,write=True) as db:
+        with self._connection(write=True) as db:
             storage.require(db)
             prior=db.execute('SELECT version_id,request_sha256 FROM ct_reference_versions WHERE request_id=?',(fields['request_id'],)).fetchone()
             if prior:

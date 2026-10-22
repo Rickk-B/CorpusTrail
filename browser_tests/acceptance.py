@@ -15,10 +15,184 @@ from .lifecycle import RequestLedger, finalize_case, settle_reads
 class BrowserAcceptance(unittest.TestCase):
     runtime = None  # Explicit runner-owned browser/report; never auto-discovered.
 
+    def curation_seed(self):
+        from .curation_fixtures import seed
+        return seed(self.fixture)
+
+    def test_curation_manual_methods_and_no_implicit_operations(self):
+        self.open_project();before=fingerprint(self.fixture.root)
+        self.click_after_reads('a[href="/curation"]')
+        expect(self.page.locator('#curation-methods')).to_contain_text('Manual only')
+        expect(self.page.locator('#curation-runs')).to_contain_text('No assessment runs')
+        expect(self.page.locator('#curation-methods')).to_contain_text('Unavailable')
+        expect(self.page.locator('#curation-planner')).to_be_hidden()
+        self.assertEqual(before,fingerprint(self.fixture.root));self.layout();self.snapshot('curation-manual')
+        self.page.get_by_role('link',name='Start or resume method-blind manual review').click()
+        expect(self.page.locator('#review-overview')).to_be_visible()
+
+    def open_curation_fixture(self):
+        data=self.curation_seed();self.open_project();self.visit('/curation#'+data['runs'][0].split(':')[1])
+        expect(self.page.locator('#curation-result-count')).to_contain_text('5 matching candidates')
+        return data
+
+    def curation_audit(self,*,primary='',capture='curation-audit-preview'):
+        self.page.locator('#curation-primary').select_option(primary)
+        self.page.locator('#curation-results-form button').click()
+        expect(self.page.locator('#curation-result-count')).to_contain_text('frozen candidates')
+        if not self.page.locator('#curation-audit-builder').evaluate('e=>e.open'):
+            self.click_after_reads('#curation-audit-builder > summary')
+        self.page.locator('#curation-audit-name').fill('Synthetic boundary audit')
+        self.page.locator('#curation-audit-actor').fill('fixture_reviewer')
+        self.page.locator('#curation-audit-mode').select_option('random')
+        self.page.locator('#curation-audit-form button').click()
+        expect(self.page.locator('#curation-audit-preview')).to_be_visible()
+        self.layout();self.snapshot(capture)
+        self.page.locator('#curation-audit-commit').click()
+        expect(self.page.locator('#curation-audit-status')).to_contain_text('immutable selected candidates')
+        return self.fixture.project
+
+    def test_curation_results_disagreement_audit_correction_and_explicit_reassessment(self):
+        from corpustrail.classification.curation import CurationService
+        data=self.open_curation_fixture();project=self.fixture.project;service=CurationService(project)
+        original=data['service'].results(data['runs'][0]);members={p:project.reviews.membership(p) for p in self.fixture.papers}
+        self.layout();self.snapshot('curation-results')
+        self.page.locator('#curation-compare').select_option(data['runs'][1])
+        self.page.locator('#curation-overlay').select_option('disagreement')
+        self.page.locator('#curation-results-form button').click()
+        expect(self.page.locator('#curation-results')).to_contain_text('Comparison observation')
+        self.layout();self.snapshot('curation-disagreement')
+        self.page.locator('#curation-overlay').select_option('')
+        self.curation_audit(primary='exclude')
+        self.assertEqual(service.audits()['total'],1);audit=service.audits()['items'][0]
+        self.assertGreater(audit['selected_count'],0);self.layout();self.snapshot('curation-audit')
+        self.page.locator('#curation-audit-members button').first.click()
+        expect(self.page.locator('#curation-paper')).to_be_visible()
+        expect(self.page.locator('#curation-paper-text')).not_to_be_empty()
+        self.layout();self.snapshot('curation-input')
+        self.page.locator('#curation-correction-actor').fill('fixture_reviewer')
+        self.page.locator('#curation-correction-label').select_option('in_scope')
+        self.page.locator('#curation-correction-evidence').select_option('metadata')
+        self.page.locator('#curation-correction-rationale').fill('Explicit invented reference correction after audit; not scientific validation.')
+        self.page.locator('#curation-correction-attest').check()
+        self.page.locator('#curation-correction-form button[type=submit]').click()
+        expect(self.page.locator('#curation-correction-preview')).to_be_visible()
+        self.layout();self.snapshot('curation-correction')
+        self.page.locator('#curation-correction-commit').click()
+        expect(self.page.locator('#curation-correction-result')).to_contain_text('Successor:')
+        history=service.workflow();self.assertEqual(history['total'],1)
+        successor=history['items'][0]['reference_version_id'];self.assertNotEqual(successor,data['reference'])
+        self.assertEqual(data['service'].results(data['runs'][0]),original)
+        self.assertEqual(members,{p:project.reviews.membership(p) for p in self.fixture.papers})
+        self.layout();self.snapshot('curation-successor')
+        self.page.locator('#curation-reassess').click()
+        self.page.locator('#curation-name').fill('Synthetic explicit successor assessment')
+        self.page.locator('#curation-actor').fill('fixture_reviewer')
+        self.page.locator('#curation-reference').select_option(successor)
+        self.page.locator('#curation-plan-form button[type=submit]').click()
+        expect(self.page.locator('#curation-plan-preview')).to_be_visible();self.layout();self.snapshot('curation-plan')
+        self.page.locator('#curation-plan-commit').click();expect(self.page.locator('#curation-plan-saved')).to_be_visible()
+        self.assertEqual(data['service'].runs()['total'],2)
+        self.page.locator('#curation-start').click();expect(self.page.locator('#curation-run-status')).to_contain_text('planned')
+        self.assertEqual(service.workflow()['total'],2)
+        self.assertEqual(data['service'].runs()['items'][-1]['processed'],0)
+        self.layout();self.snapshot('curation-reassessment')
+        self.page.locator('#curation-execute').click()
+        expect(self.page.locator('#curation-run-status')).to_contain_text('completed',timeout=15000)
+        self.assertEqual(data['service'].results(data['runs'][0]),original)
+        self.assertEqual(members,{p:project.reviews.membership(p) for p in self.fixture.papers})
+        before=fingerprint(self.fixture.root);self.restart();self.open_project();self.visit('/curation')
+        expect(self.page.locator('#curation-history')).to_contain_text('Human-attested successor reference')
+        expect(self.page.locator('#curation-history')).to_contain_text('Explicit reassessment request')
+        self.assertEqual(before,fingerprint(self.fixture.root))
+
+    def test_curation_assisted_audit_human_confirmation_and_blinded_isolation(self):
+        from corpustrail.classification.curation import CurationService
+        from corpustrail.application.review import ReviewController,_handle
+        from corpustrail._internal.values import ContractError
+        data=self.open_curation_fixture();project=self.fixture.project
+        self.curation_audit(primary='exclude',capture='curation-assisted-audit-preview');service=CurationService(project)
+        self.page.locator('#curation-reviewer').fill('fixture_reviewer');self.page.locator('#curation-assisted-confirm').check()
+        self.page.locator('#curation-assisted-form button').click()
+        expect(self.page.locator('#review-assisted')).to_be_visible()
+        self.assertFalse(self.page.locator('input[name=assessment]:checked').count())
+        self.assertEqual(self.page.locator('#review-extent').input_value(),'')
+        sid=service.assisted_sessions(service.audits()['items'][0]['audit_id'])['items'][0]['session_id']
+        with self.assertRaises(ContractError):ReviewController().view(project,_handle(sid))
+        self.layout();self.snapshot('curation-assisted')
+        self.page.locator('input[name=assessment][value=included]').check()
+        self.page.locator('#review-extent').select_option('metadata')
+        self.page.locator('#review-rationale').fill('Explicit invented human correction, separate from the engine.')
+        self.page.locator('#review-save-next').click()
+        expect(self.page.locator('#review-message')).to_contain_text('Human observation saved')
+        self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
+        self.page.locator('#review-finish').click()
+        expect(self.page.locator('#review-completion-heading')).to_have_text('Review completed — read only')
+        self.layout();self.snapshot('curation-assisted-completed')
+        self.page.locator('#review-prepare-publication').click();expect(self.page.locator('#review-publication')).to_be_visible()
+        self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
+        self.page.locator('#review-publish').click();expect(self.page.locator('#review-message')).to_contain_text('confirmed decisions')
+        self.assertEqual(sum(project.reviews.membership(p)['state']=='included' for p in self.fixture.papers),1)
+        self.layout();self.snapshot('curation-assisted-confirmed')
+        outcomes=service.outcomes(service.audits()['items'][0]['audit_id'])
+        self.assertEqual({v['kind'] for v in outcomes['items']},{'observation','authorization'})
+        self.assertEqual(data['service'].inspect_run(data['runs'][0])['processed'],5)
+
+    def test_curation_failed_and_unassessed_candidates_remain_accessible(self):
+        from corpustrail.classification import Budgets,AssessmentFailure
+        from unittest.mock import patch
+        data=self.curation_seed();project=self.fixture.project;engine,_=self.fixture.curation_registry.get('synthetic.curation-a','fixture/v1')
+        fields=dict(request_id='c'*32,name='Synthetic partial failure',actor='fixture_reviewer',created_at=AT,
+            config_event_id=project.configuration_history()[-1]['event_id'],population_version_id=data['population'],reference_version_id=data['reference'],
+            engine_id='synthetic.curation-a',engine_version='fixture/v1',budgets=Budgets(chunk_size=1,max_items_per_execution=1))
+        service=data['service'];preview=service.prepare(**fields);plan=service.commit_plan(**fields,expected_preview_sha256=preview['preview_sha256'])
+        run=service.start_run(plan['plan_id'],request_id='d'*32,actor='fixture_reviewer',created_at=AT)['run_id']
+        with patch.object(engine,'assess',side_effect=lambda p,units:tuple(AssessmentFailure(u.input()['target']['paper_id'],'unavailable') for u in units)):
+            service.execute(run,expected_revision=service.inspect_run(run)['revision'],clock=lambda:AT)
+        self.open_project();self.visit('/curation#'+run.split(':')[1]);expect(self.page.locator('#curation-result-count')).to_contain_text('5 matching candidates')
+        self.page.locator('#curation-primary').select_option('failed');self.page.locator('#curation-results-form button').click()
+        expect(self.page.locator('#curation-result-count')).to_contain_text('1 matching candidate')
+        self.page.locator('#curation-primary').select_option('not_assessed');self.page.locator('#curation-results-form button').click()
+        expect(self.page.locator('#curation-result-count')).to_contain_text('4 matching candidates')
+        self.layout();self.snapshot('curation-tail')
+        self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
+
+    def test_curation_bounded_context_picker_and_exact_reference_inspection(self):
+        from corpustrail.references import ContextStrategy
+        data=self.curation_seed();project=self.fixture.project;contexts=[]
+        for index,pid in enumerate(self.fixture.papers):
+            fields=dict(request_id=str(index+5)*32,version_id=data['reference'],target_paper_id=pid,
+                target_basis='metadata',actor='fixture_reviewer',created_at=AT,
+                config_event_id=project.configuration_history()[-1]['event_id'],held_out_paper_ids=[],dependency_ids=[],
+                strategy=ContextStrategy(in_scope=2,out_of_scope=2))
+            preview=project.references.prepare_context(**fields)
+            contexts.append(project.references.commit_context(**fields,expected_preview_sha256=preview['preview_sha256'])['context_id'])
+        self.open_project();self.visit('/curation');expect(self.page.locator('#curation-engine')).to_be_visible()
+        self.page.locator('#curation-name').fill('Synthetic bounded-context curation')
+        self.page.locator('#curation-actor').fill('fixture_reviewer')
+        self.page.locator('#curation-engine').select_option('synthetic.curation-a|fixture/v1')
+        self.page.locator('#curation-population').select_option(data['population'])
+        self.page.locator('#curation-reference').select_option(data['reference'])
+        self.page.locator('#curation-input-mode').select_option('bounded_context')
+        expect(self.page.locator('#curation-contexts input')).to_have_count(5)
+        for box in self.page.locator('#curation-contexts input').all():box.check()
+        self.page.locator('#curation-plan-form button[type=submit]').click()
+        expect(self.page.locator('#curation-plan-preview')).to_be_visible();self.layout();self.snapshot('curation-bounded-plan')
+        self.page.locator('#curation-plan-commit').click();expect(self.page.locator('#curation-plan-saved')).to_be_visible()
+        self.page.locator('#curation-start').click();expect(self.page.locator('#curation-run-status')).to_contain_text('planned')
+        self.page.locator('#curation-execute').click();expect(self.page.locator('#curation-run-status')).to_contain_text('completed',timeout=15000)
+        run=data['service'].runs()['items'][-1];plan=data['service'].inspect_plan(run['plan_id'])
+        self.assertEqual(plan['input_mode'],'bounded_context')
+        self.assertEqual({data['service'].exact_input(run['plan_id'],pid)['context_id'] for pid in self.fixture.papers},set(contexts))
+        self.page.locator('#curation-results button').first.click();expect(self.page.locator('#curation-input-references')).to_contain_text('Reference')
+        self.page.locator('#curation-input-references button').first.click();expect(self.page.locator('#curation-reference-text')).not_to_be_empty()
+        self.layout();self.snapshot('curation-bounded-input')
+        self.assertTrue(data['service'].verify_run(run['run_id'])['verified'])
+        self.assertTrue(all(project.reviews.membership(p)['state']=='not_reviewed' for p in self.fixture.papers))
+
     def setUp(self):
         # Review order uses canonical IDs. Stabilize only synthetic visual IDs;
         # every run still has a private root, lock directory and browser context.
-        self.fixture = ApplicationFixture(project_id='browser-guided-fixture' if 'review' in self._testMethodName else
+        self.fixture = ApplicationFixture(project_id='browser-curation-fixture' if 'curation' in self._testMethodName else 'browser-guided-fixture' if 'review' in self._testMethodName else
             'browser-population-fixture' if 'population' in self._testMethodName else
             'browser-reference-fixture' if 'reference' in self._testMethodName else None,
             long_path='long_paths' in self._testMethodName)
@@ -28,7 +202,7 @@ class BrowserAcceptance(unittest.TestCase):
             reduced_motion='reduce', service_workers='block')
         self.addCleanup(self.runtime.close_context, self)
         self.context.tracing.start(screenshots=True, snapshots=False, sources=False)
-        if 'reference' in self._testMethodName:
+        if 'reference' in self._testMethodName or 'curation' in self._testMethodName:
             # Control only synthetic form operation IDs at their generation
             # boundary. Same-paper contradictory assignments otherwise change
             # hash order across independent screenshots. Counter survives this

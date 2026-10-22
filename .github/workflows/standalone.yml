@@ -84,6 +84,7 @@ jobs:
           python -I -m unittest discover -s tests -p test_population_app.py -v
           python -I -m unittest discover -s tests -p 'test_reference*.py' -v
           python -I -m unittest discover -s tests -p test_classification.py -v
+          python -I -m unittest discover -s tests -p 'test_curation*.py' -v
           python -I -m unittest discover -s tests -p test_discovery_app.py -v
           python -I -m unittest discover -s tests -p test_discovery_transport_diagnostics.py -v
           python -I -m unittest discover -s tests -p test_evidence_app.py -v

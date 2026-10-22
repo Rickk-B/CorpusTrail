@@ -2,7 +2,9 @@
 // Frozen, allowlisted review DTOs only; never use the operational paper API here.
 const el = id => document.getElementById(id);
 const token = document.querySelector('meta[name="corpustrail-session"]').content;
-const schema = 'corpustrail-guided-review/v1';
+const assisted = location.pathname==='/curation/review';
+const schema = assisted?'corpustrail-local-curation/v1':'corpustrail-guided-review/v1';
+const apiPrefix=assisted?'curation/review/':'review/', pagePath=assisted?'/curation/review':'/review';
 const names = {included:'Include', excluded:'Exclude', insufficient_evidence:'Insufficient evidence', undecided:'Undecided',
   not_reviewed:'Awaiting a corpus decision', unresolved:'Unresolved',
   metadata:'Bibliographic metadata', abstract:'Abstract', sections:'Verified structured text — selected sections', full_document:'Verified structured text — full document', none:'No evidence reviewed'};
@@ -14,7 +16,7 @@ function enqueue(work) { const next = queue.catch(() => {}).then(work); queue = 
 async function api(path, body) {
   const headers = {'X-CorpusTrail-Session':token};
   if (body) Object.assign(headers, {'Content-Type':'application/json','X-CorpusTrail-CSRF':token});
-  const response = await fetch('/api/v1/review/' + path, {method:body?'POST':'GET', headers, cache:'no-store', body:body?JSON.stringify(body):undefined});
+  const response = await fetch('/api/v1/' + apiPrefix + path, {method:body?'POST':'GET', headers, cache:'no-store', body:body?JSON.stringify(body):undefined});
   const data = await response.json();
   if (!response.ok) { const error = new Error(data.error.message); error.knownResponse = true; throw error; }
   return data;
@@ -75,7 +77,8 @@ async function perform(action,value=null) {
     if (action==='finish') {
       if (result.result.status!=='completed') throw new Error('Completion was not confirmed. Reload the saved session.');
       // Completion is acknowledged before navigation; no automatic publication.
-      busy=false;dirty=false;location.assign('/dashboard#review-completed-'+state.handle);return;
+      if(!assisted){busy=false;dirty=false;location.assign('/dashboard#review-completed-'+state.handle);return;}
+      await load(state.handle);say('Assisted review completed. Saved observations are preserved; unassessed papers remain undecided. Corpus membership has not changed.');return;
     }
     await load(state.handle,{preview:action==='prepare_publication'});
     if (action==='save_next') say('Human observation saved. Corpus membership has not changed.');
@@ -84,6 +87,7 @@ async function perform(action,value=null) {
   } catch(error) { failure(error); } finally { busy=false;controls(); }
 }
 async function overview() {
+  if(assisted){location.assign('/curation');return;}
   setup=await api('configuration');
   el('review-overview').hidden=false; el('review-workspace').hidden=true;
   el('review-create').hidden=!setup.populations.some(p=>p.count)||!setup.definition;
@@ -117,6 +121,22 @@ async function load(handle,{preview=false}={}) {
   el('review-identity').textContent='Reviewer: '+data.reviewer+' · '+(data.can_publish?'Configured corpus-publication authority':'No corpus-publication authority');
   el('review-population-version').textContent=data.candidate_population?'Frozen candidate population · Version '+data.candidate_population.version+'. Exact version identity is available in session provenance.':'Session-local frozen candidate set; no saved population version was selected.';
   el('review-mode-notice').textContent=data.mode==='method-blind'?'Method-blind snapshot: discovery methods and earlier judgments are omitted. Corpus and other operational pages are not blinded.':'Operational review: frozen source attribution is available below.';
+  el('review-assisted').hidden=!assisted;
+  if(assisted){
+    el('review-overview-button').textContent='Back to Curation and Audits';
+    el('review-assisted-sources').replaceChildren();
+    const source=data.assisted_sources;
+    el('review-assisted-sources').append(node('p',source.notice||'Exact source observations remain separate from human authority.'));
+    for(const result of source.results){
+      const card=node('article','');
+      if(result.kind==='failure')card.append(node('h3','Engine execution failed — no scientific judgment'),node('p',result.failure.reason));
+      else {const value=result.assessment;card.append(node('h3','Engine proposal: '+value.outcome),node('p','Evidence sufficiency: '+value.evidence_sufficiency),node('p',value.rationale));if(value.score)card.append(node('p','Score '+value.score.value+' · '+value.score.score_type+' · '+value.score.meaning));}
+      el('review-assisted-sources').append(card);
+    }
+    if(!source.results.length)el('review-assisted-sources').append(node('p','No engine judgment was available in the frozen audit snapshot.'));
+    const details=node('details','');details.append(node('summary','Inspect exact engine assessments / failures and input lineage'),node('pre',JSON.stringify(source,null,2)));
+    el('review-assisted-sources').append(details);
+  }
   el('review-definition').textContent=data.question;el('review-stale').hidden=!data.stale;
   el('review-paper-title').textContent=data.title||'Title not available';
   el('review-bibliography').textContent=[data.authors.join(', ')||'Authors not available',data.year,data.source].filter(Boolean).join(' · ');
@@ -141,7 +161,7 @@ async function load(handle,{preview=false}={}) {
   el('review-readonly-help').hidden=!completed;
   el('review-completion-status').textContent=data.published?'Saved observations are preserved. Authoritative corpus updates have been published separately.':completed?'Saved observations are preserved. Unassessed papers remain undecided. Completing this session did not change corpus membership.':'Finish Review completes this session and preserves saved observations. Unassessed papers and incomplete or changed-unsaved drafts remain undecided. Corpus membership will not change.';
   el('review-technical').textContent=JSON.stringify({session:handle,revision:data.revision,population_sha256:data.population_sha256,evidence_snapshot_sha256:data.evidence_snapshot_sha256,candidate_population:data.candidate_population},null,2);
-  history.replaceState(null,'','/review#'+handle);controls();
+  history.replaceState(null,'',pagePath+'#'+handle);controls();
   if (completed&&!data.legacy) await summary();
 }
 async function summary(more=false) {

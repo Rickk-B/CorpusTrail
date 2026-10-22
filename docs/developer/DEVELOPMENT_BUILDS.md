@@ -1,5 +1,33 @@
 # Development checkpoint wheels — not public releases
 
+## CP9 implementation — curation methods, audits and iterative correction
+
+CP8 acceptance below is preserved with its exact source/delivery identity.
+CP9 adds the operational Curation and Audits workspace, not a real classifier.
+Manual-only remains usable; other unimplemented adapters are visibly unavailable.
+Result views separate exhaustive primary totals from overlapping evidence,
+disagreement and human-status filters, and retain failed/unassessed candidates.
+Frozen random/policy-stratified selections retain seeds, denominators, selected
+IDs and source revisions. Assisted observations and explicit authority links
+are atomic, with separate method-blind endpoints. Reference corrections append
+human-attested successor versions; reassessment is requested and executed only
+through separate explicit actions. Historical runs and corpus authority do not
+change merely because a correction, preview or audit is saved.
+
+Migration 041 is additive after frozen 001–040, with explicit backed-up upgrades.
+[Curation contracts](CURATION.md) and the [user workflow](../user/CURATION.md)
+describe pagination, concurrency, interruptions, score/validation qualifications
+and ownership. Synthetic measurements test resources/contracts, not scientific
+performance. Source-bound workflow receipts, not a shared development version
+string or earlier CP8 wheel, identify technical validation and delivery.
+
+CP9 researcher acceptance has not been granted. CP10 has not begun. The existing
+macOS fixture-path-only exception remains separately reported when actually used;
+it is not a strict visual pass. Browser evidence retains seven days and normal
+development bundles request 90 days subject to repository limits; verify actual
+run-based expiry on the delivered artifact. Native MacBook Europe PMC causation
+and the historical navigation-timeout cause remain separately unresolved.
+
 ## CP8 researcher acceptance — 22 October 2026
 
 The researcher formally accepted Checkpoint 8 through the instruction starting
