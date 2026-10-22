@@ -96,6 +96,11 @@ class CurationApplicationTests(unittest.TestCase):
             'action':'save_next','value':dict(sufficiency='insufficient',decision=None,review_extent='metadata',rationale='Explicit human uncertainty.')}
         a=self.post('review/command',command);b=self.post('review/command',command)
         self.assertEqual(a['revision'],b['revision']);self.assertEqual(len(self.h.service.outcomes(audit['audit_id'])['items']),1)
+        selected=self.get('curation/audits/'+audit['audit_id'].split(':')[1])
+        self.assertTrue(selected['items'][0]['publication']['bibliography']['title'])
+        outcome=self.get('curation/audits/'+audit['audit_id'].split(':')[1]+'/outcomes')['items'][0]
+        self.assertEqual(outcome['human_observation']['state'],'insufficient_evidence')
+        self.assertEqual(outcome['human_observation']['authority_state'],'non_authoritative')
         self.assertTrue(all(self.project.reviews.membership(pid)['state']=='not_reviewed' for pid in self.h.ids))
 
     def test_bounded_queries_and_authentication_fail_closed(self):

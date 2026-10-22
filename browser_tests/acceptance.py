@@ -78,7 +78,7 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#curation-correction-preview')).to_be_visible()
         self.layout();self.snapshot('curation-correction')
         self.page.locator('#curation-correction-commit').click()
-        expect(self.page.locator('#curation-correction-result')).to_contain_text('Successor:')
+        expect(self.page.locator('#curation-correction-result')).to_contain_text('Successor reference version')
         history=service.workflow();self.assertEqual(history['total'],1)
         successor=history['items'][0]['reference_version_id'];self.assertNotEqual(successor,data['reference'])
         self.assertEqual(data['service'].results(data['runs'][0]),original)

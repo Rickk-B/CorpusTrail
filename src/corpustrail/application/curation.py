@@ -11,6 +11,7 @@ from corpustrail.classification.curation import CurationService, AuditSelection,
 from corpustrail.classification.curation_views import CurationReads, PRIMARY, OVERLAYS
 from corpustrail.classification import storage
 from corpustrail.curation.sessions import _load
+from corpustrail.curation.service import _history
 from corpustrail.models.contracts import safe_data
 from corpustrail.populations.contracts import command_id, page
 from corpustrail.project import Project
@@ -99,6 +100,22 @@ class CurationController:
                         data = item[key]
                         item[key] = {k: v for k, v in data.items() if k in {'outcome', 'evidence_sufficiency', 'score', 'reason', 'retryable'}}
         return {'schema': SCHEMA, **value}
+
+    def audit(self, project, audit_id, **paging):
+        value=CurationService(project).audit(audit_id,**paging)
+        with connection(project.database_path) as db:
+            for item in value['items']:item['publication']=ProjectReads(project)._row(db,item['paper_id'])
+        return {'schema':SCHEMA,**value,'catalogue_notice':'Titles are current catalogue metadata; frozen selection identities and original engine inputs remain unchanged.'}
+
+    def outcomes(self, project, audit_id, **paging):
+        value=CurationService(project).outcomes(audit_id,**paging)
+        with connection(project.database_path) as db:
+            for item in value['items']:
+                event=next((e for e in _history(db,item['paper_id']) if e['event_id']==item['review_event_id']),None)
+                if event is None or content_hash(event)!=item['review_event_sha256']:raise ContractError('audit outcome human event differs')
+                item['publication']=ProjectReads(project)._row(db,item['paper_id'])
+                item['human_observation']={k:event[k] for k in ('state','sufficiency','review_extent','rationale','producer_id','authority_state','created_at')}
+        return {'schema':SCHEMA,**value}
 
     def validations(self, project, run_id, *, offset=0, limit=20, cutoff=None):
         page(offset,limit)

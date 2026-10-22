@@ -197,7 +197,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                             parts=path.split('/');aid=handle(parts[5],'curation-audit');service=CurationService(current)
                             operation=service.outcomes if path.endswith('/outcomes') else service.assisted_sessions if path.endswith('/sessions') else service.audit
                             if operation==service.audit and 'cutoff' in query:raise ContractError('immutable audit detail has no live-list cutoff')
-                            result=operation(aid,**(paging if operation==service.audit else list_paging))
+                            result=curation.audit(current,aid,**paging) if operation==service.audit else curation.outcomes(current,aid,**list_paging) if operation==service.outcomes else operation(aid,**list_paging)
                         else:return self.error(404,'not_found','Curation resource not found.')
                         safe_data(result,secrets=ProjectController._secrets(current.config))
                         return self.send(200,json.dumps(result,ensure_ascii=False,allow_nan=False))
