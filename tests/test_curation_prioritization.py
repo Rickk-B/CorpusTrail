@@ -6,6 +6,8 @@ import hashlib
 import http.client
 import importlib.util
 import json
+from io import StringIO
+import os
 from pathlib import Path
 import re
 import sqlite3
@@ -291,7 +293,15 @@ class CurationTests(unittest.TestCase):
         raw=self.config.to_dict()
         with patch('corpustrail._internal.database.migrations',return_value=migrations()[:33]):
             create_database(target/self.config.database,raw,AT,'fixture')
-            (target/'corpustrail.project.json').write_text(canonical(raw)+'\n',encoding='utf-8')
+            bootstrap=(canonical(raw)+'\n').encode('utf-8')
+            config_path=target/'corpustrail.project.json'
+            # Reproduce the platform text-mode translation that used to make
+            # this fixture invalid on Windows. Integrity must still reject it.
+            config_path.write_bytes(bootstrap.replace(b'\n',b'\r\n'))
+            with self.assertRaisesRegex(ContractError,'immutable project bootstrap changed'):
+                Project.open(target)
+            # create_database records these exact canonical UTF-8/LF bytes.
+            config_path.write_bytes(bootstrap)
             old=Project.open(target)
             self.project=old
             pid=self.enroll(99)
@@ -336,10 +346,23 @@ class CurationTests(unittest.TestCase):
         self.assertEqual(self.project.review_sessions.view('session')['counts']['blank'],8)
 
     def test_cli_review_and_corpus_are_workspace_independent(self):
-        with patch('sys.stdout'),patch('sys.stderr'):
-            self.assertEqual(main(['review','prepare',str(self.root),'--session-id','session','--reviewer','reviewer_one','--authoritative']),0)
-            self.assertEqual(main(['review','status',str(self.root),'--session-id','session']),0)
-            self.assertEqual(main(['corpus',str(self.root),'--state','not_reviewed']),0)
+        root=self.project.root
+        self.assertEqual(root,self.root.resolve())
+        aliases=[self.root] if self.root!=root else []
+        if os.name=='posix':
+            alias=Path(self.temp.name).resolve()/'cli-alias'
+            alias.symlink_to(root,target_is_directory=True)
+            aliases.append(alias)
+        # A macOS temporary-parent alias (and the controlled POSIX alias)
+        # must still fail closed. The ordinary CLI fixture uses its real root.
+        for alias in aliases:
+            with self.subTest(alias_refused=True),patch('sys.stdout',new_callable=StringIO),patch('sys.stderr',new_callable=StringIO) as error:
+                self.assertEqual(main(['review','prepare',str(alias),'--session-id','session','--reviewer','reviewer_one','--authoritative']),2)
+                self.assertIn('Symbolic-link or reparse locations are not supported',error.getvalue())
+        with patch('sys.stdout',new_callable=StringIO),patch('sys.stderr',new_callable=StringIO) as error:
+            self.assertEqual(main(['review','prepare',str(root),'--session-id','session','--reviewer','reviewer_one','--authoritative']),0,error.getvalue())
+            self.assertEqual(main(['review','status',str(root),'--session-id','session']),0,error.getvalue())
+            self.assertEqual(main(['corpus',str(root),'--state','not_reviewed']),0,error.getvalue())
 
     def test_http_origin_csrf_and_resume(self):
         self.prepare()

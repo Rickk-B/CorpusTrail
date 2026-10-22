@@ -94,5 +94,16 @@ accounts for the vertical reflow. Every unrelated reference stays byte-for-byte
 unchanged. Per-image rationales/hashes and capture source/report identities live
 in each baseline approval manifest. This is explicit review, not automatic
 approval from a successful capture or a substitute for final strict acceptance.
+
+Expanded native lifecycle coverage also exercises the existing legacy curation
+tests, not only the new CP9 files. The initial capture run exposed two test-owned
+portability assumptions: text-mode Windows bootstrap newline translation and a
+CLI fixture using a noncanonical temporary location. Fixtures now write exact
+canonical UTF-8/LF bytes and use the Project's stored canonical root for normal
+CLI operations. Explicit CRLF and POSIX/native-alias probes still require the
+unchanged production integrity/path guards to refuse those invalid inputs.
+Historical macOS stderr was mocked, so its original error message was not
+preserved; the controlled alias probe supplies the specific refusal evidence.
+This does not establish that earlier accepted scientific data was affected.
 Fixtures establish architecture only. CP10 and real model/import tracks remain
 separately gated; native Europe PMC causation remains unresolved.
