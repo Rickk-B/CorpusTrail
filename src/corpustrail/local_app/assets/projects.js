@@ -79,7 +79,7 @@ function options(kind, capabilities, active) {
   }
 }
 const fieldLabels = {name: 'Project name', description: 'Topic description', scope: 'Corpus definition',
-  providers: 'Discovery providers', resolvers: 'Evidence resolvers', search: 'Search concepts', authorized_reviewers: 'Authorized corpus reviewers'};
+  providers: 'Search services', resolvers: 'Evidence retrieval', search: 'Search concepts', authorized_reviewers: 'Authorized corpus reviewers'};
 function changedFields(current = fields()) {
   return editing ? Object.keys(fieldLabels).filter(key => JSON.stringify(current[key]) !== JSON.stringify(settingsData.fields[key])) : [];
 }
@@ -90,8 +90,8 @@ function summarize() {
     const list = make('dl'); list.className = 'configuration-summary';
     for (const [label, value] of [
     ['Project', current.name], ['Topic description', current.description], ['Broad-corpus definition', current.scope || 'No separate definition configured'],
-    ['Discovery providers', current.providers.map(p => entryData.capabilities.providers.find(a => a.id === p.adapter)?.label || p.id).join(', ') || 'None'],
-    ['Evidence resolvers', current.resolvers.map(id => entryData.capabilities.resolvers.find(r => r.id === id)?.label || id).join(', ') || 'None'],
+    ['Search services', current.providers.map(p => entryData.capabilities.providers.find(a => a.id === p.adapter)?.label || p.id).join(', ') || 'None'],
+    ['Evidence retrieval', current.resolvers.map(id => entryData.capabilities.resolvers.find(r => r.id === id)?.label || id).join(', ') || 'None'],
     ['Search concepts', current.search.map(c => c.label).join(', ') || 'None'], ['Configuration author', current.reviewer],
     ['Authorized corpus reviewers', current.authorized_reviewers.join(', ') || 'None — review observations do not grant authority'],
     ['Storage location', editing ? settingsData.location : entryData.projects_root + '/' + get('folder').value]]) {

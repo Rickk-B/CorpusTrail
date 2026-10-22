@@ -387,7 +387,7 @@ class DiscoveryHttpTests(DiscoveryFixture):
         self.assertIn('I authorize this exact search',html)
         self.assertIn('I also authorize organizing retrieved records',html)
         self.assertIn('No corpus-membership decisions will be made',html)
-        self.assertIn('only the separate Run Discovery action',html)
+        self.assertIn('only the separate Run Search action',html)
         self.assertNotIn('id="transfer"',html)
         self.assertNotIn('id="identity"',html)
         self.assertIn(by_id['approval-area'][1]['aria-labelledby'],by_id)
@@ -545,7 +545,7 @@ async function preview(){elements['search-form'].onsubmit({preventDefault(){}});
         assets=resources.files('corpustrail.local_app').joinpath('assets')
         js=assets.joinpath('discovery.js').read_text(encoding='utf-8')
         self.assertNotIn('innerHTML',js);self.assertNotIn('localStorage',js);self.assertNotIn('http://',js)
-        self.assertIn('Discovery workflow in this UI',assets.joinpath('home.html').read_text(encoding='utf-8'))
+        self.assertIn('Exact-query search available',assets.joinpath('home.html').read_text(encoding='utf-8'))
 
 
 if __name__=='__main__':unittest.main()

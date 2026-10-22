@@ -13,6 +13,20 @@ source "/path/to/environment/bin/activate"
 python -m pip show corpus-trail
 ```
 
+On Windows PowerShell, activate the environment you actually installed into with
+`& "C:\path\to\environment\Scripts\Activate.ps1"`; then use the same `python -m
+pip` commands below. Do not change execution/security policy just to run this:
+you can instead invoke that environment's `Scripts\python.exe` explicitly.
+On macOS/Linux its interpreter is `bin/python`. Check `python --version` and
+`python -m pip --version` before replacing software.
+
+Download the workflow development bundle and retain `build-provenance.json` and
+`SHA256SUMS`. Verify its wheel with `shasum -a 256` (macOS), `sha256sum` (Linux),
+or `Get-FileHash -Algorithm SHA256` (PowerShell), comparing the receipt—not just
+the shared `0.1.0a3.dev0` version. Development downloads expire; they are not a
+GitHub release or PyPI publication. After updating, launch with
+`corpustrail app --open-browser`, or pass your existing project directory.
+
 Installing a newer wheel replaces the previous CorpusTrail package in **that
 environment**, not in every environment on the machine. For development checkpoints
 that share the same package version, explicitly force replacement:

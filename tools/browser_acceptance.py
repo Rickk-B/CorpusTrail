@@ -48,6 +48,9 @@ for names in LIMITED.values():
         'curation-input','curation-correction','curation-successor','curation-plan','curation-reassessment',
         'curation-assisted','curation-assisted-completed','curation-assisted-confirmed','curation-tail','curation-assisted-audit-preview',
         'curation-bounded-plan','curation-bounded-input'})
+    names.update({'handoff-empty-export','handoff-knowledge','handoff-assertion-preview','handoff-knowledge-detail',
+        'handoff-models','handoff-model-configuration','handoff-connection','handoff-task','handoff-ordering',
+        'handoff-export-preview','handoff-export','handoff-mapping'})
 
 
 class Runtime:
@@ -296,7 +299,7 @@ class Runtime:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population','reference','curation'),default='all')
+    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population','reference','curation','handoff'),default='all')
     parser.add_argument('--viewports',nargs='+',choices=tuple(VIEWPORTS),default=list(VIEWPORTS))
     parser.add_argument('--visual',choices=('capture','compare'),default='capture')
     parser.add_argument('--browser',choices=('chromium','webkit'),default='chromium')

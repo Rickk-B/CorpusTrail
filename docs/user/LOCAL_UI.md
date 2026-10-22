@@ -1,8 +1,8 @@
-# Local projects, settings and read-only paper browser
+# Local application: projects, research workflows and paper browser
 
-This development build includes Checkpoints 1–7 of `0.1.0a3.dev0`, not a public a3
+This development build includes the CP10 alpha UI handoff in `0.1.0a3.dev0`, not a public a3
 release. The project wizard and settings have explicit configuration writes.
-The [Discovery workflow](DISCOVERY.md) prepares, approves and executes exact frozen
+The [Explore workflow](DISCOVERY.md) prepares, approves and executes exact frozen
 searches as separate actions, with local background progress and search history.
 Publication details support [explicit eligible evidence retrieval](EVIDENCE.md).
 Dashboard, catalogue, details and provenance browsing remain read-only. No page
@@ -23,9 +23,11 @@ uses a sage background. Scientific badges retain explicit text: a selected page
 or card does not mean a publication is included, reviewed or trusted evidence.
 Warnings and destructive actions remain distinct from primary actions.
 
-The refresh changes presentation, not navigation, review authority, provenance or
-scientific behavior. Researcher aesthetic approval is separate from functional
-acceptance. The existing narrowly verified macOS fixture-path wrapping exception
+The researcher approved the warm appearance on 21 October 2026. CP10 groups
+optional operational work under **Research tools**, with the main navigation
+focused on Home, Projects, dashboard, Explore, Corpus and Review. These are
+presentation changes, not changes to authority, evidence or scientific behavior.
+The existing narrowly verified macOS fixture-path wrapping exception
 remains visual debt, never a strict comparison pass.
 
 ## Launch
@@ -109,10 +111,11 @@ Keep its commit receipt: successive checkpoints share the development version.
    That review interface retains its original write/authority behavior. Do not
    confuse it with the new read-only browser.
 
-Checkpoint 1 received user-performed macOS visual acceptance. New Checkpoint 2
-tests run on Linux; native macOS wizard acceptance remains for the tester.
-No desktop installer is claimed. The product uses standard-library Python and
-packaged local assets.
+CP1–9 and the warm refresh are researcher-accepted. Hosted Linux Chromium,
+macOS Chromium/WebKit and Windows/macOS lifecycle checks are technical evidence,
+not a claim of native Safari or every personal Python environment working.
+CP10 researcher acceptance remains separate. No desktop installer is claimed.
+The product uses standard-library Python and packaged local assets.
 
 ## New Project / Open Existing Project
 
@@ -126,9 +129,9 @@ Choose **New Project**, then follow six steps:
 1. Enter a project name and topic description. Check the proposed folder/location.
 2. Enter an explicit broad-corpus definition. Topical inclusion/exclusion criteria
    may be written in this existing scope field; they are not new independent fields.
-3. Select installed discovery providers and optional search concepts, one per line.
+3. Select installed search services and optional search ideas, one per line.
    Optional credential configuration accepts an environment-variable name only.
-4. Select evidence resolvers separately. Europe PMC currently requires an already
+4. Select evidence-retrieval services separately. Europe PMC currently requires an already
    known PMCID; this wizard does not add DOI/PMID enrichment.
 5. Enter a configuration-author pseudonym (not a default reviewer for future
    sessions). **No publication authority** is selected by default. To grant initial
@@ -224,8 +227,9 @@ projects. Downloaded wheels are independently removable. See [storage ownership]
 authoritatively included. In corpus, Out of corpus, Insufficient evidence and
 Awaiting corpus decision remain separate; likely or unreviewed records are not hidden.
 
-Home describes which workflow steps are available here, through existing commands
-or the separate review UI, and which guided interfaces are planned. Its diagram
+Home distinguishes implemented workflows, optional experimental capabilities and
+future integrations. [Research tools](ALPHA_WORKFLOWS.md) explains ordering,
+Knowledge, Models and Export. The Home diagram
 is explanatory, not an action that runs a search or retrieves evidence.
 The **Review** navigation and dashboard action open [Guided Review](GUIDED_REVIEW.md):
 explicit frozen sessions, draft autosave, non-authoritative Save & Next, Finish
@@ -291,7 +295,7 @@ search-box whitespace. All selected corpus, evidence and human-review filters
 must also match. **Clear search and filters** resets those filters and the query.
 Papers without stored journal metadata cannot match a journal name, but can still
 be found by title or author. A no-results message does not mean a journal has no
-literature. For external literature discovery, use **Discovery** and approve its
+literature. For external literature discovery, use **Explore** and approve its
 exact search plan separately.
 
 The reported macOS no-results incident could not be conclusively attributed
@@ -303,9 +307,9 @@ query as literal text, including whitespace, and has not changed.
 For updating/uninstalling the software without deleting your projects, see
 [removal and storage ownership](REMOVAL_STORAGE.md).
 
-- Only explicit project, discovery, evidence, review, population and reference
-  actions write their respective state. Viewing pages does not run those actions.
-  No classifier engine or production import UI is implemented.
+- Only explicit confirmed operations write their respective state. Viewing pages
+  does not execute those operations. CP8 assessment infrastructure is implemented;
+  real membership-classifier engines and production importers remain unavailable.
 - Catalogue cursors refer to a live revision, not a persisted population. If
   another process changes relevant project records, Refresh/reapply filters to
   restart pagination. The browser does not silently mix revisions.

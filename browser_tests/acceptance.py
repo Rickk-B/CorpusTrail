@@ -15,6 +15,132 @@ from .lifecycle import RequestLedger, finalize_case, settle_reads
 class BrowserAcceptance(unittest.TestCase):
     runtime = None  # Explicit runner-owned browser/report; never auto-discovered.
 
+    def tools_page(self,path):
+        self.visit(path);expect(self.page.locator('#tools-content')).to_have_attribute('aria-busy','false')
+
+    def confirm_tools(self,label,*,remote=False):
+        expect(self.page.locator('#tools-operation')).to_be_visible()
+        self.page.locator('#tools-confirm').check()
+        if remote:self.page.locator('#tools-transfer').check()
+        self.page.get_by_role('button',name=label,exact=True).click()
+        expect(self.page.locator('#operation-summary .badge')).to_contain_text('complete',timeout=15000)
+        self.assertEqual(self.page.locator('#tools-message.error').count(),0)
+
+    def test_handoff_empty_workspaces_and_read_only_navigation(self):
+        self.open_project();before=fingerprint(self.fixture.root)
+        for path,title in (('/prioritization','Review order'),('/knowledge','Knowledge'),('/models','Models'),('/export','Export')):
+            self.tools_page(path);expect(self.page.locator('#tools-title')).to_have_text(title)
+            self.layout()
+        expect(self.page.locator('#tools-content')).to_contain_text('No confirmed corpus members yet')
+        expect(self.page.get_by_role('button',name='Preview bibliography export')).to_have_count(0)
+        self.snapshot('handoff-empty-export')
+        self.page.locator('nav details > summary').focus();self.page.keyboard.press('Enter')
+        expect(self.page.locator('nav details')).to_have_attribute('open','')
+        self.page.get_by_role('link',name='Models',exact=True).click()
+        expect(self.page.locator('#tools-title')).to_have_text('Models')
+        self.assertEqual(before,fingerprint(self.fixture.root))
+        self.assertEqual(self.fixture.model_wire.calls,[]);self.assertEqual(self.fixture.transport.calls,[])
+
+    def test_handoff_knowledge_assertion_authority_history_and_restart(self):
+        from dataclasses import replace
+        p=self.fixture.project
+        p.configure(replace(p.config,config_version=p.config.config_version+1,review=replace(p.config.review,authorized_reviewers=('fixture_reviewer',))),
+            expected_event_id=p.configuration_history()[-1]['event_id'],created_by='fixture',created_at=AT)
+        self.open_project();self.tools_page('/knowledge');self.layout();self.snapshot('handoff-knowledge')
+        self.page.locator('#tools-paper-query').fill('Evidence reference')
+        self.page.get_by_role('button',name='Search project',exact=True).click()
+        self.page.get_by_role('button',name='Use this publication',exact=True).click()
+        self.page.locator('#tools-actor').fill('fixture_reviewer');self.page.locator('#knowledge-field').select_option('ct.organism_population')
+        self.page.locator('#knowledge-value').fill('Invented material specimen')
+        self.page.locator('#knowledge-evidence').select_option(index=1)
+        self.page.locator('#knowledge-rationale').fill('Synthetic human reading; not a model or membership decision.')
+        self.page.get_by_role('button',name='Preview human observation',exact=True).click()
+        expect(self.page.locator('#operation-summary')).to_contain_text('non-authoritative')
+        self.assertEqual(p.knowledge_store.assertions(),[]);self.layout();self.snapshot('handoff-assertion-preview')
+        self.confirm_tools('Confirm Knowledge Record');self.page.get_by_role('button',name='Refresh this workspace',exact=True).click()
+        expect(self.page.locator('#tools-content')).to_have_attribute('aria-busy','false')
+        self.page.locator('#knowledge-predicate').select_option('ct.organism_population')
+        expect(self.page.get_by_role('button',name='Inspect evidence, conflicts and history',exact=True)).to_have_count(1)
+        self.page.get_by_role('button',name='Inspect evidence, conflicts and history',exact=True).click()
+        expect(self.page.locator('#knowledge-detail')).to_contain_text('Invented material specimen')
+        self.page.locator('#event-reviewer').fill('fixture_reviewer');self.page.locator('#event-rationale').fill('Explicit synthetic claim validation, not membership.')
+        self.page.get_by_role('button',name='Preview Knowledge event',exact=True).click()
+        self.confirm_tools('Confirm Knowledge Record')
+        self.tools_page('/knowledge');self.page.locator('#knowledge-predicate').select_option('ct.organism_population')
+        expect(self.page.get_by_role('button',name='Inspect evidence, conflicts and history',exact=True)).to_have_count(1)
+        self.page.get_by_role('button',name='Inspect evidence, conflicts and history',exact=True).click()
+        self.page.get_by_role('button',name='Inspect history page',exact=True).click()
+        expect(self.page.locator('#knowledge-detail')).to_contain_text('validates');self.layout();self.snapshot('handoff-knowledge-detail')
+        self.assertEqual(len(p.knowledge_store.assertions()),1)
+        self.assertTrue(all(p.reviews.membership(pid)['state']=='not_reviewed' for pid in self.fixture.papers))
+        before=fingerprint(self.fixture.root);self.restart();self.open_project();self.tools_page('/knowledge')
+        self.assertEqual(before,fingerprint(self.fixture.root));self.assertEqual(self.fixture.model_wire.calls,[])
+
+    def test_handoff_model_configuration_synthetic_connection_and_exact_task(self):
+        from dataclasses import replace
+        from corpustrail.models import ModelConfig
+        p=self.fixture.project
+        p.configure(replace(p.config,config_version=p.config.config_version+1,models=(ModelConfig('synthetic-task','synthetic-wire','synthetic-model'),)),
+            expected_event_id=p.configuration_history()[-1]['event_id'],created_by='fixture',created_at=AT)
+        self.open_project();self.tools_page('/models');self.layout();self.snapshot('handoff-models')
+        for selector,text in (('#tools-actor','fixture_reviewer'),('#model-workflow','local-experimental'),('#model-name','user-configured-model'),('#model-endpoint','http://127.0.0.1:9/v1')):
+            self.page.locator(selector).fill(text)
+        self.page.locator('#model-execution').select_option('local');self.page.locator('#model-frozen').check()
+        self.page.get_by_role('button',name='Preview model configuration',exact=True).click()
+        expect(self.page.locator('#operation-summary')).to_contain_text('Configuration only')
+        self.assertEqual(len(p.config.models),1);self.layout();self.snapshot('handoff-model-configuration')
+        self.confirm_tools('Save Model Configuration');self.assertEqual(len(p.config.models),2)
+        self.tools_page('/models');self.page.locator('#model-existing').select_option('local-experimental')
+        expect(self.page.locator('#model-endpoint')).to_have_value('http://127.0.0.1:9/v1')
+        expect(self.page.locator('#model-workflow')).to_have_value('local-experimental')
+        self.page.locator('#model-test-actor').fill('fixture_reviewer')
+        self.page.locator('article').filter(has=self.page.get_by_role('heading',name='synthetic-task',exact=True)).get_by_role('button',name='Preview synthetic connection test').click()
+        self.assertEqual(self.fixture.model_wire.calls,[]);self.layout();self.snapshot('handoff-connection')
+        self.confirm_tools('Run Synthetic Connection Test',remote=True)
+        self.assertEqual([v[0] for v in self.fixture.model_wire.calls],['connection'])
+        self.assertEqual(p.knowledge_store.assertions(),[])
+        self.page.locator('#tools-paper-query').fill('Evidence reference');self.page.get_by_role('button',name='Search project',exact=True).click()
+        self.page.get_by_role('button',name='Use this publication',exact=True).click()
+        self.page.locator('#task-actor').fill('fixture_reviewer');self.page.locator('#task-workflow').select_option('synthetic-task')
+        self.page.locator('#task-instructions').fill('Invented offline characterization; no scientific-performance claim.')
+        self.page.locator('#task-predicate').select_option('ct.organism_population')
+        self.page.get_by_role('button',name='Preview exact Knowledge task',exact=True).click()
+        self.page.get_by_text('Inspect exact frozen plan and input',exact=True).click()
+        expect(self.page.locator('#operation-summary > details').filter(has=self.page.get_by_text('Inspect exact frozen plan and input',exact=True)).locator('pre')).to_contain_text('Evidence reference')
+        self.layout();self.snapshot('handoff-task')
+        self.confirm_tools('Authorize and Run This Exact Task',remote=True)
+        self.assertEqual([v[0] for v in self.fixture.model_wire.calls],['connection','task'])
+        self.assertEqual(len(p.knowledge_store.assertions()),1)
+        self.assertEqual(p.knowledge_store.assertions()[0]['payload']['initial_authority'],'non_authoritative')
+        self.assertTrue(all(p.reviews.membership(pid)['state']=='not_reviewed' for pid in self.fixture.papers))
+        self.assertEqual(self.fixture.transport.calls,[])
+
+    def test_handoff_ordering_preserves_complete_tail_and_authority(self):
+        from corpustrail.curation import ReviewEvent,EvidenceBasis
+        from dataclasses import replace
+        p=self.fixture.project
+        p.configure(replace(p.config,config_version=p.config.config_version+1,review=replace(p.config.review,authorized_reviewers=('fixture_reviewer',))),
+            expected_event_id=p.configuration_history()[-1]['event_id'],created_by='fixture',created_at=AT)
+        for pid,state in zip(self.fixture.papers[:2],('included','excluded')):
+            source=p.identities.observations(pid)[0]['source']
+            event=ReviewEvent(pid,state,'sufficient','metadata','Invented training decision','fixture_reviewer',AT,
+                (EvidenceBasis('metadata',source['source_sha256'],source['source_uri'],artifact_validity='verified'),),
+                producer_type='human',authority_state='human_authorized')
+            p.reviews.apply(p.reviews.plan(event),recorded_at=AT)
+        members={pid:p.reviews.membership(pid) for pid in self.fixture.papers}
+        self.open_project();self.tools_page('/prioritization')
+        expect(self.page.locator('#tools-content')).to_contain_text('Synthetic')
+        self.page.locator('#tools-actor').fill('fixture_reviewer')
+        self.page.get_by_role('button',name='Preview review ordering',exact=True).click()
+        self.confirm_tools('Create Review Ordering')
+        self.page.get_by_role('button',name='Refresh this workspace',exact=True).click()
+        self.page.get_by_role('button',name='Inspect ordering',exact=True).click()
+        expect(self.page.locator('#tools-ranking article')).to_have_count(5)
+        expect(self.page.locator('#tools-ranking')).to_contain_text('not calibrated')
+        self.layout();self.snapshot('handoff-ordering')
+        self.assertEqual(members,{pid:p.reviews.membership(pid) for pid in self.fixture.papers})
+        self.assertEqual(self.fixture.transport.calls,[])
+
     def curation_seed(self):
         from .curation_fixtures import seed
         return seed(self.fixture)
@@ -220,17 +346,18 @@ class BrowserAcceptance(unittest.TestCase):
     def setUp(self):
         # Review order uses canonical IDs. Stabilize only synthetic visual IDs;
         # every run still has a private root, lock directory and browser context.
-        self.fixture = ApplicationFixture(project_id='browser-curation-fixture' if 'curation' in self._testMethodName else 'browser-guided-fixture' if 'review' in self._testMethodName else
+        self.fixture = ApplicationFixture(project_id='browser-handoff-fixture' if 'handoff' in self._testMethodName else 'browser-curation-fixture' if 'curation' in self._testMethodName else 'browser-guided-fixture' if 'review' in self._testMethodName else
             'browser-population-fixture' if 'population' in self._testMethodName else
             'browser-reference-fixture' if 'reference' in self._testMethodName else None,
-            long_path='long_paths' in self._testMethodName)
+            long_path='long_paths' in self._testMethodName,
+            alpha_workflow=self._testMethodName=='test_review_guided_save_finish_publish_and_resume')
         self.addCleanup(self.fixture.close)
         self.context = self.runtime.browser.new_context(viewport=self.runtime.viewport,
             device_scale_factor=1, locale='en-US', timezone_id='UTC', color_scheme='light',
             reduced_motion='reduce', service_workers='block')
         self.addCleanup(self.runtime.close_context, self)
         self.context.tracing.start(screenshots=True, snapshots=False, sources=False)
-        if 'reference' in self._testMethodName or 'curation' in self._testMethodName:
+        if 'reference' in self._testMethodName or 'curation' in self._testMethodName or 'handoff' in self._testMethodName:
             # Control only synthetic form operation IDs at their generation
             # boundary. Same-paper contradictory assignments otherwise change
             # hash order across independent screenshots. Counter survives this
@@ -415,8 +542,8 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('link',name='Open Existing Project',exact=True).click()
         expect(self.page.locator('#project-list article')).to_have_count(1)
         self.open_project();self.snapshot('dashboard')
-        self.page.get_by_role('link',name='Discover More Publications',exact=True).click()
-        expect(self.page.get_by_role('heading',name='Discovery',exact=True)).to_be_visible()
+        self.page.get_by_role('link',name='Explore More Publications',exact=True).click()
+        expect(self.page.get_by_role('heading',name='Explore',exact=True)).to_be_visible()
         expect(self.page.locator('#providers input')).to_have_count(4)
         self.assertEqual(self.fixture.transport.calls,[])
         self.visit('/papers')
@@ -593,7 +720,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(created.config.review.authorized_reviewers,('browser_reviewer',))
         self.assertEqual(created.configuration_history()[0]['created_by'],'browser_reviewer')
         self.snapshot('empty-dashboard');self.layout()
-        self.page.get_by_role('link',name='Start Literature Discovery',exact=True).click()
+        self.page.get_by_role('link',name='Explore Publications',exact=True).click()
         expect(self.page.locator('#history button')).to_have_count(0)
         self.assertEqual(self.fixture.transport.calls,[])
         self.visit('/settings');self.snapshot('settings');self.layout()
@@ -689,7 +816,7 @@ class BrowserAcceptance(unittest.TestCase):
     def test_discovery_exact_approval_execution_and_history(self):
         self.open_project();self.prepare_discovery()
         self.fixture.transport.gate=threading.Event()
-        self.page.get_by_role('button',name='Run Discovery',exact=True).click()
+        self.page.get_by_role('button',name='Run Search',exact=True).click()
         expect(self.page.locator('#job-status')).to_contain_text('Running')
         expect(self.page.locator('#repeat')).to_be_enabled()
         expect(self.page.locator('#provider-progress li').first).to_have_text(
@@ -725,7 +852,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Preview Search Plan').click()
         self.page.get_by_role('button',name='Approve Search Plan').click()
         self.fixture.transport.fail_crossref=True
-        self.page.get_by_role('button',name='Run Discovery',exact=True).click()
+        self.page.get_by_role('button',name='Run Search',exact=True).click()
         expect(self.page.locator('#job-status')).to_contain_text('partial',timeout=15000)
         self.assertIn('Publications created by this search\n0',self.page.locator('#results').inner_text())
         self.assertIn('Previously known publications\n4',self.page.locator('#results').inner_text())
@@ -751,7 +878,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='Preview Search Plan',exact=True).click()
         self.page.get_by_role('button',name='Approve Search Plan',exact=True).click()
         self.assertEqual(self.fixture.transport.calls,[])
-        self.page.get_by_role('button',name='Run Discovery',exact=True).click()
+        self.page.get_by_role('button',name='Run Search',exact=True).click()
         expect(self.page.locator('#job-status')).to_contain_text('1/1 providers finished',timeout=15000)
         expect(self.page.locator('#provider-progress')).to_contain_text('TLS certificate verification failed')
         self.assertNotIn('rate limit',self.page.locator('#provider-progress').inner_text().lower())
@@ -1234,6 +1361,8 @@ class BrowserAcceptance(unittest.TestCase):
             source_uri='fixture://verified-review-evidence',legitimate_basis='synthetic_fixture',resolver='fixture',resolver_version='v1')
         initial={p:project.reviews.history(p) for p in self.fixture.papers}
         self.open_project();self.start_guided_review()
+        self.assertEqual(len(project.identities.observations(self.fixture.papers[0])),2)
+        self.assertEqual(sum(len(project.identities.observations(p)) for p in self.fixture.papers),6)
         self.snapshot('review-active');self.layout()
         outcomes=['included','excluded','insufficient_evidence','included','excluded']
         captured_missing=False
@@ -1250,6 +1379,8 @@ class BrowserAcceptance(unittest.TestCase):
                 self.assertFalse(project.reviews.history(self.fixture.papers[0]))
                 self.snapshot('review-verified-text')
             elif 'Long scientific title' in title:self.snapshot('review-long-title')
+            elif self.page.locator('#review-abstract').inner_text()=='Invented second abstract-best source.':
+                expect(self.page.locator('#review-evidence-status')).not_to_contain_text('No abstract available')
             else:
                 expect(self.page.locator('#review-evidence-status')).to_contain_text('No abstract available')
                 expect(self.page.locator('#review-extent option[value="full_document"]')).to_have_count(0)
@@ -1257,7 +1388,7 @@ class BrowserAcceptance(unittest.TestCase):
                 if not captured_missing:
                     self.snapshot('review-missing-evidence');captured_missing=True
             self.page.locator('input[name="assessment"][value="'+outcome+'"]').check()
-            self.page.locator('#review-extent').select_option('full_document' if title==TITLE else 'metadata')
+            self.page.locator('#review-extent').select_option('full_document' if title==TITLE else 'abstract' if self.page.locator('#review-abstract').inner_text()=='Invented second abstract-best source.' else 'metadata')
             self.page.locator('#review-rationale').fill('Invented human assessment '+str(i+1))
             expect(self.page.locator('#review-save-state')).to_contain_text('Draft saved')
             if i==0:
@@ -1320,6 +1451,31 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(self.fixture.transport.calls,[])
         self.visit('/dashboard');expect(self.page.locator('#summaries')).to_contain_text('In corpus: 2')
         self.assertTrue(handle)
+        self.tools_page('/export');self.page.locator('#tools-actor').fill('fixture_reviewer')
+        self.page.get_by_role('button',name='Preview bibliography export',exact=True).click()
+        expect(self.page.locator('#operation-summary')).to_contain_text('included: 2')
+        self.assertEqual(self.fixture.handoff.list(project,'exports')['total'],0)
+        self.layout();self.snapshot('handoff-export-preview')
+        self.confirm_tools('Create Frozen Export')
+        with self.page.expect_download() as saved:
+            self.page.locator('#operation-actions').get_by_role('button',name='Download Bibliography CSV',exact=True).click()
+        import csv
+        from pathlib import Path
+        body=Path(saved.value.path()).read_text(encoding='utf-8')
+        import io
+        records=list(csv.DictReader(io.StringIO(body)))
+        self.assertEqual(len(records),2);self.assertNotIn('asreview_label',records[0])
+        self.assertEqual({r['corpustrail_paper_id'] for r in records},{p for p in self.fixture.papers if project.reviews.membership(p)['state']=='included'})
+        self.tools_page('/export');self.layout();self.snapshot('handoff-export')
+        self.page.get_by_role('button',name='Use this export for returned results',exact=True).click()
+        for selector,text in (('#mapping-actor','fixture_reviewer'),('#mapping-question','Invented downstream review question'),('#mapping-review','Synthetic ASReview results')):
+            self.page.locator(selector).fill(text)
+        returned='corpustrail_paper_id,asreview_label\n'+'\n'.join(r['corpustrail_paper_id']+',0' for r in reversed(records))+'\n'
+        self.page.locator('#mapping-file').set_input_files({'name':'synthetic-returned.csv','mimeType':'text/csv','buffer':returned.encode()})
+        self.page.get_by_role('button',name='Preview question-specific mapping',exact=True).click()
+        expect(self.page.locator('#operation-summary')).to_contain_text('will not change broad-corpus membership')
+        self.layout();self.snapshot('handoff-mapping');self.confirm_tools('Map Question-specific Results')
+        self.assertEqual(states,[project.reviews.membership(p)['state'] for p in self.fixture.papers])
 
     def test_review_skip_frozen_population_and_draft_resume(self):
         from corpustrail.identity import BibliographicRecord,Identifier,SourceReference

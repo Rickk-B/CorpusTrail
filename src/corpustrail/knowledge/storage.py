@@ -303,11 +303,15 @@ def event_row(item):
             ('target_assertion_id','source_assertion_id','target_event_id','relation','actor_type','actor_id','purpose','policy_id','created_at')}, 'payload_json': canonical(p)}
 
 
-def verify_connection(con, store):
+def verify_connection(con, store, *, assertion_ids=None, event_ids=None):
     """Reconstruct IDs, indexed columns, concepts and links from immutable payloads."""
     counts = {}
     for table, kind, row_fn in [('knowledge_assertions','assertion',assertion_row), ('knowledge_events','event',event_row)]:
-        rows = con.execute('SELECT * FROM ' + table).fetchall()
+        selected = assertion_ids if kind == 'assertion' else event_ids
+        column = 'assertion_id' if kind == 'assertion' else 'event_id'
+        rows = con.execute('SELECT * FROM ' + table +
+            ('' if selected is None else ' WHERE '+column+' IN ('+','.join('?' for _ in selected)+')'),
+            () if selected is None else tuple(selected)).fetchall()
         counts[table] = len(rows)
         for row in rows:
             p = json.loads(row['payload_json'])

@@ -1,9 +1,9 @@
-# Discover publications through the local app
+# Explore publications through the local app
 
-Open a project, then choose **Discovery**. No database is contacted by opening
+Open a project, then choose **Explore**. No database is contacted by opening
 this page, reading history or preparing a preview.
 
-1. Enter one exact search query, or start from a configured concept. This does
+1. Enter one exact search query, or start from a saved search idea. This does
    not edit Project Settings. The chooser copies one label into the standalone
    query; it does not run all concepts. Aliases are not automatically expanded. Providers
    interpret their own query syntax; separate language/date filters are not
@@ -24,7 +24,7 @@ this page, reading history or preparing a preview.
    source-provenance organization. **Approve Search Plan** explicitly authorizes
    both operations together for this exact plan. Approval itself sends nothing and
    makes no corpus-membership decisions; both authorizations remain recorded.
-6. Click **Run Discovery**. Only the approved frozen plan is executed. Editing
+6. Click **Run Search**. Only the approved frozen plan is executed. Editing
    invalidates that preview/approval; configuration changes require a new preview.
    Queries/settings go to the selected services, with your credential header if
    configured. Paper text, review labels and membership decisions are not sent.

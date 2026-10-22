@@ -36,10 +36,29 @@ class KnowledgeView:
                 (predicate is None or o['predicate']==predicate) and
                 (producer is None or o['producer']['type']==producer)]
 
-    def _observations(self, db):
-        verify_connection(db, KnowledgeStore(self.project,registry=Registry.from_connection(db)))
+    def _observations(self, db, *, selected=None):
+        def rows(table, key, where=''):
+            sql = 'SELECT * FROM '+table
+            args = ()
+            if selected is not None:
+                sql += ' WHERE '+key+' IN ('+','.join('?' for _ in selected)+')'
+                args = tuple(selected)
+                if where: sql += ' AND '+where
+            elif where: sql += ' WHERE '+where
+            return list(db.execute(sql+' ORDER BY '+key, args))
+        assertions = rows('knowledge_assertions','assertion_id')
+        if selected is None:
+            events = rows('knowledge_events','event_id')
+        else:
+            ids = [r['assertion_id'] for r in assertions]
+            marks = ','.join('?' for _ in ids)
+            events = list(db.execute('SELECT * FROM knowledge_events WHERE target_assertion_id IN ('+marks+
+                ') OR source_assertion_id IN ('+marks+') ORDER BY event_id', (*ids,*ids)))
+        verify_connection(db, KnowledgeStore(self.project,registry=Registry.from_connection(db)),
+            assertion_ids=None if selected is None else [r['assertion_id'] for r in assertions],
+            event_ids=None if selected is None else [r['event_id'] for r in events])
         result = []
-        for row in db.execute('SELECT * FROM ct_paper_observations ORDER BY observation_id'):
+        for row in rows('ct_paper_observations','observation_id'):
             p = json.loads(row['payload_json']); source = p['source']
             result.append(observation(row['observation_id'],row['paper_id'],'bibliography.record',p['record'],
                 source={'table':'ct_paper_observations','record_id':row['observation_id'], **source},
@@ -47,15 +66,23 @@ class KnowledgeView:
                           'name':source['producer_id'],'version':None},
                 evidence={'representation':'metadata','artifact_sha256':source['source_sha256'],
                           'trusted':source['identity_status']=='verified'}, timestamp=source['observed_at']))
-        reviews = list(db.execute('SELECT * FROM ct_review_events ORDER BY sequence'))
+        reviews = rows('ct_review_events','event_id')
+        reviews.sort(key=lambda r:r['sequence'])
         current = {}
         for row in reviews:
             if row['authority_state']=='human_authorized':
                 current[row['paper_id']]=row['event_id']
+        if selected is not None:
+            for row in reviews:
+                head = db.execute("SELECT event_id FROM ct_review_events WHERE paper_id=? AND authority_state='human_authorized' ORDER BY sequence DESC LIMIT 1",(row['paper_id'],)).fetchone()
+                if head: current[row['paper_id']]=head[0]
         for row in reviews:
             p = json.loads(row['payload_json'])
             relations = [{'relation':'supersedes','target':p['supersedes']}] if p['supersedes'] else []
             relations += [{'relation':'superseded_by','source':r['event_id']} for r in reviews if r['supersedes']==row['event_id']]
+            if selected is not None:
+                relations = ([{'relation':'supersedes','target':p['supersedes']}] if p['supersedes'] else []) + [
+                    {'relation':'superseded_by','source':r[0]} for r in db.execute('SELECT event_id FROM ct_review_events WHERE supersedes=? ORDER BY sequence',(row['event_id'],))]
             result.append(observation(row['event_id'],row['paper_id'],'ct.broad_corpus_membership',p['state'],
                 source={'table':'ct_review_events','record_id':row['event_id'], 'content_sha256':row['content_sha256'],
                         'original_review':p}, producer={'type':{'parser':'parser/document','imported':'imported/external'}.get(p['producer_type'],p['producer_type']),
@@ -63,7 +90,7 @@ class KnowledgeView:
                 timestamp=p['created_at'],authority={'source_status':row['authority_state'],
                     'purpose':'broad_corpus_membership','current':current.get(row['paper_id'])==row['event_id']},
                 relations=relations))
-        for row in db.execute("SELECT * FROM ct_pipeline_events WHERE kind='representation' ORDER BY event_id"):
+        for row in rows('ct_pipeline_events','event_id',"kind='representation'"):
             p = json.loads(row['payload_json'])['payload']
             result.append(observation(row['event_id'],row['paper_id'],'ct.evidence_availability',p['representation'],
                 source={'table':'ct_pipeline_events','record_id':row['event_id'],'content_sha256':row['content_sha256'],
@@ -72,8 +99,8 @@ class KnowledgeView:
                 evidence={'representation':p['representation'],'artifact_sha256':p['artifact_sha256'],
                           'trusted':p['trusted'],'artifact_validity':p['artifact_validity'],
                           'evidence_depth':p.get('evidence_depth')}, timestamp=p['created_at']))
-        events = [identified(json.loads(r['payload_json']),'event') for r in db.execute('SELECT * FROM knowledge_events ORDER BY event_id')]
-        for row in db.execute('SELECT * FROM knowledge_assertions ORDER BY assertion_id'):
+        events = [identified(json.loads(r['payload_json']),'event') for r in events]
+        for row in assertions:
             p = json.loads(row['payload_json'])
             relations = [e for e in events if row['assertion_id'] in (e['payload']['target_assertion_id'],e['payload']['source_assertion_id'])]
             grants = [e for e in events if e['payload']['target_assertion_id']==row['assertion_id'] and

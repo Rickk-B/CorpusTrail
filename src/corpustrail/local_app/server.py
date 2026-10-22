@@ -24,7 +24,30 @@ ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; char
           'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8',
           'evidence.js': 'text/javascript; charset=utf-8', 'review.js':'text/javascript; charset=utf-8',
           'populations.js': 'text/javascript; charset=utf-8','references.js':'text/javascript; charset=utf-8',
-          'curation.js':'text/javascript; charset=utf-8'}
+          'curation.js':'text/javascript; charset=utf-8','handoff.js':'text/javascript; charset=utf-8'}
+
+
+def navigation(active, path, *, workflows=(), editable=True):
+    from html import escape
+    main=[('/home','Home')]+([('/projects','Projects')] if editable else [])
+    if active:
+        main += [('/dashboard','Project dashboard')]
+        if 'explore' in workflows:main.append(('/explore','Explore'))
+        main.append(('/papers','Corpus'))
+        if 'review' in workflows:main.append(('/review','Review'))
+    def link(route,label):
+        selected = path==route or route=='/explore' and path=='/discovery'
+        identity = ' id="nav-'+{'/dashboard':'dashboard','/papers':'papers','/projects':'projects','/settings':'settings'}[route]+'"' if route in {'/dashboard','/papers','/projects','/settings'} else ''
+        target=route+'#' if route in {'/curation','/populations','/references'} else route
+        return '<a'+identity+' href="'+target+'"'+(' aria-current="page"' if selected else '')+'>'+escape(label)+'</a>'
+    body=''.join(link(*item) for item in main)
+    if active:
+        tools=[item for item in [
+            ('/curation','Curation and audits'),('/populations','Candidate sets'),('/references','Reference collections'),
+            ('/prioritization','Review order'),('/knowledge','Knowledge'),('/models','Models'),('/export','Export'),('/settings','Project Settings')]
+            if item[0][1:] in workflows or item[0]=='/settings' and editable]
+        if tools:body += '<details class="nav-tools"><summary>Research tools</summary><div>'+''.join(link(*item) for item in tools)+'</div></details>'
+    return '<nav aria-label="Application">'+body+'</nav>'
 
 
 def _query(value, allowed):
@@ -41,7 +64,7 @@ def _number(value):
 
 
 @leased_server_factory
-def make_server(project=None, *, port=8766, controller=None, discovery=None, evidence=None, curation=None):
+def make_server(project=None, *, port=8766, controller=None, discovery=None, evidence=None, curation=None, handoff=None):
     """Reads never write; only controller-enabled project POSTs can configure."""
     if type(port) is not int or not 0 <= port <= 65535:
         raise ContractError('port must be between 0 and 65535')
@@ -65,6 +88,9 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
     if controller is not None and curation is None:
         from corpustrail.application.curation import CurationController
         curation = CurationController()
+    if controller is not None and handoff is None:
+        from corpustrail.application.handoff import HandoffController
+        handoff = HandoffController()
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
@@ -79,11 +105,13 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 and (origin is None or self.headers.get_all('Origin') == ['http://' + expected])
                 and self.headers.get('Sec-Fetch-Site', 'same-origin') in {'none', 'same-origin'})
 
-        def send(self, status, body, content_type='application/json; charset=utf-8'):
+        def send(self, status, body, content_type='application/json; charset=utf-8', *, download=None):
             data = body if isinstance(body, bytes) else body.encode('utf-8')
             self.send_response(status)
             self.send_header('Content-Type', content_type)
             self.send_header('Content-Length', str(len(data)))
+            if download is not None:
+                self.send_header('Content-Disposition', 'attachment; filename="'+download+'"')
             self.send_header('Cache-Control', 'no-store')
             self.send_header('X-Content-Type-Options', 'nosniff')
             self.send_header('Referrer-Policy', 'no-referrer')
@@ -107,13 +135,13 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/review','/populations','/references','/curation','/curation/review'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/explore','/review','/populations','/references','/curation','/curation/review','/prioritization','/knowledge','/models','/export'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
                     active = controller.active_handle is not None if controller is not None else project is not None
                     home = path == '/home' or path == '/' and not active
                     setup = controller is not None and path in {'/projects', '/projects/new', '/settings'}
-                    if path == '/discovery' and (not active or discovery is None):
+                    if path in {'/discovery','/explore'} and (not active or discovery is None):
                         return self.error(409, 'project_required', 'Open a project before using Discovery.')
                     if path == '/review' and (not active or review is None):
                         return self.error(409,'project_required','Open a project before using Guided Review.')
@@ -123,8 +151,14 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                         return self.error(409,'project_required','Open a project before using reference collections.')
                     if path.startswith('/curation') and (not active or curation is None):
                         return self.error(409,'project_required','Open a project before using curation.')
+                    if path in {'/prioritization','/knowledge','/models','/export'} and (not active or handoff is None):
+                        return self.error(409,'project_required','Open a project before using research tools.')
                     page = 'home.html' if home else 'projects.html' if setup else 'curation.html' if path=='/curation' else 'references.html' if path=='/references' else 'populations.html' if path=='/populations' else 'review.html' if path in {'/review','/curation/review'} else 'discovery.html' if path == '/discovery' else 'index.html'
+                    if path in {'/discovery','/explore'}:page='discovery.html'
+                    if path in {'/prioritization','/knowledge','/models','/export'}:page='handoff.html'
                     html = assets.joinpath(page).read_text(encoding='utf-8')
+                    workflows=[name for name,service in [('explore',discovery),('review',review),('populations',populations),('references',references),('curation',curation),('prioritization',handoff),('knowledge',handoff),('models',handoff),('export',handoff)] if service is not None]
+                    html = re.sub(r'<nav aria-label="Application">.*?</nav>',lambda _:navigation(active,path,workflows=workflows,editable=controller is not None),html,flags=re.S)
                     html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active else 'hidden')
                     html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
                     html = html.replace('REVIEW_NAV_HIDDEN', '' if active and review is not None else 'hidden')
@@ -143,6 +177,48 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     return self.error(404, 'not_found', 'Page not found.')
                 if self.headers.get_all('X-CorpusTrail-Session') != [token]:
                     return self.error(403, 'session_required', 'Open the local application before reading its API.')
+                if handoff is not None and path.startswith('/api/v1/tools/'):
+                    from corpustrail.application.handoff import fields
+                    from corpustrail.application.projects import ProjectController
+                    with controller.use() as current:
+                        query=_query(route.query,{'offset','limit','revision','paper','predicate','section'})
+                        paging={k:_number(v) for k,v in query.items() if k in {'offset','limit'}}
+                        tail=path[len('/api/v1/tools/'):];parts=tail.split('/')
+                        if tail=='export-summary':
+                            if query:raise ContractError('export summary has no query fields')
+                            result={'schema':'corpustrail-local-handoff/v1',**current.asreview.preview()}
+                        elif tail=='configuration':
+                            if query:raise ContractError('configuration has no query fields')
+                            result=handoff.configuration(current)
+                        elif tail in {'knowledge','rankings','exports','operations','connections','extractions','mappings'}:
+                            if 'section' in query:raise ContractError('unsupported tools list field')
+                            result=handoff.list(current,tail,**paging,**{k:v for k,v in query.items() if k not in paging})
+                        elif parts[0] in {'model-history','connection-history'} and len(parts) in {1,2}:
+                            if set(query)-{'offset','limit','revision','event'}:raise ContractError('unsupported model history query')
+                            result=handoff.model_history(current,**paging,revision=query.get('revision'),
+                                connection_tests=parts[0]=='connection-history',handle=parts[1] if len(parts)==2 else None,event=query.get('event'))
+                        elif len(parts)==2 and parts[0] in {'knowledge','rankings','operations','evidence'}:
+                            if set(query)-({'offset','limit','section','revision'} if parts[0]=='knowledge' else {'offset','limit','section'} if parts[0]=='rankings' else {'offset','limit'}):raise ContractError('unsupported tools detail fields')
+                            if parts[0]=='knowledge':result=handoff.knowledge(current,parts[1],**paging,section=query.get('section','record'),revision=query.get('revision'))
+                            elif parts[0]=='rankings':result=handoff.ranking(current,parts[1],**paging,section=query.get('section','scores'))
+                            elif parts[0]=='evidence':
+                                if query:raise ContractError('evidence choices have no query')
+                                result=handoff.evidence_choices(current,parts[1])
+                            else:
+                                if query:raise ContractError('operation status has no query')
+                                result=handoff.operation(current,parts[1])
+                        elif len(parts)==3 and parts[0]=='operations' and parts[2]=='plan':
+                            if set(query)-{'offset','limit'}:raise ContractError('unsupported plan fields')
+                            result=handoff.exact_plan(current,parts[1],**paging)
+                        elif len(parts)==3 and parts[0]=='download':
+                            if query:raise ContractError('download has no query')
+                            body=handoff.download(current,parts[1],parts[2])
+                            return self.send(200,body,'text/csv; charset=utf-8' if parts[2]=='dataset.csv' else 'application/json',download=parts[2])
+                        else:return self.error(404,'not_found','Research tool resource not found.')
+                        fields(result,{'schema'},set(result)-{'schema'})
+                        from corpustrail.models.contracts import safe_data
+                        safe_data(result,secrets=ProjectController._secrets(current.config))
+                        return self.send(200,json.dumps(result,ensure_ascii=False,allow_nan=False))
                 if path.startswith('/api/v1/projects/trash/') or path == '/api/v1/projects/close':
                     return self.error(404, 'not_found', 'This operation requires explicit protected submission.')
                 if controller is not None and path == '/api/v1/projects':
@@ -367,6 +443,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             routes.update('/api/v1/references/'+name for name in ('preview','commit','upgrade','verify','context_preview','context_commit'))
             routes.update('/api/v1/curation/'+name for name in ('upgrade','plan_preview','plan_commit','start','execute','recover','cancel','validate','audit_preview','audit_commit','assisted_create','correction_preview','correction_commit'))
             routes.add('/api/v1/curation/review/command')
+            routes.update('/api/v1/tools/'+name for name in ('prepare','execute','results-upload'))
             if controller is None or self.path not in routes:
                 return self.readonly()
             self.close_connection = True
@@ -382,6 +459,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             is_population = self.path.startswith('/api/v1/populations/')
             is_reference = self.path.startswith('/api/v1/references/')
             is_curation = self.path.startswith('/api/v1/curation/')
+            is_tools = self.path.startswith('/api/v1/tools/')
             try:
                 lengths = self.headers.get_all('Content-Length')
                 if (self.headers.get_all('Content-Type') != ['application/json']
@@ -407,10 +485,20 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 from corpustrail.application.populations import SCHEMA as POPULATION_SCHEMA
                 from corpustrail.application.references import SCHEMA as REFERENCE_SCHEMA
                 from corpustrail.application.curation import SCHEMA as CURATION_SCHEMA
-                expected_schema = CURATION_SCHEMA if is_curation else REFERENCE_SCHEMA if is_reference else POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                from corpustrail.application.handoff import SCHEMA as HANDOFF_SCHEMA
+                expected_schema = HANDOFF_SCHEMA if is_tools else CURATION_SCHEMA if is_curation else REFERENCE_SCHEMA if is_reference else POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
                 if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if is_curation:
+                if is_tools:
+                    from corpustrail.application.handoff import fields
+                    action=self.path.rsplit('/',1)[1]
+                    required={'prepare':{'kind','values','request_id'},'execute':{'key','preview_sha256','confirmed','confirm_external'},
+                              'results-upload':{'request_id','offset','body','final','sha256'}}[action]
+                    fields(body,required)
+                    with controller.use() as current:
+                        result=(handoff.prepare(current,**body) if action=='prepare' else handoff.execute(current,**body)
+                                if action=='execute' else handoff.upload(current,**body))
+                elif is_curation:
                     action='review_command' if self.path=='/api/v1/curation/review/command' else self.path.rsplit('/',1)[1]
                     with controller.use() as current:result=curation.command(current,action,body)
                 elif is_reference:
@@ -474,6 +562,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             discovery.close()
             if evidence is not None: evidence.close()
             if curation is not None: curation.close()
+            if handoff is not None: handoff.close()
             original_close()
         server.server_close = close
     return server
@@ -497,3 +586,4 @@ def serve(project=None, *, port=8766, open_browser=False, projects_root=None):
         pass
     finally:
         server.server_close()
+        controller.close()

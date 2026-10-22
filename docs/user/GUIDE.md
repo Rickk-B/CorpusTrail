@@ -3,6 +3,13 @@
 CorpusTrail maintains a broad topic corpus. ASReview later applies the eligibility
 criteria of a particular review question. Keep those label spaces separate.
 
+For ordinary alpha use, launch `corpustrail app --open-browser` and follow the
+[local UI guide](LOCAL_UI.md) and [Research tools walkthrough](ALPHA_WORKFLOWS.md).
+Explore, Corpus and Review form the main path; optional ordering, Knowledge,
+Models, candidate/reference sets and unlabelled ASReview export are under
+**Research tools**. The command/configuration examples below remain advanced
+interfaces, not requirements to copy technical IDs or edit JSON for these UI flows.
+
 ## Installation
 
 Use a dedicated venv with `python -m pip install -e .` from a supplied or cloned

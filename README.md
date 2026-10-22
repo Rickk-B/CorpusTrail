@@ -74,7 +74,7 @@ actions. A direct project launch still opens its dashboard. Browse **Corpus**, p
 details, evidence status and optional advanced provenance. Browsing remains read-only.
 New Project keeps a six-step wizard; Project Settings is a direct-edit page with
 Save Changes and Discard Changes. Configuration saves preserve their history.
-The [Discovery page](docs/user/DISCOVERY.md) previews an exact saved search, requires
+The [Explore page](docs/user/DISCOVERY.md) previews an exact saved search, requires
 explicit approval, then runs a bounded background search with progress/history.
 Discovery collects candidates, never membership decisions. Opening pages never
 contacts external services. Publication details now support explicit eligible
@@ -85,7 +85,10 @@ freezes a publication/evidence set, autosaves drafts and records non-authoritati
 human observations through Save & Next. Finish Review preserves undecided papers;
 only a separate authorized confirmation publishes corpus membership atomically.
 The existing `corpustrail review serve` interface retains its legacy per-paper
-contract. Export UI and production corpus import remain separately planned.
+contract. [Research tools](docs/user/ALPHA_WORKFLOWS.md) now expose existing local
+review ordering, Knowledge observations and history, optional model configuration
+and exact structured tasks, and unlabelled ASReview export/results mapping.
+Production corpus import remains separately gated; Export is not an importer.
 The [Populations workspace](docs/user/POPULATIONS.md) freezes origin-independent
 candidate versions, retains lineage, combines exact canonical sets and feeds
 Guided Review. Production format importers remain separately gated and unavailable.
@@ -102,6 +105,8 @@ reassessment. Manual review always works without an engine. Synthetic examples
 demonstrate software contracts, not scientific performance.
 Assessments never publish membership or change human authority.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
+The one-command launcher is the installation bridge, not a native installer.
+No model, account or optional numerical package is needed for manual curation.
 Optional [macOS project removal](docs/user/PROJECT_REMOVAL.md) moves a confirmed,
 inactive project to native Trash; it never falls back to permanent deletion.
 

@@ -1,4 +1,4 @@
-include README.md LICENSE NOTICE.md CHANGELOG.md CONTRIBUTING.md SECURITY.md pyproject.toml .gitignore .gitattributes
+include README.md LICENSE NOTICE.md CHANGELOG.md CONTRIBUTING.md SECURITY.md AGENTS.md pyproject.toml .gitignore .gitattributes
 recursive-include src *.py *.sql *.json
 recursive-include src/corpustrail/local_app/assets *.html *.css *.js
 include docs/v0.1.0a3-implementation-plan.md
@@ -30,6 +30,7 @@ include docs/developer/POPULATIONS.md docs/developer/GUIDED_REVIEW.md
 include docs/developer/REFERENCES.md
 include docs/developer/CLASSIFICATION.md
 include docs/developer/CURATION.md
+include docs/developer/UI_HANDOFF.md
 include tools/reference_acceptance.py tools/reference_storage_benchmark.py
 include tools/classification_acceptance.py
 include docs/developer/DISCOVERY_TRANSPORT_DIAGNOSTICS.md docs/developer/SECURITY_PUBLICATION_REVIEW.md

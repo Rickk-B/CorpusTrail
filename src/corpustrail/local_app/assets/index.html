@@ -11,7 +11,7 @@
 </head>
 <body>
   <header><a href="/home" class="brand">CorpusTrail</a><span class="badge">PROJECT_BROWSER_STATUS</span></header>
-  <nav aria-label="Application"><a href="/home">Home</a><a href="/projects">Projects</a><a PROJECT_NAV_HIDDEN id="nav-dashboard" href="/dashboard">Project dashboard</a><a DISCOVERY_NAV_HIDDEN href="/discovery">Discovery</a><a POPULATIONS_NAV_HIDDEN href="/populations">Populations</a><a PROJECT_NAV_HIDDEN id="nav-papers" href="/papers">Corpus</a><a REVIEW_NAV_HIDDEN href="/review">Review</a><a PROJECT_NAV_HIDDEN href="/settings">Project Settings</a></nav>
+  <nav aria-label="Application"><a href="/home">Home</a><a href="/projects">Projects</a><a PROJECT_NAV_HIDDEN id="nav-dashboard" href="/dashboard">Project dashboard</a><a DISCOVERY_NAV_HIDDEN href="/discovery">Explore</a><a POPULATIONS_NAV_HIDDEN href="/populations">Populations</a><a PROJECT_NAV_HIDDEN id="nav-papers" href="/papers">Corpus</a><a REVIEW_NAV_HIDDEN href="/review">Review</a><a PROJECT_NAV_HIDDEN href="/settings">Project Settings</a></nav>
   <main>
     <p class="muted app-note">Browsing does not change your project or contact external services.</p>
     <p id="message" role="status" aria-live="polite"></p>
@@ -23,9 +23,10 @@
       <details id="dashboard-details"><summary>Activity and identity details</summary></details>
       <details><summary>Project setup</summary><p id="providers"></p><p id="resolvers"></p>
         <p class="muted">Configured services are not tested when you open this page.</p></details>
-      <div class="pager"><a DISCOVERY_NAV_HIDDEN id="dashboard-discovery" href="/discovery" class="button">Start Literature Discovery</a><a POPULATIONS_NAV_HIDDEN href="/populations" class="button">Candidate Populations</a><a href="/papers" class="button">Browse Corpus</a><a REVIEW_NAV_HIDDEN href="/review" class="button">Start or Resume Review</a></div>
+      <div class="pager"><a DISCOVERY_NAV_HIDDEN id="dashboard-discovery" href="/discovery" class="button">Explore Publications</a><a POPULATIONS_NAV_HIDDEN href="/populations" class="button">Candidate Populations</a><a href="/papers" class="button">Browse Corpus</a><a REVIEW_NAV_HIDDEN href="/review" class="button">Start or Resume Review</a></div>
       <p REFERENCES_NAV_HIDDEN><a href="/references">Reference Collections</a> — maintain explicit Known in-scope and Known out-of-scope examples separately from corpus membership.</p>
       <p CURATION_NAV_HIDDEN><a href="/curation">Curation and Audits</a> — inspect non-authoritative assessments, audit any part of a population and explicitly correct references or request reassessment.</p>
+      <div PROJECT_NAV_HIDDEN class="grid"><section class="card"><h2>Understand and organize</h2><p><a href="/prioritization">Review order</a> · Optional local ordering, never an inclusion rule.</p><p><a href="/knowledge">Knowledge</a> · Inspect evidence-bound observations and contradictions.</p></section><section class="card"><h2>Continue your research</h2><p><a href="/export">Export confirmed members</a> · Unlabelled bibliography and downstream result mapping.</p><p><a href="/models">Optional models</a> · Configuration and explicit task provenance; no default engine.</p></section></div>
       <p class="muted">CorpusTrail builds broad-topic corpora. ASReview handles downstream question-specific screening. Prioritization never automatically excludes papers or stops review.</p>
     </section>
     <section id="catalogue" hidden><h1>Corpus</h1><p><a REVIEW_NAV_HIDDEN href="/review">Review collected publications</a></p>
@@ -75,6 +76,6 @@
       </details>
     </section>
   </main>
-  <footer>CorpusTrail · PROJECT_BROWSER_STATUS</footer>
+  <footer>CorpusTrail · Local research workspace</footer>
 </body>
 </html>

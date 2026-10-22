@@ -15,6 +15,12 @@ This is the single repository coordination record, not a second specification.
   services; finish navigation, Explore terminology, practical launcher/user guide,
   alpha acceptance and exact-source development delivery. No new engine/importer,
   automatic query generation, RIS, native installer or phone implementation.
+- CP10 working implementation: protected preview/confirm workspaces, bounded
+  Knowledge/ranking/native-model history inspection, exact ASReview CSV download
+  and returned-result mapping, Explore/navigation/Home copy, and practical user
+  guidance. No new scientific migration. Local development checks are in progress,
+  not delivered acceptance. Evidence is preserved in the authorized durable CP10
+  set (`cp10-20261022-XNiRpoOu`); do not confuse diagnostic attempts with final gates.
 - Open investigations: native MacBook Europe PMC transport causation and the
   historical macOS navigation-timeout cause remain unresolved. Hosted success
   and harness corrections are not proof those native issues are fixed.
@@ -67,7 +73,8 @@ and ownership. Synthetic measurements test resources/contracts, not scientific
 performance. Source-bound workflow receipts, not a shared development version
 string or earlier CP8 wheel, identify technical validation and delivery.
 
-CP9 researcher acceptance has not been granted. CP10 has not begun. The existing
+The implementation status above is historical; the explicit CP9 acceptance entry
+supersedes its earlier pending status. CP10 is authorized separately. The existing
 macOS fixture-path-only exception remains separately reported when actually used;
 it is not a strict visual pass. Browser evidence retains seven days and normal
 development bundles request 90 days subject to repository limits; verify actual

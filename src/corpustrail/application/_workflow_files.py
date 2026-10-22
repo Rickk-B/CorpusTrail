@@ -17,7 +17,7 @@ def operation_lease(project, purpose):
 def location(project, *, family='discovery'):
     # ProjectConfig already validates the relative data directory. Reject all
     # symlink components, including links that stay within the project.
-    if family not in {'discovery', 'evidence'}:
+    if family not in {'discovery', 'evidence', 'handoff'}:
         raise ContractError('unsupported local workflow family')
     return no_links(project.root / project.config.data_directory / (family+'-workflows') / 'v1', missing=True)
 

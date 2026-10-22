@@ -77,7 +77,7 @@ function statusNodes(paper) {
 async function dashboard() {
   const data = await api('dashboard');
   byId('dashboard').hidden = false;
-  text('dashboard-discovery', data.papers ? 'Discover More Publications' : 'Start Literature Discovery');
+  text('dashboard-discovery', data.papers ? 'Explore More Publications' : 'Explore Publications');
   text('project-name', data.project.name); text('description', data.project.description);
   const separate = data.project.definition_origin === 'review_scope';
   const distinct = separate && data.project.broad_corpus_definition !== data.project.description;
@@ -102,8 +102,8 @@ async function dashboard() {
     node('p', 'Session updates: ' + data.review.session_updates), node('p', data.review.notice),
     node('p', 'Observations with recorded identity warnings: ' + data.identity_issues.recorded_observations_with_issues),
     node('p', data.identity_issues.notice));
-  text('providers', 'Discovery providers: ' + (data.providers.map(serviceName).join(', ') || 'None configured'));
-  text('resolvers', 'Evidence resolvers: ' + (data.resolvers.map(serviceName).join(', ') || 'None configured'));
+  text('providers', 'Search services: ' + (data.providers.map(serviceName).join(', ') || 'None configured'));
+  text('resolvers', 'Evidence retrieval: ' + (data.resolvers.map(serviceName).join(', ') || 'None configured'));
   if (location.hash === '#created') text('message', 'Project created successfully. No searches, evidence acquisition or paper reviews have been performed.');
   const completed=location.hash?.match(/^#review-completed-([0-9a-f]{64})$/);
   if (completed) {

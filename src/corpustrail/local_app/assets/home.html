@@ -9,33 +9,35 @@
 </head>
 <body>
   <header><a href="/home" class="brand">CorpusTrail</a><span class="badge">Local research workspace</span></header>
-  <nav aria-label="Application"><a href="/home" aria-current="page">Home</a><a href="/projects">Projects</a><a PROJECT_NAV_HIDDEN href="/dashboard">Project dashboard</a><a DISCOVERY_NAV_HIDDEN href="/discovery">Discovery</a><a POPULATIONS_NAV_HIDDEN href="/populations">Populations</a><a PROJECT_NAV_HIDDEN href="/papers">Corpus</a><a REVIEW_NAV_HIDDEN href="/review">Review</a><a PROJECT_NAV_HIDDEN href="/settings">Project Settings</a></nav>
+  <nav aria-label="Application"><a href="/home" aria-current="page">Home</a><a href="/projects">Projects</a><a PROJECT_NAV_HIDDEN href="/dashboard">Project dashboard</a><a DISCOVERY_NAV_HIDDEN href="/discovery">Explore</a><a POPULATIONS_NAV_HIDDEN href="/populations">Populations</a><a PROJECT_NAV_HIDDEN href="/papers">Corpus</a><a REVIEW_NAV_HIDDEN href="/review">Review</a><a PROJECT_NAV_HIDDEN href="/settings">Project Settings</a></nav>
   <main>
     <section class="welcome-intro" aria-labelledby="welcome-title">
       <p class="eyebrow">From literature discovery to a curated research corpus.</p>
       <h1 id="welcome-title">Welcome to CorpusTrail</h1>
       <p>CorpusTrail helps researchers find, organize and evaluate scientific publications. Build a collection around your research topic, keep track of available evidence, and understand how publications became part of your corpus.</p>
+      <p class="notice"><strong>Free, open source and local.</strong> Your projects live on your computer. CorpusTrail has no subscription, tracking or mandatory cloud service. You control each external search or transfer; external services may have their own costs and terms.</p>
       <div class="pager"><a class="button primary" href="/projects/new">Create New Project</a><a class="button" href="/projects#open-existing">Open Existing Project</a></div>
     </section>
     <section aria-labelledby="workflow-title">
       <h2 id="workflow-title">Your research workflow</h2>
       <ol class="workflow" aria-label="Seven steps from defining your topic to continuing your research">
         <li><span class="step-number">1</span><h3>Define your topic</h3><p>Choose a scientific subject and define the broad scope of your collection.</p><span class="capability">Project setup in this UI</span></li>
-        <li><span class="step-number">2</span><h3>Discover publications</h3><p>Search scientific literature databases after approving an exact plan.</p><span class="capability">Discovery workflow in this UI</span></li>
+        <li><span class="step-number">2</span><h3>Explore publications</h3><p>Choose search services and approve the exact queries and limits before searching.</p><span class="capability">Exact-query search available</span></li>
         <li><span class="step-number">3</span><h3>Organize publications</h3><p>Bring together records for the same publication using exact identifiers.</p><span class="capability">Commands available · Browse here</span></li>
         <li><span class="step-number">4</span><h3>Collect evidence</h3><p>Inspect abstracts and explicitly request legitimate structured text where supported.</p><span class="capability">Evidence inspection and eligible Europe PMC retrieval here</span></li>
         <li><span class="step-number">5</span><h3>Review and curate</h3><p>Assess which publications belong to your broad research topic.</p><span class="capability">Guided human review and explicit corpus publication here</span></li>
         <li><span class="step-number">6</span><h3>Build your corpus</h3><p>Maintain a curated collection with transparent decisions.</p><span class="capability">Dashboard and corpus browsing here</span></li>
-        <li><span class="step-number">7</span><h3>Export and continue</h3><p>Use your corpus for further research or downstream screening.</p><span class="capability">Commands available · Export UI planned</span></li>
+        <li><span class="step-number">7</span><h3>Export and continue</h3><p>Download a frozen, unlabelled bibliography of confirmed corpus members for downstream screening.</p><span class="capability">CSV export and exact ASReview result mapping available</span></li>
       </ol>
-      <p class="muted">Project setup, exact-plan discovery, evidence retrieval, frozen candidate populations and guided human review are available here. Saving observations and publishing corpus membership are separate actions. Export has command-line tools; its guided interface, assisted assessment and production file-format imports remain planned.</p>
+      <p class="muted">Search, evidence inspection, fixed candidate sets, human review, reference examples, curation audits, Knowledge and export are available. A saved observation is not a confirmed corpus decision.</p>
     </section>
     <div class="grid">
       <section class="card"><h2>Keep the research trail</h2><p>See where a publication came from, what evidence was available and how a decision was made. A clear trail helps you revisit decisions and explain or reproduce your work.</p><p class="muted">Missing evidence does not mean a publication is out of scope. Only explicitly authorized decisions change corpus membership.</p></section>
       <section class="card"><h2>Continue with ASReview, if useful</h2><div class="handoff"><p><strong>CorpusTrail</strong><br>Build and curate a broad-topic literature collection.</p><span aria-hidden="true">↓</span><p><strong>ASReview — optional</strong><br>Screen that collection for a specific systematic or scoping review question.</p></div><p class="muted">Broad-topic membership and question-specific eligibility are different decisions. Prioritization only orders review; it never automatically excludes publications or stops review.</p></section>
     </div>
+    <section class="card"><h2>Optional model assistance — with clear limits</h2><p>Manual review works without a model. Generic assessment plans, stored results and audit workflows are implemented. Real membership-assessment engines are not installed or validated by default. The separate experimental structured-Knowledge adapter supports explicit configuration and synthetic connection tests; connecting a model does not establish scientific validity or authorize evidence transfer.</p><p>Production file-format importers, automatic query generation, direct institutional-database connections, RIS export, native installers and phone support are future, separately scoped work—not working features of this alpha.</p></section>
     <p class="muted">This application runs locally. Opening Home does not contact external services or change your research projects. Searches and retrieval require explicit actions; no model is required.</p>
   </main>
-  <footer>CorpusTrail · Your projects stay yours when you update or remove the software.</footer>
+  <footer>CorpusTrail · Local research workspace</footer>
 </body>
 </html>

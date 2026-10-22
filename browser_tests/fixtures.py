@@ -128,11 +128,14 @@ class FixtureTransport:
 
 
 class ApplicationFixture:
-    def __init__(self, *, project_id=None, long_path=False):
+    def __init__(self, *, project_id=None, long_path=False, alpha_workflow=False):
         self.stack = ExitStack()
         self.project_id=project_id or 'browser-'+uuid.uuid4().hex
         self.long_path=long_path
+        self.alpha_workflow=alpha_workflow
         self.curation_registry=EngineRegistry()
+        from .handoff_fixtures import WireFixture
+        self.model_wire=WireFixture()
         try:
             self._setup()
         except BaseException:
@@ -178,14 +181,20 @@ class ApplicationFixture:
                 'Long scientific title — Μικροδομή ' + 'porous materials and characterization ' * 8,
                 'Pending document publication', 'Metadata-only publication'), 1):
             raw = ('synthetic-'+str(i)).encode()
-            record = BibliographicRecord(title, ABSTRACT if i == 1 else None,
+            if self.alpha_workflow and i==5:title=TITLE+' — distinct metadata-only publication'
+            record = BibliographicRecord(title, ABSTRACT if i == 1 else 'Invented second abstract-best source.' if self.alpha_workflow and i in (2,3) else None,
                 authors=('Fixture Researcher',), year=2025, source='Synthetic Journal',
-                identifiers=(Identifier('doi', '10.1234/evidence.'+str(i)),) +
+                identifiers=(() if self.alpha_workflow and i==2 else (Identifier('doi', '10.1234/evidence.'+str(i)),)) +
                 ((Identifier('pmcid', 'PMC123'),) if i == 1 else ()))
             source = SourceReference('fixture://bibliography/'+str(i), str(i),
                 'sha256:'+hashlib.sha256(raw).hexdigest(), len(raw), 'fixture_discovery', AT, identity_status='verified')
             self.papers.append(self.project.identities.apply(self.project.identities.plan(record, source),
                 approve_new_identity=True, approve_aliases=True))
+        if self.alpha_workflow:
+            raw=b'Synthetic independent second-provider observation of the same exact publication.'
+            duplicate=SourceReference('fixture://second-provider/exact-paper','second-record','sha256:'+hashlib.sha256(raw).hexdigest(),len(raw),'fixture_discovery',AT,identity_status='verified')
+            matched=self.project.identities.apply(self.project.identities.plan(BibliographicRecord(TITLE,identifiers=(Identifier('doi','10.1234/evidence.1'),)),duplicate),approve_new_identity=True,approve_aliases=True)
+            if matched!=self.papers[0]:raise AssertionError('Exact synthetic overlap must preserve one canonical paper')
         self.project.evidence.preserve_document(self.papers[3],
             b'<article><body><p>Unidentified synthetic document.</p></body></article>',
             representation='jats_xml',media_type='application/xml',source_uri='fixture://pending-document',
@@ -213,7 +222,10 @@ class ApplicationFixture:
         self.discovery = DiscoveryController(self.controller, transport_factory=lambda: self.transport)
         self.evidence = EvidenceController(self.controller, transport_factory=lambda: self.transport)
         self.curation=CurationController(registry=self.curation_registry,synthetic=True,clock=lambda:AT)
-        self.server = make_server(port=0, controller=self.controller, discovery=self.discovery, evidence=self.evidence,curation=self.curation)
+        from corpustrail.application.handoff import HandoffController
+        from .handoff_fixtures import OrderingFixture,service
+        self.handoff=HandoffController(clock=lambda:AT,model_service=lambda p:service(self,p),priority_adapter=OrderingFixture())
+        self.server = make_server(port=0, controller=self.controller, discovery=self.discovery, evidence=self.evidence,curation=self.curation,handoff=self.handoff)
         self.stack.callback(self.server.server_close)
         self.disconnects = 0
         def handler_error(*_):

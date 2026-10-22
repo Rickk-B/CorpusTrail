@@ -7,6 +7,13 @@ CorpusTrail does not provide, proxy or share API access. It does not endorse or
 require any particular model. All normal corpus workflows work without a model.
 This experimental feature is included in `0.1.0a2`, not `0.1.0a1`.
 
+The current development alpha also provides **Research tools → Models** for
+configuration, synthetic connection tests, exact structured Knowledge tasks and
+saved history, without copying task IDs or editing JSON. See the
+[UI walkthrough](ALPHA_WORKFLOWS.md#models-experimental-structured-knowledge-not-an-assessment-engine).
+These are optional, non-authoritative Knowledge operations—not validated broad-
+corpus assessment engines. No real model is installed or invoked on page open.
+
 You can configure your own model through CorpusTrail's model-adapter interface.
 The first built-in reference adapter targets OpenAI-compatible endpoints.
 Compatible endpoints can be local or remote. Real-server compatibility may vary

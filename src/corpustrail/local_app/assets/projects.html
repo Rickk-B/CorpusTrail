@@ -10,7 +10,7 @@
 </head>
 <body>
   <header><a href="/home" class="brand">CorpusTrail</a><span class="badge">Local project setup</span></header>
-  <nav aria-label="Application"><a href="/home">Home</a><a id="nav-projects" href="/projects">Projects</a><a PROJECT_NAV_HIDDEN href="/dashboard">Project dashboard</a><a DISCOVERY_NAV_HIDDEN href="/discovery">Discovery</a><a POPULATIONS_NAV_HIDDEN href="/populations">Populations</a><a PROJECT_NAV_HIDDEN href="/papers">Corpus</a><a REVIEW_NAV_HIDDEN href="/review">Review</a><a PROJECT_NAV_HIDDEN id="nav-settings" href="/settings">Project Settings</a></nav>
+  <nav aria-label="Application"><a href="/home">Home</a><a id="nav-projects" href="/projects">Projects</a><a PROJECT_NAV_HIDDEN href="/dashboard">Project dashboard</a><a DISCOVERY_NAV_HIDDEN href="/discovery">Explore</a><a POPULATIONS_NAV_HIDDEN href="/populations">Populations</a><a PROJECT_NAV_HIDDEN href="/papers">Corpus</a><a REVIEW_NAV_HIDDEN href="/review">Review</a><a PROJECT_NAV_HIDDEN id="nav-settings" href="/settings">Project Settings</a></nav>
   <main>
     <p class="muted">Opening pages does not change research data or contact external services. Creation, configuration saves and confirmed Move to Trash are explicit actions.</p>
     <p id="message" role="status" aria-live="polite"></p>
@@ -54,14 +54,14 @@
           <p class="muted">Describe topical inclusion and exclusion criteria here if useful. They are preserved as the existing versioned scope text, not separate new scientific fields. ASReview handles downstream question-specific screening.</p>
           <p id="definition-version" class="muted"></p>
         </fieldset>
-        <fieldset data-step="2" aria-labelledby="section-2"><h2 id="section-2" class="section-heading" tabindex="-1">Discovery providers</h2>
+        <fieldset data-step="2" aria-labelledby="section-2"><h2 id="section-2" class="section-heading" tabindex="-1">Search services</h2>
           <div id="provider-options"></div>
-          <label>Search concepts / keywords (one per line)<textarea id="concepts" rows="4" maxlength="12000"></textarea></label>
-          <p class="muted">This only configures search concepts. No search is planned or executed here. Existing language tags, aliases and concept identifiers are preserved for unchanged concepts.</p>
+          <label>Search ideas (one per line; optional)<textarea id="concepts" rows="4" maxlength="12000"></textarea></label>
+          <p class="muted">These are reusable search ideas, not automatically generated queries. Explore shows the exact query before execution. Editing ideas never changes a historical search plan or your corpus definition.</p>
           <p>No API-key values are accepted. Optional credential settings name an environment variable only; configure its value outside CorpusTrail.</p>
         </fieldset>
-        <fieldset data-step="3" aria-labelledby="section-3"><h2 id="section-3" class="section-heading" tabindex="-1">Evidence resolvers</h2>
-          <div id="resolver-options"></div><p class="muted">Evidence resolvers are separate from discovery providers. No evidence acquisition or connectivity test occurs during setup.</p>
+        <fieldset data-step="3" aria-labelledby="section-3"><h2 id="section-3" class="section-heading" tabindex="-1">Evidence retrieval</h2>
+          <div id="resolver-options"></div><p class="muted">Search services find publication records. Evidence retrieval separately requests available scientific text for an identified publication. Setup performs neither operation; unavailable text never means exclusion.</p>
         </fieldset>
         <fieldset data-step="4" aria-labelledby="section-4"><h2 id="section-4" class="section-heading" tabindex="-1">Reviewer configuration</h2>
           <label>Configuration author<input id="reviewer" required maxlength="100" autocomplete="off" aria-describedby="author-help"></label>
@@ -88,6 +88,6 @@
       </form>
     </section>
   </main>
-  <footer>CorpusTrail · Local project setup · No automatic network operations</footer>
+  <footer>CorpusTrail · Local research workspace</footer>
 </body>
 </html>

@@ -1,18 +1,18 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="corpustrail-session" content="SESSION_TOKEN">
-  <title>CorpusTrail — Discovery</title><link rel="stylesheet" href="/assets/app.css"><script src="/assets/discovery.js" defer></script></head>
+  <title>CorpusTrail — Explore</title><link rel="stylesheet" href="/assets/app.css"><script src="/assets/discovery.js" defer></script></head>
 <body>
   <header><a href="/home" class="brand">CorpusTrail</a><span class="badge">Local discovery workspace</span></header>
-  <nav aria-label="Application"><a href="/home">Home</a><a href="/projects">Projects</a><a href="/dashboard">Project dashboard</a><a href="/discovery" aria-current="page">Discovery</a><a POPULATIONS_NAV_HIDDEN href="/populations">Populations</a><a href="/papers">Corpus</a><a REVIEW_NAV_HIDDEN href="/review">Review</a><a href="/settings">Project Settings</a></nav>
+  <nav aria-label="Application"><a href="/home">Home</a><a href="/projects">Projects</a><a href="/dashboard">Project dashboard</a><a href="/discovery" aria-current="page">Explore</a><a POPULATIONS_NAV_HIDDEN href="/populations">Populations</a><a href="/papers">Corpus</a><a REVIEW_NAV_HIDDEN href="/review">Review</a><a href="/settings">Project Settings</a></nav>
   <main>
-    <h1>Discovery</h1><p>Collect publications for your research topic. A discovered publication is a candidate, not an accepted corpus member.</p>
+    <h1>Explore</h1><p>Collect publications for your research topic. A discovered publication is a candidate, not an accepted corpus member.</p>
     <p><a POPULATIONS_NAV_HIDDEN href="/populations">Freeze or combine discovery candidates in Populations</a></p>
     <p id="message" role="status" aria-live="polite"></p>
     <section id="search-setup" class="card" aria-labelledby="configure-heading">
       <h2 id="configure-heading">Configure a search</h2>
       <form id="search-form">
-        <label for="concept">Start from a configured concept</label><select id="concept"><option value="">Enter your own query</option></select>
+        <label for="concept">Start from a saved search idea</label><select id="concept"><option value="">Enter your own query</option></select>
         <label for="query">Exact search query</label><textarea id="query" required maxlength="4000" rows="3" aria-describedby="query-help"></textarea>
         <p id="query-help" class="muted">One exact query goes to each selected database. No automatic alias expansion. Each database interprets its own search syntax; unsupported separate date/language filters are not added.</p>
         <fieldset><legend>Select databases</legend><div id="providers"></div></fieldset>
@@ -29,10 +29,10 @@
         <p id="approval-disclosure">By choosing Approve Search Plan, I authorize this exact search to contact the following databases:</p>
         <p id="approval-providers"></p>
         <p id="organization-disclosure">I also authorize organizing retrieved records using exact publication identifiers and source provenance. No corpus-membership decisions will be made.</p>
-        <p id="execution-disclosure" class="muted">Review the exact settings above. Approval records both authorizations; only the separate Run Discovery action starts external requests.</p>
+        <p id="execution-disclosure" class="muted">Review the exact settings above. Approval records both authorizations; only the separate Run Search action starts external requests.</p>
         <div class="approval-actions"><button id="approve" type="button" aria-describedby="approval-disclosure approval-providers organization-disclosure execution-disclosure">Approve Search Plan</button></div>
       </section>
-      <div class="pager"><button id="edit" type="button" hidden>Edit Search</button><button id="run" type="button" hidden>Run Discovery</button><button id="repeat" type="button">Prepare a new search from these settings</button></div>
+      <div class="pager"><button id="edit" type="button" hidden>Edit Search</button><button id="run" type="button" hidden>Run Search</button><button id="repeat" type="button">Prepare a new search from these settings</button></div>
       <p id="plan-notice" class="muted"></p>
       <details id="plan-advanced"><summary>Advanced plan details</summary><pre id="plan-details"></pre></details>
     </section>
@@ -49,5 +49,5 @@
       </details>
     </section>
     <section class="card" aria-labelledby="history-heading"><h2 id="history-heading">Previous searches</h2><p class="muted">Viewing plans or history never reruns a search. Interrupted searches require inspection and a new explicitly approved search; automatic crash-resume is not provided.</p><ul id="history"></ul><button id="more-history" type="button" hidden>More searches</button></section>
-  </main><footer>CorpusTrail · Intentional, bounded discovery · No automatic membership decisions</footer>
+  </main><footer>CorpusTrail · Local research workspace</footer>
 </body></html>
