@@ -216,6 +216,15 @@ class HandoffApplicationTests(unittest.TestCase):
         status,body=request('/api/v1/tools/configuration');self.assertEqual(status,200,body)
         status,_=request('/api/v1/tools/prepare','POST',{'schema':SCHEMA,'kind':'export','values':{'actor':'reviewer'},'request_id':uuid.uuid4().hex},authenticated=False)
         self.assertEqual(status,403)
+        self.configured()
+        self.assertEqual(self.finish(self.prepare('extraction',workflow='offline-task',paper=self.h.ids[0].split(':')[1],
+            instructions='Synthetic native history',predicates=['ct.organism_population'],mode='metadata'),external=True)['status'],'complete')
+        history=self.app.model_history(self.project);handle=history['items'][0]['handle']
+        event=self.app.model_history(self.project,handle=handle)['items'][0]['event_id']
+        from urllib.parse import urlencode
+        status,body=request('/api/v1/tools/model-history/'+handle+'?'+urlencode({'event':event,'limit':17}))
+        self.assertEqual(status,200,body);self.assertEqual(len(json.loads(body)['text']),17)
+        self.assertEqual(request('/api/v1/tools/model-history/'+handle+'?event=foreign')[0],400)
 
     def test_optional_real_tfidf_ordering_preserves_entire_tail_and_human_authority(self):
         if not self.app.configuration(self.project)['optional_ml_installed']:

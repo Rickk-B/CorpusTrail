@@ -181,7 +181,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     from corpustrail.application.handoff import fields
                     from corpustrail.application.projects import ProjectController
                     with controller.use() as current:
-                        query=_query(route.query,{'offset','limit','revision','paper','predicate','section'})
+                        query=_query(route.query,{'offset','limit','revision','paper','predicate','section','event'})
                         paging={k:_number(v) for k,v in query.items() if k in {'offset','limit'}}
                         tail=path[len('/api/v1/tools/'):];parts=tail.split('/')
                         if tail=='export-summary':
