@@ -25,6 +25,7 @@ FRONTEND.add('corpustrail/local_app/assets/evidence.js')
 FRONTEND.update({'corpustrail/local_app/assets/review.html', 'corpustrail/local_app/assets/review.js'})
 FRONTEND.update({'corpustrail/local_app/assets/populations.html', 'corpustrail/local_app/assets/populations.js'})
 FRONTEND.update({'corpustrail/local_app/assets/references.html', 'corpustrail/local_app/assets/references.js'})
+FRONTEND.update({'corpustrail/local_app/assets/curation.html', 'corpustrail/local_app/assets/curation.js'})
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
 # Checkpoint 2 delegates writes to unchanged scientific/configuration services.
@@ -108,6 +109,24 @@ CLASSIFICATION_HASHES = {
     'src/corpustrail/operational/schema/040_classifier_assessments.sql': '5194cf72c8ea2bfe72d87d456c84ce892efea00cf89b18318d897a4bf75a8fa1'}
 
 
+# CP9 composes existing services in an explicit transaction and adds immutable
+# audit/workflow lineage. Historical frozen hashes above remain verified.
+CURATION_COMMIT = '930145f826daeb06779e2b7dd3bcbbcc8b2653fa'
+CURATION_HASHES = {
+    'src/corpustrail/_internal/database.py': '9c55f03409d7a44a49481156c01518178875904a59d6db808e0dd69f62c56f77',
+    'src/corpustrail/project/service.py': '4578ee3e59043d507a57cca7639f7d63ae99f4f2c58b5440397a0cbb9ca9a419',
+    'src/corpustrail/operational/schema_manifest.json': 'bb6172a060e5fbd1a60629f244f3489ea71f41ce7d31f997d6b8ee33910d745c',
+    'src/corpustrail/operational/schema/041_curation_audits.sql': '1b6149142f58530e769cb256df29a9c98651f663794bb67c362ed6096b42fd76',
+    'src/corpustrail/references/service.py': '866b8ae2ed637810988468e0f7871e6be89dc062e67bb6edca245012e1342a5e',
+    'src/corpustrail/curation/guided.py': '50f1828513738b4507dd4e8d99c93779b76c9104aa3ce3af848933ecd6b4da41',
+    'src/corpustrail/application/review.py': '2431285f994f766f5777dd8515ca414330ab9b25547b2da048976a509e2e7a90',
+    'src/corpustrail/classification/service.py': '04353fc123ed921b1750827a4a83ea1050951df4fb6be18638128d3ca0450a1c',
+    'src/corpustrail/classification/curation.py': 'f5bc7f7b5b6c8c47e13ae7b8bc84a663c5ea4b64c6d0b51733f142f9bfca156e',
+    'src/corpustrail/classification/curation_views.py': '4e7e02d7f70759af11a8a7c7353a7937288d8aed416effb04df3a39c158dbc5e',
+    'src/corpustrail/application/curation.py': '62b3dc296b89f3053b5e0d8003a9d5b840e841b8de864458a6b16530d48dee6e',
+    'src/corpustrail/local_app/server.py': '20798e0322bf083351e2af9af0cd95b0489374f400077584c5c5fd0332d625cc'}
+
+
 def git(root, *args):
     return subprocess.check_output(['git', '-C', str(root), *args], text=True).strip()
 
@@ -137,6 +156,17 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
         xml_compatibility = bool(changed & XML_COMPATIBILITY_EXTRA_PATHS)
         allowed = CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS
+        curation = (root/'src/corpustrail/application/curation.py').is_file()
+        if curation:
+            if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',CURATION_COMMIT,expected]).returncode:
+                raise ValueError('Curation must descend from its reviewed implementation')
+            for name,expected_hash in CURATION_HASHES.items():
+                path=root/name
+                frozen=subprocess.check_output(['git','-C',str(root),'show',CURATION_COMMIT+':'+name])
+                if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash
+                        or hashlib.sha256(frozen).hexdigest()!=expected_hash):
+                    raise ValueError('Curation source differs from the frozen reviewed implementation')
+            allowed |= set(CURATION_HASHES) | {'src/corpustrail/local_app/assets/curation.html','src/corpustrail/local_app/assets/curation.js'}
         classification = (root/'src/corpustrail/classification/service.py').is_file()
         if classification:
             if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',CLASSIFICATION_COMMIT,expected]).returncode:
@@ -144,7 +174,8 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
             for name,expected_hash in CLASSIFICATION_HASHES.items():
                 path=root/name
                 frozen=subprocess.check_output(['git','-C',str(root),'show',CLASSIFICATION_COMMIT+':'+name])
-                if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash
+                current_hash=CURATION_HASHES.get(name,expected_hash) if curation else expected_hash
+                if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=current_hash
                         or hashlib.sha256(frozen).hexdigest()!=expected_hash):
                     raise ValueError('Classification source differs from the frozen reviewed implementation')
             allowed |= set(CLASSIFICATION_HASHES)
@@ -156,6 +187,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                 path=root/name
                 frozen=subprocess.check_output(['git','-C',str(root),'show',REFERENCE_COMMIT+':'+name])
                 current_hash=CLASSIFICATION_HASHES.get(name,expected_hash) if classification else expected_hash
+                if curation:current_hash=CURATION_HASHES.get(name,current_hash)
                 if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=current_hash
                         or hashlib.sha256(frozen).hexdigest()!=expected_hash):
                     raise ValueError('Reference source differs from the frozen reviewed implementation')
@@ -173,6 +205,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     expected_hash=REFERENCE_HASHES[name]
                 if classification and name in CLASSIFICATION_HASHES:
                     expected_hash=CLASSIFICATION_HASHES[name]
+                if curation:expected_hash=CURATION_HASHES.get(name,expected_hash)
                 path=root/name
                 if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash:
                     raise ValueError('Population source differs from the frozen reviewed implementation')
@@ -188,6 +221,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     if hashlib.sha256(historical).hexdigest()!=expected_hash:
                         raise ValueError('Historical guided review implementation hash differs')
                     expected_hash = POPULATION_HASHES[name]  # Exact separately frozen integration, not an exception.
+                if curation:expected_hash=CURATION_HASHES.get(name,expected_hash)
                 path=root/name
                 if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash:
                     raise ValueError('Guided review source differs from the frozen reviewed implementation')
@@ -246,7 +280,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         checkpoint3 = (root/'src/corpustrail/application/discovery.py').is_file()
         checkpoint4 = (root/'src/corpustrail/application/evidence.py').is_file()
         scientific = {'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py', 'src/corpustrail/evidence/service.py'}
-        return {**previous, 'name': 'Checkpoint 8 — generic classifier plans, assessment storage and validation hooks' if classification else 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
+        return {**previous, 'name': 'Checkpoint 9 — curation methods, audit views and iterative correction' if curation else 'Checkpoint 8 — generic classifier plans, assessment storage and validation hooks' if classification else 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
                 'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
                 'application_source_unchanged': not bool(changed),
                 'configuration_writes_supported': True,
@@ -268,32 +302,41 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     'implementation_commit_sha':GUIDED_REVIEW_COMMIT,
                     'session_schema':'corpustrail-review-session/v2',
                     'policy':'deferred-human-publication/v1',
-                    'source_sha256':{name:POPULATION_HASHES.get(name,value) if populations else value for name,value in GUIDED_REVIEW_HASHES.items()},
+                    'source_sha256':{name:CURATION_HASHES.get(name,POPULATION_HASHES.get(name,value) if populations else value) if curation else POPULATION_HASHES.get(name,value) if populations else value for name,value in GUIDED_REVIEW_HASHES.items()},
                     'pre_population_source_sha256':GUIDED_REVIEW_HASHES,
                     'legacy_authority_unchanged':True,
                     'schema_migrations':False,
                     'notice':'Versioned guided lifecycle; build identity is source.commit_sha, not this historical implementation receipt.'} if guided_review else None,
                 'populations': {'schema':'corpustrail-population-code-review/v1',
                     'implementation_commit_sha':POPULATION_COMMIT,
-                    'source_sha256':{name:CLASSIFICATION_HASHES.get(name,REFERENCE_HASHES.get(name,value)) if classification else REFERENCE_HASHES.get(name,value) if references else value for name,value in POPULATION_HASHES.items()},
+                    'source_sha256':{name:CURATION_HASHES.get(name,CLASSIFICATION_HASHES.get(name,REFERENCE_HASHES.get(name,value))) if curation else CLASSIFICATION_HASHES.get(name,REFERENCE_HASHES.get(name,value)) if classification else REFERENCE_HASHES.get(name,value) if references else value for name,value in POPULATION_HASHES.items()},
                     'pre_reference_source_sha256':POPULATION_HASHES,
                     'population_schema':'corpustrail-candidate-population/v1','policy':'exact-canonical-union/v1',
                     'migration':38,'read_compatible_schema':37,'upgrade':'explicit_with_backup',
                     'production_importers':False,'membership_authority_unchanged':True} if populations else None,
                 'references':{'schema':'corpustrail-reference-code-review/v1','implementation_commit_sha':REFERENCE_COMMIT,
-                    'source_sha256':{name:CLASSIFICATION_HASHES.get(name,value) if classification else value for name,value in REFERENCE_HASHES.items()},
+                    'source_sha256':{name:CURATION_HASHES.get(name,CLASSIFICATION_HASHES.get(name,value)) if curation else CLASSIFICATION_HASHES.get(name,value) if classification else value for name,value in REFERENCE_HASHES.items()},
                     'pre_classifier_source_sha256':REFERENCE_HASHES,'reference_schema':'corpustrail-reference-set/v1',
                     'context_schema':'corpustrail-selected-reference-context/v1','eligibility_policy':'explicit-human-unconflicted/v1',
                     'selection_strategy':'canonical-reference-order/v1','migration':39,'read_compatible_schema':[37,38],
                     'upgrade':'explicit_with_backup','real_engines':False,'membership_authority_unchanged':True} if references else None,
                 'classification':{'schema':'corpustrail-classifier-code-review/v1',
-                    'implementation_commit_sha':CLASSIFICATION_COMMIT,'source_sha256':CLASSIFICATION_HASHES,
+                    'implementation_commit_sha':CLASSIFICATION_COMMIT,
+                    'source_sha256':{name:CURATION_HASHES.get(name,value) if curation else value for name,value in CLASSIFICATION_HASHES.items()},
+                    'pre_curation_source_sha256':CLASSIFICATION_HASHES,
                     'plan_schema':'corpustrail-assessment-plan/v1','assessment_schema':'corpustrail-immutable-assessment/v1',
                     'migration':40,'read_compatible_schema':[37,38,39],'upgrade':'explicit_with_backup',
                     'engine_execution':'explicitly_registered_offline_only','real_model_integration':False,
                     'scientific_performance_claim':False,'assessment_authority':'non_authoritative',
                     'membership_authority_unchanged':True,'calibration':'provenance_hooks_not_validated_calibrator',
-                    'cp9_workflow_implemented':False} if classification else None,
+                    'cp9_workflow_implemented':curation} if classification else None,
+                'curation':{'schema':'corpustrail-curation-code-review/v1','implementation_commit_sha':CURATION_COMMIT,
+                    'source_sha256':CURATION_HASHES,'migration':41,'read_compatible_schema':[37,38,39,40],
+                    'upgrade':'explicit_with_backup','api_schema':'corpustrail-local-curation/v1',
+                    'audit_schema':'corpustrail-frozen-curation-audit/v1','assessment_authority':'non_authoritative',
+                    'human_authorization':'existing_guided_service_with_atomic_source_links','real_engines':False,
+                    'automatic_reassessment':False,'membership_authority_unchanged':True,
+                    'researcher_acceptance':False} if curation else None,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
                           'The source/build SHA identifies this development artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):

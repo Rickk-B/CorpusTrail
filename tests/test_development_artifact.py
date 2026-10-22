@@ -261,6 +261,7 @@ class DevelopmentArtifactTests(unittest.TestCase):
         for name,expected in TOOL['GUIDED_REVIEW_HASHES'].items():
             if name in TOOL['POPULATION_HASHES']:
                 expected=TOOL['POPULATION_HASHES'][name]
+            expected=TOOL['CURATION_HASHES'].get(name,expected)
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
 
     def test_population_review_hashes_match_current_scientific_source(self):
@@ -271,6 +272,7 @@ class DevelopmentArtifactTests(unittest.TestCase):
                 expected=TOOL['REFERENCE_HASHES'][name]
             if name in TOOL['CLASSIFICATION_HASHES']:
                 expected=TOOL['CLASSIFICATION_HASHES'][name]
+            expected=TOOL['CURATION_HASHES'].get(name,expected)
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
 
     def test_reference_review_hashes_match_exact_scientific_source(self):
@@ -280,11 +282,41 @@ class DevelopmentArtifactTests(unittest.TestCase):
                     original=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['REFERENCE_COMMIT']+':'+name])
                     self.assertEqual(hashlib.sha256(original).hexdigest(),expected)
                 expected=TOOL['CLASSIFICATION_HASHES'][name]
+            expected=TOOL['CURATION_HASHES'].get(name,expected)
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
 
     def test_classification_hashes_match_exact_scientific_source(self):
         for name,expected in TOOL['CLASSIFICATION_HASHES'].items():
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['CURATION_HASHES'].get(name,expected))
+            if (ROOT/'.git').exists():
+                original=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['CLASSIFICATION_COMMIT']+':'+name])
+                self.assertEqual(hashlib.sha256(original).hexdigest(),expected)
+
+    def test_curation_hashes_match_exact_frozen_scientific_source(self):
+        for name,expected in TOOL['CURATION_HASHES'].items():
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+            if (ROOT/'.git').exists():
+                original=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['CURATION_COMMIT']+':'+name])
+                self.assertEqual(hashlib.sha256(original).hexdigest(),expected)
+
+    def test_curation_boundary_requires_current_and_historical_integrity(self):
+        accepted=self.implementation
+        classifier='src/corpustrail/classification/service.py'
+        path=self.root/classifier;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('cp8_fixture=True\n',encoding='utf-8')
+        old={classifier:hashlib.sha256(path.read_bytes()).hexdigest()};self.commit();cp8=TOOL['git'](self.root,'rev-parse','HEAD')
+        names=[classifier,'src/corpustrail/application/curation.py','src/corpustrail/operational/schema/041_curation_audits.sql'];current={}
+        for name in names:
+            path=self.root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('cp9_fixture=True\n',encoding='utf-8')
+            current[name]=hashlib.sha256(path.read_bytes()).hexdigest()
+        self.commit();cp9=TOOL['git'](self.root,'rev-parse','HEAD')
+        with patch.dict(TOOL['check_implementation'].__globals__,{'CLASSIFICATION_COMMIT':cp8,'CLASSIFICATION_HASHES':old,'CURATION_COMMIT':cp9,'CURATION_HASHES':current}):
+            receipt=TOOL['check_implementation'](self.root,accepted,cp9,distribution=accepted,accepted_checkpoint1=accepted)
+            self.assertEqual(receipt['curation']['migration'],41);self.assertTrue(receipt['classification']['cp9_workflow_implemented'])
+            self.assertFalse(receipt['curation']['researcher_acceptance'])
+            with patch.dict(TOOL['check_implementation'].__globals__,{'CLASSIFICATION_HASHES':{classifier:'0'*64}}):
+                with self.assertRaisesRegex(ValueError,'Classification source differs'):TOOL['check_implementation'](self.root,accepted,cp9,distribution=accepted,accepted_checkpoint1=accepted)
+            path=self.root/names[-1];path.write_text('unreviewed_schema=True\n',encoding='utf-8');self.commit()
+            with self.assertRaisesRegex(ValueError,'Curation source differs'):TOOL['check_implementation'](self.root,accepted,TOOL['git'](self.root,'rev-parse','HEAD'),distribution=accepted,accepted_checkpoint1=accepted)
 
     def test_classification_boundary_preserves_integrity_and_requires_frozen_lineage(self):
         accepted=self.implementation;hashes={}
