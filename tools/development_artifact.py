@@ -111,7 +111,7 @@ CLASSIFICATION_HASHES = {
 
 # CP9 composes existing services in an explicit transaction and adds immutable
 # audit/workflow lineage. Historical frozen hashes above remain verified.
-CURATION_COMMIT = '930145f826daeb06779e2b7dd3bcbbcc8b2653fa'
+CURATION_COMMIT = '29cc58e342d6f10b3c7edf778b4f24f4ff103bc2'
 CURATION_HASHES = {
     'src/corpustrail/_internal/database.py': '9c55f03409d7a44a49481156c01518178875904a59d6db808e0dd69f62c56f77',
     'src/corpustrail/project/service.py': '4578ee3e59043d507a57cca7639f7d63ae99f4f2c58b5440397a0cbb9ca9a419',
@@ -123,8 +123,8 @@ CURATION_HASHES = {
     'src/corpustrail/classification/service.py': '04353fc123ed921b1750827a4a83ea1050951df4fb6be18638128d3ca0450a1c',
     'src/corpustrail/classification/curation.py': 'f5bc7f7b5b6c8c47e13ae7b8bc84a663c5ea4b64c6d0b51733f142f9bfca156e',
     'src/corpustrail/classification/curation_views.py': '4e7e02d7f70759af11a8a7c7353a7937288d8aed416effb04df3a39c158dbc5e',
-    'src/corpustrail/application/curation.py': '62b3dc296b89f3053b5e0d8003a9d5b840e841b8de864458a6b16530d48dee6e',
-    'src/corpustrail/local_app/server.py': '20798e0322bf083351e2af9af0cd95b0489374f400077584c5c5fd0332d625cc'}
+    'src/corpustrail/application/curation.py': '2d40397873018a4a6648d27da5efca2d16c759d5eb76f7b34919dc039e13a96c',
+    'src/corpustrail/local_app/server.py': '274ecb07c45473ca72294334f649a7f898266c68522a0a73a2699a7d0b104a18'}
 
 
 def git(root, *args):
