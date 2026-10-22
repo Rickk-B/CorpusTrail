@@ -159,7 +159,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     html = assets.joinpath(page).read_text(encoding='utf-8')
                     workflows=[name for name,service in [('explore',discovery),('review',review),('populations',populations),('references',references),('curation',curation),('prioritization',handoff),('knowledge',handoff),('models',handoff),('export',handoff)] if service is not None]
                     html = re.sub(r'<nav aria-label="Application">.*?</nav>',lambda _:navigation(active,path,workflows=workflows,editable=controller is not None),html,flags=re.S)
-                    html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active else 'hidden')
+                    html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active and controller is not None else 'hidden')
                     html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
                     html = html.replace('REVIEW_NAV_HIDDEN', '' if active and review is not None else 'hidden')
                     html = html.replace('POPULATIONS_NAV_HIDDEN', '' if active and populations is not None else 'hidden')

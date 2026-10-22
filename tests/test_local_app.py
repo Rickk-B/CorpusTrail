@@ -419,6 +419,13 @@ class HttpReadTests(AppFixture):
         self.assertEqual(code, 200)
         self.token = re.search('name="corpustrail-session" content="([^"]+)"', body).group(1)
 
+    def test_legacy_read_only_dashboard_does_not_offer_enabled_handoff_writers(self):
+        code,html,_=self.request('GET','/dashboard')
+        self.assertEqual(code,200)
+        self.assertIn('<div hidden class="grid"><section class="card"><h2>Understand and organize',html)
+        for path in ('/prioritization','/knowledge','/models','/export'):
+            self.assertEqual(self.request('GET',path)[0],409)
+
     def request(self, method, path, *, headers=None, body=None, authenticated=False):
         client = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=10)
         try:

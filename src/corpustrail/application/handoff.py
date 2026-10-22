@@ -448,7 +448,9 @@ class HandoffController:
                     raise ContractError('project changed since preview; prepare and inspect a fresh operation')
             if prepared['data'].get('remote') and confirm_external is not True: raise ContractError('explicit exact remote-transfer approval required')
             lease=acquire_project_use(project.root)
-            operation=files.operation_lease(project,'handoff-worker')
+            try:operation=files.operation_lease(project,'handoff-worker')
+            except BaseException:
+                lease.close();raise
             try:self.publish(project,'started',key,{'prepared_sha256':preview_sha256,'confirmed':True,
                 'confirm_external':confirm_external,'started_at':self.clock()})
             except BaseException:

@@ -37,6 +37,8 @@ class HandoffApplicationTests(unittest.TestCase):
     def setUp(self):
         from test_knowledge import KnowledgeTests
         self.h=KnowledgeTests();self.h.setUp();self.addCleanup(self.h.doCleanups);self.project=self.h.project
+        self.locks=patch('corpustrail.application.project_use.lock_directory',return_value=self.project.root.parent/'handoff-locks')
+        self.locks.start();self.addCleanup(self.locks.stop)
         self.wire=OfflineWire();self.registry=AdapterRegistry([self.wire])
         self.app=HandoffController(clock=lambda:'2026-01-02T00:00:00+00:00',model_service=lambda p:ModelService(p,registry=self.registry))
         self.addCleanup(self.app.close)
@@ -292,6 +294,22 @@ class HandoffApplicationTests(unittest.TestCase):
         finally:release.set()
         self.assertEqual(self.app.operation(self.project,op['id'])['status'],'complete')
         self.assertEqual(len(self.wire.calls),1)
+
+    def test_worker_reservation_failure_explicitly_releases_project_resources(self):
+        from corpustrail.application import handoff
+        real_acquire=handoff.acquire_project_use;real_operation=handoff.files.operation_lease;leases=[]
+        def acquire(root):
+            lease=real_acquire(root);leases.append(lease);self.addCleanup(lease.close);return lease
+        def operation(project,kind):
+            if kind=='handoff-worker':raise ContractError('Synthetic competing worker reservation')
+            return real_operation(project,kind)
+        op=self.assertion()
+        with patch.object(handoff,'acquire_project_use',side_effect=acquire),patch.object(handoff.files,'operation_lease',side_effect=operation):
+            with self.assertRaises(ContractError):self.app.execute(self.project,op['id'],preview_sha256=op['preview_sha256'],confirmed=True)
+        self.assertEqual(len(leases),1)
+        self.assertTrue(all(not lock.release.alive for lock in leases[0]._leases),'Failure must explicitly release owned locks, not rely on garbage collection.')
+        self.assertEqual(self.app.operation(self.project,op['id'])['status'],'prepared')
+        self.assertEqual(self.project.knowledge_store.assertions(),[])
 
     def test_editing_native_endpoint_preserves_unedited_supported_settings(self):
         from corpustrail.models.integrations import register_reference_adapters
