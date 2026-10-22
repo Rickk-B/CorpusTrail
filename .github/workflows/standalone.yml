@@ -108,7 +108,7 @@ jobs:
   browser-acceptance:
     name: Offline Chromium / reviewed Linux visual baselines
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     outputs:
       visual_mode: '${{ steps.visual-mode.outputs.mode }}'
       acceptance: '${{ steps.browser-report.outputs.acceptance }}'
@@ -146,7 +146,7 @@ jobs:
   browser-macos-smoke:
     name: Full macOS Chromium and WebKit / offline acceptance
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 35
     outputs:
       visual_mode: '${{ steps.visual-mode.outputs.mode }}'
       chromium_acceptance: '${{ steps.chromium-report.outputs.acceptance }}'

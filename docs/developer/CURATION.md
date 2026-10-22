@@ -105,5 +105,15 @@ unchanged production integrity/path guards to refuse those invalid inputs.
 Historical macOS stderr was mocked, so its original error message was not
 preserved; the controlled alias probe supplies the specific refusal evidence.
 This does not establish that earlier accepted scientific data was affected.
+
+The complete browser inventory grows from 51 to 66 executions per renderer and
+from 184 to 235 captures. The accepted CP8 macOS job took 21 minutes 30 seconds;
+CP9's first macOS Chromium capture alone took 13 minutes 9 seconds. Whole-job
+budgets are therefore 20 minutes for Linux Chromium and 35 minutes for the two
+macOS engines, rather than 15/25. This accommodates the required added coverage;
+it does not extend interaction/navigation waits, tolerate failures or relax any
+comparison. Standard runners, permissions, triggers, delivery gates and 7/90-day
+artifact-retention requests are unchanged. Public-use billing evidence remains
+the basis for the zero-additional-charge boundary; no paid capacity is enabled.
 Fixtures establish architecture only. CP10 and real model/import tracks remain
 separately gated; native Europe PMC causation remains unresolved.
