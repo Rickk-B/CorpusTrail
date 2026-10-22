@@ -96,8 +96,36 @@ class BrowserAcceptance(unittest.TestCase):
         self.assertEqual(service.workflow()['total'],2)
         self.assertEqual(data['service'].runs()['items'][-1]['processed'],0)
         self.layout();self.snapshot('curation-reassessment')
-        self.page.locator('#curation-execute').click()
-        expect(self.page.locator('#curation-run-status')).to_contain_text('completed',timeout=15000)
+        # Poll lightweight run progress, not a whole-population result join.
+        # The real offline engine is held at its execution boundary; no API
+        # response or scientific result is fabricated by this browser test.
+        from unittest.mock import patch
+        engine,_=self.fixture.curation_registry.get('synthetic.curation-a','fixture/v1')
+        assess=engine.assess;release=threading.Event();requests=[]
+        path='/api/v1/curation/runs/'+data['service'].runs()['items'][-1]['run_id'].split(':')[1]
+        def record(request):
+            if request.url.startswith(self.fixture.origin+path):requests.append(request.url.removeprefix(self.fixture.origin))
+        def gated(plan,chunk):
+            if not release.wait(30):raise AssertionError('controlled curation engine was not released')
+            return assess(plan,chunk)
+        self.page.on('request',record)
+        try:
+            with patch.object(engine,'assess',side_effect=gated):
+                self.page.locator('#curation-execute').click()
+                expect(self.page.locator('#curation-run-status')).to_contain_text('running')
+                for _ in range(2):
+                    with self.page.expect_response(lambda response:response.url==self.fixture.origin+path,timeout=5000):pass
+                self.assertFalse(any('/results' in value for value in requests),requests)
+                self.assertEqual(data['service'].runs()['items'][-1]['processed'],0)
+                with self.page.expect_response(lambda response:response.url.startswith(self.fixture.origin+path+'/results?'),timeout=15000):
+                    release.set()
+                    expect(self.page.locator('#curation-run-status')).to_contain_text('completed',timeout=15000)
+                from corpustrail.classification.curation_views import CurationReads
+                total=CurationReads(project).results(data['service'].runs()['items'][-1]['run_id'],
+                    primary=self.page.locator('#curation-primary').input_value(),overlay=self.page.locator('#curation-overlay').input_value())['filtered_total']
+                expect(self.page.locator('#curation-result-count')).to_contain_text(str(total)+' matching candidates')
+        finally:
+            release.set();self.page.remove_listener('request',record)
         self.assertEqual(data['service'].results(data['runs'][0]),original)
         self.assertEqual(members,{p:project.reviews.membership(p) for p in self.fixture.papers})
         before=fingerprint(self.fixture.root);self.restart();self.open_project();self.visit('/curation')

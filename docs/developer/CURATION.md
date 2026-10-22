@@ -78,5 +78,21 @@ whole CP7/8 fixture build). Shared project database: 66,117,632 bytes. This is a
 dated synthetic observation, not a production capacity/performance guarantee.
 The executable tool regenerates measurements and fails bounds/invariants in CI;
 the collection has no corresponding 2,000-paper cap.
+Worker monitoring reads bounded run progress, not the population result join on
+every poll. Result counts refresh at completion or an explicit refresh. A gated
+offline-engine browser regression observes two real progress responses, verifies
+that no result-list request occurs while work is held, then verifies the final
+filtered result refresh after release. No API response is mocked.
+
+CP9 visual review adds 51 new curation states and updates seven dashboard captures
+per renderer for the explicit entry point. Linux reference candidates came from
+clean source `4f1f587f2a60ffeb7ba2380bb200e0ba426cfdc2`, with all 66 functional
+executions completed. Full viewport contact sheets and individual key reading/
+assessment images were inspected; each existing dashboard original, candidate
+and full-size diff was inspected separately. The dashboard's added link/paragraph
+accounts for the vertical reflow. Every unrelated reference stays byte-for-byte
+unchanged. Per-image rationales/hashes and capture source/report identities live
+in each baseline approval manifest. This is explicit review, not automatic
+approval from a successful capture or a substitute for final strict acceptance.
 Fixtures establish architecture only. CP10 and real model/import tracks remain
 separately gated; native Europe PMC causation remains unresolved.
