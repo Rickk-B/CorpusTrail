@@ -1,5 +1,31 @@
 # Development checkpoint wheels — not public releases
 
+## CP8 researcher acceptance — 22 October 2026
+
+The researcher formally accepted Checkpoint 8 through the instruction starting
+CP9. Checkpoints 1–8 and the visual refresh are researcher-accepted. This records
+the researcher's decision; it does not grant CP9 acceptance. The historical CP8
+implementation status below is superseded by this acceptance entry.
+
+Accepted delivery on `development/v0.1.0a3-read-only-local-ui`:
+
+- Commit: `d2ade7e3840236d4fdb3dba672380efe1dcac632`.
+- Tree: `cd381990726c0e61c8b9b8c4a83e571b87dbe6f3`.
+- [Run 39612709296](https://github.com/Rickk-B/CorpusTrail/actions/runs/39612709296),
+  attempt 1: all 12 jobs passed. Linux Chromium, macOS Chromium and macOS WebKit
+  each completed 51/51 functional executions and 184/184 strict comparisons;
+  no path-only exception was used.
+- Wheel: `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 319,953 bytes.
+- SHA-256: `3d74369835fcb1e12d6e121940647d08a9b6de0e514f19023407a0f6d25916f1`.
+- Development bundle `12352408112` was created at `2026-10-21T14:23:50Z` and
+  expires at `2027-01-19T13:58:36Z`: 90 days from run creation, not upload.
+  Browser artifacts retain their separate seven-day policy.
+
+CP8 validates deterministic offline architecture, not real-model interoperability
+or scientific performance. Native MacBook Europe PMC transport causation and the
+historical macOS navigation-timeout cause remain separate unresolved issues.
+CP9 implementation is separately authorized; CP10 has not begun.
+
 ## CP8 implementation — generic assessment infrastructure
 
 Checkpoints 1–7 remain researcher-accepted. The warm visual refresh was approved
