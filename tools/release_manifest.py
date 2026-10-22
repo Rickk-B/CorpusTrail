@@ -6,7 +6,7 @@ import tomllib
 from pathlib import Path
 
 ROOT_FILES = {'README.md', 'LICENSE', 'NOTICE.md', 'CHANGELOG.md', 'CONTRIBUTING.md',
-              'SECURITY.md', 'pyproject.toml', 'MANIFEST.in', '.gitignore', '.gitattributes'}
+              'SECURITY.md', 'AGENTS.md', 'pyproject.toml', 'MANIFEST.in', '.gitignore', '.gitattributes'}
 RECEIPTS = {'docs/phase2b_migration_origins.json', 'docs/phase2c_migration_origins.json'}
 TOOLS = {'tools/smoke_install.py', 'tools/smoke_asreview.py', 'tools/release_manifest.py',
          'tools/development_artifact.py', 'tools/evidence_diagnostic.py',

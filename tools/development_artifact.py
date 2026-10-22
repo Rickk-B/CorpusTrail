@@ -26,6 +26,7 @@ FRONTEND.update({'corpustrail/local_app/assets/review.html', 'corpustrail/local_
 FRONTEND.update({'corpustrail/local_app/assets/populations.html', 'corpustrail/local_app/assets/populations.js'})
 FRONTEND.update({'corpustrail/local_app/assets/references.html', 'corpustrail/local_app/assets/references.js'})
 FRONTEND.update({'corpustrail/local_app/assets/curation.html', 'corpustrail/local_app/assets/curation.js'})
+FRONTEND.update({'corpustrail/local_app/assets/handoff.html', 'corpustrail/local_app/assets/handoff.js'})
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
 # Checkpoint 2 delegates writes to unchanged scientific/configuration services.
@@ -127,6 +128,57 @@ CURATION_HASHES = {
     'src/corpustrail/local_app/server.py': '274ecb07c45473ca72294334f649a7f898266c68522a0a73a2699a7d0b104a18'}
 
 
+# CP10 may change the HTTP presentation/composition boundary, not the CP9
+# scientific implementation. No scientific/migration digest may be overridden.
+HANDOFF_BASELINE = 'ad4a5496bea422c56cc8ea3cd512a0887ae442c1'
+HANDOFF_COMMIT = '2e832ca615081af8e94db1b996ba30422569dfea'
+HANDOFF_HASHES = {
+    'src/corpustrail/application/_workflow_files.py':'7b9e6fa277c6accc8060bec05ab6db753db86a72bc16a90e7e06179cb41741db',
+    'src/corpustrail/application/handoff.py':'9ce8251567ea407ae0d44f0afd46fa03cded2b3c68a36090db134dca9356fa9e',
+    'src/corpustrail/knowledge/service.py':'fb5d97391dec62c9bc7c4a1fba2ea3bd5e1d37a370ef347366733bea91bdb307',
+    'src/corpustrail/knowledge/storage.py':'086c9ec62f0264f954009a590c96a8357a2d2dacd98b573baa159705dabff764',
+    'src/corpustrail/local_app/assets/app.css':'0145071e25d42b37c5b06d1e8bec57141fc8a78c1a84318bc06f1e1026fcd88c',
+    'src/corpustrail/local_app/assets/app.js':'1b785756ab7fe9ed622294efe67cb43bb7b3ce14075270eebdb8a26c5917aca7',
+    'src/corpustrail/local_app/assets/curation.html':'3c98cf06b885852881e3d5b057b4939be73f47c93394b3cc031116c06f0ffda0',
+    'src/corpustrail/local_app/assets/discovery.html':'045171ed593c2e7d9f635a3ad68b1f502d5358d727a835d6e339ccb77c5f6d12',
+    'src/corpustrail/local_app/assets/handoff.html':'887e226b9e28401cea7dbacfe7b7cf6cce47321fb59f95c5957edc50297f9887',
+    'src/corpustrail/local_app/assets/handoff.js':'c9fa1152b5aa08570c94da549e1f84f693bd549208b3e89753851b35d0f8717f',
+    'src/corpustrail/local_app/assets/home.html':'b753d4d9438dc5fdbf0337c6cbc97e7ccb3dffb4c86b0f8d2568e4870455585d',
+    'src/corpustrail/local_app/assets/index.html':'0bf15e2aebe14d770ad531dc1611b763b0438e288578e12acbf3896334c8a69c',
+    'src/corpustrail/local_app/assets/populations.html':'623993339f59b2a6c954fa9c58a726a7e0230949ae9b9623792e2e759428221d',
+    'src/corpustrail/local_app/assets/projects.html':'724959c01236401f4a8671b9eaabffe01ee84a9d5353f9b9abee39c7c203f2d1',
+    'src/corpustrail/local_app/assets/projects.js':'40fc01b2e4882ab4c7a436f02e1a6ec68c14c38329dc87b92f20b7573dbf64e1',
+    'src/corpustrail/local_app/assets/references.html':'b5849dc6547324bec71959e721daa5005f0c6012e5a714789f477ef565ed2275',
+    'src/corpustrail/local_app/assets/review.html':'271921901cb30c32b9abade6bd11b4ffb5220ff95515a735447e73b0845a017c',
+    'src/corpustrail/local_app/server.py':'7ec72eae556c9fb4d264222455dba5457b4ee1661b734efec3d1e4c94829813b'}
+HANDOFF_HTTP = 'src/corpustrail/local_app/server.py'
+HANDOFF_READ_SUPPORT = {'src/corpustrail/knowledge/service.py', 'src/corpustrail/knowledge/storage.py',
+    'src/corpustrail/application/_workflow_files.py', 'src/corpustrail/application/handoff.py'}
+
+
+def check_handoff(root, expected):
+    if not HANDOFF_HASHES or not re.fullmatch('[0-9a-f]{40}',HANDOFF_COMMIT):
+        raise ValueError('UI handoff requires its exact implementation receipt')
+    # This fixed overlap is deliberately narrower than a configurable hash
+    # overlay: all CP9 scientific and migration checks below remain unchanged.
+    if set(HANDOFF_HASHES)&set(CURATION_HASHES)!={HANDOFF_HTTP}:
+        raise ValueError('UI handoff cannot override a frozen scientific or migration boundary')
+    allowed=HANDOFF_READ_SUPPORT|{HANDOFF_HTTP}|{'src/'+name for name in FRONTEND}|{
+        'src/corpustrail/local_app/assets/projects.html','src/corpustrail/local_app/assets/projects.js'}
+    if set(HANDOFF_HASHES)-allowed:
+        raise ValueError('UI handoff receipt exceeds its fixed composition/read/presentation scope')
+    changed=set(subprocess.check_output(['git','-C',str(root),'diff','--name-only',HANDOFF_BASELINE,HANDOFF_COMMIT,'--','src/corpustrail'],text=True).splitlines())
+    if changed!=set(HANDOFF_HASHES):raise ValueError('UI handoff receipt must cover its complete exact source delta')
+    if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',HANDOFF_COMMIT,expected]).returncode:
+        raise ValueError('UI handoff must descend from its reviewed implementation')
+    for name,wanted in HANDOFF_HASHES.items():
+        path=root/name
+        frozen=subprocess.check_output(['git','-C',str(root),'show',HANDOFF_COMMIT+':'+name])
+        if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=wanted
+                or hashlib.sha256(frozen).hexdigest()!=wanted):
+            raise ValueError('UI handoff source differs from its exact reviewed implementation')
+
+
 def git(root, *args):
     return subprocess.check_output(['git', '-C', str(root), *args], text=True).strip()
 
@@ -156,6 +208,10 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
         xml_compatibility = bool(changed & XML_COMPATIBILITY_EXTRA_PATHS)
         allowed = CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS
+        handoff=(root/'src/corpustrail/application/handoff.py').is_file()
+        if handoff:
+            check_handoff(root,expected)
+            allowed |= set(HANDOFF_HASHES)
         curation = (root/'src/corpustrail/application/curation.py').is_file()
         if curation:
             if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',CURATION_COMMIT,expected]).returncode:
@@ -163,7 +219,10 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
             for name,expected_hash in CURATION_HASHES.items():
                 path=root/name
                 frozen=subprocess.check_output(['git','-C',str(root),'show',CURATION_COMMIT+':'+name])
-                if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash
+                # HTTP's new bytes were separately checked above against the
+                # exact CP10 commit. Its original CP9 bytes stay verified here.
+                current=frozen if handoff and name==HANDOFF_HTTP else path.read_bytes()
+                if (path.is_symlink() or not path.is_file() or hashlib.sha256(current).hexdigest()!=expected_hash
                         or hashlib.sha256(frozen).hexdigest()!=expected_hash):
                     raise ValueError('Curation source differs from the frozen reviewed implementation')
             allowed |= set(CURATION_HASHES) | {'src/corpustrail/local_app/assets/curation.html','src/corpustrail/local_app/assets/curation.js'}
@@ -280,7 +339,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         checkpoint3 = (root/'src/corpustrail/application/discovery.py').is_file()
         checkpoint4 = (root/'src/corpustrail/application/evidence.py').is_file()
         scientific = {'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py', 'src/corpustrail/evidence/service.py'}
-        return {**previous, 'name': 'Checkpoint 9 — curation methods, audit views and iterative correction' if curation else 'Checkpoint 8 — generic classifier plans, assessment storage and validation hooks' if classification else 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
+        return {**previous, 'name': 'Checkpoint 10 — complete UI handoff and alpha acceptance' if handoff else 'Checkpoint 9 — curation methods, audit views and iterative correction' if curation else 'Checkpoint 8 — generic classifier plans, assessment storage and validation hooks' if classification else 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
                 'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
                 'application_source_unchanged': not bool(changed),
                 'configuration_writes_supported': True,
@@ -337,6 +396,10 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     'human_authorization':'existing_guided_service_with_atomic_source_links','real_engines':False,
                     'automatic_reassessment':False,'membership_authority_unchanged':True,
                     'researcher_acceptance':False} if curation else None,
+                'ui_handoff':{'schema':'corpustrail-ui-handoff-code-review/v1','implementation_commit_sha':HANDOFF_COMMIT,
+                    'source_sha256':HANDOFF_HASHES,'api_schema':'corpustrail-local-handoff/v1','migration':None,
+                    'alpha_baseline':True,'beta_release':False,'native_installer':False,'real_model_validation':False,
+                    'production_importers':False,'membership_authority_unchanged':True,'researcher_acceptance':False} if handoff else None,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
                           'The source/build SHA identifies this development artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):

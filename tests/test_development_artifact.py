@@ -294,10 +294,28 @@ class DevelopmentArtifactTests(unittest.TestCase):
 
     def test_curation_hashes_match_exact_frozen_scientific_source(self):
         for name,expected in TOOL['CURATION_HASHES'].items():
-            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+            if name==TOOL['HANDOFF_HTTP'] and (ROOT/'src/corpustrail/application/handoff.py').is_file():
+                self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['HANDOFF_HASHES'][name])
+            else:self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
             if (ROOT/'.git').exists():
                 original=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['CURATION_COMMIT']+':'+name])
                 self.assertEqual(hashlib.sha256(original).hexdigest(),expected)
+
+    def test_handoff_exact_source_and_forbidden_scientific_overlap(self):
+        native='src/corpustrail/operational/schema/041_curation_audits.sql'
+        globals_=TOOL['check_handoff'].__globals__
+        for hashes in ({TOOL['HANDOFF_HTTP']:'0'*64,native:'1'*64}, {'src/corpustrail/models/service.py':'0'*64,TOOL['HANDOFF_HTTP']:'0'*64}):
+            with patch.dict(globals_,{'HANDOFF_COMMIT':self.sha,'HANDOFF_HASHES':hashes}):
+                with self.assertRaises(ValueError):TOOL['check_handoff'](self.root,self.sha)
+        files={TOOL['HANDOFF_HTTP']:'Synthetic reviewed HTTP', 'src/corpustrail/application/handoff.py':'Synthetic reviewed composition'}
+        for name,body in files.items():
+            path=self.root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(body,encoding='utf-8')
+        self.commit();reviewed=TOOL['git'](self.root,'rev-parse','HEAD')
+        hashes={name:hashlib.sha256((self.root/name).read_bytes()).hexdigest() for name in files}
+        with patch.dict(globals_,{'HANDOFF_COMMIT':reviewed,'HANDOFF_BASELINE':self.implementation,'HANDOFF_HASHES':hashes}):
+            TOOL['check_handoff'](self.root,reviewed)
+            (self.root/TOOL['HANDOFF_HTTP']).write_text('Unreviewed HTTP override',encoding='utf-8');self.commit()
+            with self.assertRaisesRegex(ValueError,'exact reviewed'):TOOL['check_handoff'](self.root,TOOL['git'](self.root,'rev-parse','HEAD'))
 
     def test_curation_boundary_requires_current_and_historical_integrity(self):
         accepted=self.implementation

@@ -9,7 +9,7 @@ concurrency:
 # CP7 capture evidence reviewed explicitly; every delivery requires strict comparison.
 # A future capture phase still cannot deliver a development wheel.
 env:
-  BROWSER_VISUAL_MODE: compare
+  BROWSER_VISUAL_MODE: capture
 jobs:
   acceptance:
     runs-on: ubuntu-latest
@@ -85,6 +85,7 @@ jobs:
           python -I -m unittest discover -s tests -p 'test_reference*.py' -v
           python -I -m unittest discover -s tests -p test_classification.py -v
           python -I -m unittest discover -s tests -p 'test_curation*.py' -v
+          python -I -m unittest discover -s tests -p test_handoff_application.py -v
           python -I -m unittest discover -s tests -p test_discovery_app.py -v
           python -I -m unittest discover -s tests -p test_discovery_transport_diagnostics.py -v
           python -I -m unittest discover -s tests -p test_evidence_app.py -v

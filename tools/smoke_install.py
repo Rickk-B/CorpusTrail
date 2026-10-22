@@ -72,7 +72,9 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
                      'src/corpustrail/classification/curation_views.py', 'docs/developer/CURATION.md', 'docs/user/CURATION.md',
                      'src/corpustrail/local_app/assets/curation.html', 'src/corpustrail/local_app/assets/curation.js',
                      'src/corpustrail/local_app/assets/references.html', 'src/corpustrail/local_app/assets/references.js',
-                     'src/corpustrail/resources/origins.json'):
+                     'src/corpustrail/resources/origins.json', 'AGENTS.md', 'docs/user/ALPHA_WORKFLOWS.md',
+                     'src/corpustrail/application/handoff.py', 'src/corpustrail/local_app/assets/handoff.html',
+                     'src/corpustrail/local_app/assets/handoff.js'):
         if not (source / required).is_file():
             raise RuntimeError('sdist omitted required provenance/tutorial: ' + required)
     wheels = root / 'sdist-wheels'
@@ -92,13 +94,30 @@ def sdist_smoke(root, payload, outside, env, *, dependency_wheels=None):
         project = root / ('sdist-tutorial-' + mode)
         tutorial, _ = invoke([str(python), '-I', '-B', '-m', 'corpustrail.tutorial', str(project)] +
                              (['--prioritize'] if mode == 'ml' else []), outside, env)
+        # Independent external original is not package/cache ownership. Preserve
+        # all project artifacts as bytes, not just the status summary.
+        original=root/('researcher-external-original-'+mode+'.pdf')
+        original.write_bytes(b'%PDF-1.4 Synthetic unverified original; not a real scholarly document.\n')
+        invoke([str(python),'-I','-c',
+            "import sys;from pathlib import Path;from corpustrail.project import Project;"
+            "p=Project.open(sys.argv[1]);original=Path(sys.argv[2]);"
+            "p.evidence.preserve_document(p.identities.papers()[0],original.read_bytes(),representation='pdf',"
+            "media_type='application/pdf',source_uri=original.as_uri(),legitimate_basis='synthetic_fixture',"
+            "resolver='fixture',resolver_version='1',created_at='2026-01-01T00:00:00+00:00')",
+            str(project),str(original)],outside,env)
         status, _ = invoke([str(venv/'bin/corpustrail'), 'project', 'status', str(project)], outside, env)
+        def owned_bytes():
+            return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest()
+                    for p in [original,*project.rglob('*')] if p.is_file()}
+        before_removal=owned_bytes()
         invoke([str(python), '-m', 'pip', 'uninstall', '-y', 'corpus-trail'], outside, env)
+        if owned_bytes()!=before_removal:raise RuntimeError('uninstall changed project or external-original bytes')
         invoke(command, outside, env)
         reopened, _ = invoke([str(venv/'bin/corpustrail'), 'project', 'status', str(project)], outside, env)
-        if json.loads(status) != json.loads(reopened):
+        if json.loads(status) != json.loads(reopened) or owned_bytes()!=before_removal:
             raise RuntimeError('uninstall/reinstall changed project state')
-        reports[mode] = {'tests': (out+err).strip(), 'tutorial': json.loads(tutorial), 'reinstall_reopen': True}
+        reports[mode] = {'tests': (out+err).strip(), 'tutorial': json.loads(tutorial), 'reinstall_reopen': True,
+                         'project_and_external_original_bytes_preserved':True}
     return {'sdist_sha256': 'sha256:' + hashlib.sha256(archive.read_bytes()).hexdigest(),
             'wheel_from_sdist_sha256': 'sha256:' + hashlib.sha256(wheel.read_bytes()).hexdigest(), 'environments': reports}
 
@@ -132,7 +151,8 @@ def run(*, dependency_wheels=None) -> dict:
                          'corpustrail/local_app/assets/evidence.js',
                          'corpustrail/local_app/assets/populations.html', 'corpustrail/local_app/assets/populations.js',
                          'corpustrail/local_app/assets/references.html', 'corpustrail/local_app/assets/references.js',
-                         'corpustrail/local_app/assets/review.html', 'corpustrail/local_app/assets/review.js'):
+                         'corpustrail/local_app/assets/review.html', 'corpustrail/local_app/assets/review.js',
+                         'corpustrail/local_app/assets/handoff.html', 'corpustrail/local_app/assets/handoff.js'):
             if required not in wheel_entries:
                 raise RuntimeError('wheel omitted local frontend asset: ' + required)
         if any(not name.startswith(("corpustrail/", "corpus_trail-")) for name in wheel_entries):

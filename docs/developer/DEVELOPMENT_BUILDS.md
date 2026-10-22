@@ -21,6 +21,13 @@ This is the single repository coordination record, not a second specification.
   guidance. No new scientific migration. Local development checks are in progress,
   not delivered acceptance. Evidence is preserved in the authorized durable CP10
   set (`cp10-20261022-XNiRpoOu`); do not confuse diagnostic attempts with final gates.
+- CP10 implementation anchor: `2e832ca615081af8e94db1b996ba30422569dfea`.
+  Local evidence includes a 679-test Python pass (one platform skip), complete
+  78-execution/271-capture Chromium pass, clean wheel/sdist/core/optional-ML and
+  project/external-original preservation checks. Focused HTTP/lease corrections
+  are separately recorded; hosted capture review and strict delivery are pending.
+  Capture mode is evidence collection only; the existing wheel gate requires
+  compare mode. The final source/run receipt, not this anchor, identifies delivery.
 - Open investigations: native MacBook Europe PMC transport causation and the
   historical macOS navigation-timeout cause remain unresolved. Hosted success
   and harness corrections are not proof those native issues are fixed.
