@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 from contextlib import closing
 import shutil
 import subprocess
@@ -348,20 +349,30 @@ class CurationTests(unittest.TestCase):
     def test_cli_review_and_corpus_are_workspace_independent(self):
         root=self.project.root
         self.assertEqual(root,self.root.resolve())
-        aliases=[self.root] if self.root!=root else []
+        def linked(path):
+            # A different spelling (for example a Windows short name) is not
+            # evidence of a link. Inspect the actual filesystem entry types.
+            return any(stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0)&0x400
+                for info in (component.lstat() for component in (*path.parents,path)))
+        aliases=[self.root] if linked(self.root) else []
+        spelling_parent=root.parent/'cli-spelling';spelling_parent.mkdir()
+        spelling=spelling_parent/'..'/root.name
+        self.assertNotEqual(spelling,root);self.assertEqual(spelling.resolve(),root)
+        self.assertFalse(linked(spelling))
         if os.name=='posix':
             alias=Path(self.temp.name).resolve()/'cli-alias'
             alias.symlink_to(root,target_is_directory=True)
             aliases.append(alias)
         # A macOS temporary-parent alias (and the controlled POSIX alias)
         # must still fail closed. The ordinary CLI fixture uses its real root.
-        for alias in aliases:
+        for index,alias in enumerate(aliases):
             with self.subTest(alias_refused=True),patch('sys.stdout',new_callable=StringIO),patch('sys.stderr',new_callable=StringIO) as error:
-                self.assertEqual(main(['review','prepare',str(alias),'--session-id','session','--reviewer','reviewer_one','--authoritative']),2)
+                self.assertEqual(main(['review','prepare',str(alias),'--session-id','refused-alias-'+str(index),'--reviewer','reviewer_one','--authoritative']),2)
                 self.assertIn('Symbolic-link or reparse locations are not supported',error.getvalue())
         with patch('sys.stdout',new_callable=StringIO),patch('sys.stderr',new_callable=StringIO) as error:
             self.assertEqual(main(['review','prepare',str(root),'--session-id','session','--reviewer','reviewer_one','--authoritative']),0,error.getvalue())
             self.assertEqual(main(['review','status',str(root),'--session-id','session']),0,error.getvalue())
+            self.assertEqual(main(['review','status',str(spelling),'--session-id','session']),0,error.getvalue())
             self.assertEqual(main(['corpus',str(root),'--state','not_reviewed']),0,error.getvalue())
 
     def test_http_origin_csrf_and_resume(self):

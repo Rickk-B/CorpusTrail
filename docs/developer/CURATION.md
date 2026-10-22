@@ -102,6 +102,10 @@ CLI fixture using a noncanonical temporary location. Fixtures now write exact
 canonical UTF-8/LF bytes and use the Project's stored canonical root for normal
 CLI operations. Explicit CRLF and POSIX/native-alias probes still require the
 unchanged production integrity/path guards to refuse those invalid inputs.
+Different normalized path spellings are not assumed to be links: the negative
+fixture inspects actual symbolic-link/reparse metadata, and a valid nonlinked
+alternate-spelling probe must still work through the CLI. Refusal probes use
+distinct session IDs so an unexpected result cannot contaminate the normal case.
 Historical macOS stderr was mocked, so its original error message was not
 preserved; the controlled alias probe supplies the specific refusal evidence.
 This does not establish that earlier accepted scientific data was affected.
