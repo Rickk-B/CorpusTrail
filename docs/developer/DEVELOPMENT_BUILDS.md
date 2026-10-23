@@ -5,67 +5,65 @@
 Read this section when starting work and update it at completion/interruption.
 This is the single repository coordination record, not a second specification.
 
-- Researcher-accepted: CP1–9 and the warm presentation refresh. CP10 is now
-  authorized and in progress; it completes the alpha baseline, not beta status.
-- Delivered code: `ad4a5496bea422c56cc8ea3cd512a0887ae442c1`, tree
-  `6c7cccdf3a205d43ea29d11b2f1a8e0a7a1d69e7`,
-  [run 39811534279/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39811534279).
-  This acceptance/handover documentation is later than that delivered software.
-- Current work: expose existing Prioritization, Knowledge, Models and Export
-  services; finish navigation, Explore terminology, practical launcher/user guide,
-  alpha acceptance and exact-source development delivery. No new engine/importer,
-  automatic query generation, RIS, native installer or phone implementation.
-- CP10 working implementation: protected preview/confirm workspaces, bounded
-  Knowledge/ranking/native-model history inspection, exact ASReview CSV download
-  and returned-result mapping, Explore/navigation/Home copy, and practical user
-  guidance. No new scientific migration. Local development checks are in progress,
-  not delivered acceptance. Evidence is preserved in the authorized durable CP10
-  set (`cp10-20261022-XNiRpoOu`); do not confuse diagnostic attempts with final gates.
-- CP10 implementation anchor: `175f7b48478371bb8fb63ff58fe85b4457bcc307`
-  (superseding `2e832ca615081af8e94db1b996ba30422569dfea` with two terminology
-  strings only; scientific execution remains unchanged).
-  Local evidence includes a 679-test Python pass (one platform skip), complete
-  78-execution/271-capture Chromium pass, clean wheel/sdist/core/optional-ML and
-  project/external-original preservation checks. Focused HTTP/lease corrections
-  are separately recorded; hosted capture review and strict delivery are pending.
-  Capture mode is evidence collection only; the existing wheel gate requires
-  compare mode. The final source/run receipt, not this anchor, identifies delivery.
-- [Initial CP10 capture run 39838670454/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39838670454)
-  is not acceptance: Python/package and all six lifecycle jobs passed; macOS
-  Chromium completed 78/78 and 271 captures; WebKit completed 77/78 and 268
-  captures. Its assisted-audit test filled a required reviewer field before the
-  prior operation's final history/focus work completed. A controlled real-read
-  regression now verifies the operation-complete boundary before input. The
-  exact WebKit text-loss mechanism is not established. Linux exceeded its
-  20-minute whole-job budget after a ten-minute installation step; the bounded
-  job budget is now 35 minutes, with interaction/assertion timeouts unchanged.
-  A clean current-source local capture passed 78/78 with 271 captures; targeted
-  deferred-read checks passed all three viewports. Complete reviewed captures
-  and final strict validation/delivery remain pending. All failed/interrupted
-  evidence is retained; no capture-only wheel is a delivery.
-- [Complete CP10 capture run 39929496555/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39929496555)
-  from `3e6fc53bb3e8af3df40f42ebf2fa3ed91bbd3aaf` passed all 11 validation
-  jobs; the wheel job was correctly skipped in capture mode. Each renderer
-  completed 78/78 functional executions and 271 distinct captures. Explicit
-  engineering review inspected complete inventories and representative original,
-  previous-reference and full-size-diff images across all three viewports. Each
-  namespace records per-capture hashes and rationale: 224 existing references
-  intentionally change with navigation/footer/alpha-fixture updates, 36 new
-  handoff captures are added, and 11 earlier PNGs are preserved byte-for-byte.
-  This is not researcher acceptance or a claim that every original was read
-  full-size. No visual threshold, privacy mask, interaction timeout or existing
-  path-only exception policy changed. Strict compare mode is now restored;
-  final workflow-produced wheel/provenance/retention verification remains pending.
-- Open investigations: native MacBook Europe PMC transport causation and the
-  historical macOS navigation-timeout cause remain unresolved. Hosted success
-  and harness corrections are not proof those native issues are fixed.
-- Explicit decisions: manual use needs no model; assessments/Knowledge assertions
-  are not membership; human confirmation remains separate. Existing narrowly
-  approved macOS fixture-path visual debt must be reported when used, never called
-  a strict pass. Development bundles request 90 days; browser evidence seven.
-- Delivery uses standard public runners under the existing zero-additional-charge
-  approval. No release, PyPI/main/tag/billing/security changes or artifact deletion.
-  Mac coordination documents are maintained separately by the researcher.
+- Researcher-accepted: CP1–9 and the warm presentation refresh. CP10 is
+  **technically delivered, awaiting researcher acceptance**. This completes the
+  approved alpha UI baseline; it is not a beta or a published release.
+- Validated software: `f077bb7722ac2b6f3c911a434cb8a541dc8a5745`, tree
+  `affc087d36c57b1157f40f656c55f0657b3fe567`,
+  [run 39935463128/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128):
+  all 12 jobs passed.
+  Any later commit changing only this coordination record is not a new software
+  delivery; the source/run/wheel receipt below remains authoritative.
+- [Development bundle 12495277511](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12495277511):
+  `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 379,534 bytes,
+  SHA-256 `34b1315558ceee6a993d69660e230d1034ca4f921022ea60d2b93ef8a8467487`.
+  Source-to-wheel Git bytes, every wheel RECORD member,
+  native receipt and original downloaded artifact checksums were independently
+  verified. GitHub sign-in/read access is required for artifact downloads.
+- Linux Chromium, macOS Chromium and macOS WebKit each completed **78/78 functional
+  executions and 271/271 strict comparisons**. No path-only exception was used.
+  All Python 3.11–3.13 scientific/package/optional-ML jobs and all six macOS/Windows
+  lifecycle jobs passed. Native macOS steps are intentionally absent on Windows;
+  the 2,000-reference scale check runs on Python 3.13 rather than all three
+  versions. Exact conditional skips remain recorded, not disguised as performed
+  tests. [Linux browser evidence](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12494613577)
+  and [macOS browser evidence](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12493989570)
+  include original reports, screenshots, traces and sanitized diagnostics.
+- Delivered work: Research tools expose existing review ordering, Knowledge
+  observation/evidence/history and explicit validation, optional model setup and
+  exact tasks, and unlabelled ASReview export/returned-result mapping. Explore,
+  Home/navigation, launcher and practical install/update/removal guidance are
+  complete. Ordinary flows use forms/pickers and explicit preview/confirmation.
+  No new scientific migration, runtime dependency, authority model or UI framework.
+- Manual use requires no model. Ranking scores, model proposals and Knowledge
+  assertions remain separate from explicit human corpus-membership authority.
+  Frozen plans, exact identities, evidence trust and method-blind Review remain
+  protected. Synthetic fixtures demonstrate contracts, not scientific performance
+  or real-server interoperability. Hosted WebKit is not native Safari validation.
+- Development bundle created `2026-10-23T10:31:02Z`, expires
+  `2027-01-21T09:56:09Z`: 90 days from **run creation**, not upload.
+  Browser artifacts retain their separate seven-day policy; save evidence before
+  expiry. The existing narrowly approved macOS fixture-path exception remains
+  technical debt and must be reported separately whenever actually used.
+- Evidence: [capture run 39929496555/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39929496555)
+  passed all 11 validation jobs and correctly skipped capture-mode wheel delivery;
+  final strict run above validates delivery. The earlier incomplete capture
+  [39838670454/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39838670454)
+  is preserved as failed diagnostic evidence. Its audit helper now waits for the
+  actual operation-complete boundary; the exact historical WebKit text-loss
+  mechanism remains unproven. Linux whole-job budget is 35 minutes; interaction
+  timeouts, privacy masks, comparison thresholds and unique capture guards remain
+  unchanged. The durable CP10 set is `cp10-20261022-XNiRpoOu`, with original ZIPs,
+  member manifests, exact logs, visual-review rationale and independent Git recovery.
+- Outstanding investigations: native MacBook Europe PMC transport causation and
+  the historical macOS navigation-timeout cause remain unresolved. Hosted success
+  does not establish resolution. Production importers, automatic query generation,
+  RIS export, real assessment engines, institutional integrations, native installers
+  and phone support remain separately gated. No subsequent implementation is
+  authorized by this delivery. Researcher UX/alpha acceptance is the next decision.
+- Delivery used standard public runners under the existing zero-additional-charge
+  approval. No release/PyPI/main/tag change, artifact deletion, billing/security
+  change or paid service was introduced. Mac coordination documents remain separate.
 
 ## CP9 researcher acceptance — 22 October 2026
 
