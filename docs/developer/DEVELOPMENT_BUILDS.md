@@ -21,13 +21,28 @@ This is the single repository coordination record, not a second specification.
   guidance. No new scientific migration. Local development checks are in progress,
   not delivered acceptance. Evidence is preserved in the authorized durable CP10
   set (`cp10-20261022-XNiRpoOu`); do not confuse diagnostic attempts with final gates.
-- CP10 implementation anchor: `2e832ca615081af8e94db1b996ba30422569dfea`.
+- CP10 implementation anchor: `175f7b48478371bb8fb63ff58fe85b4457bcc307`
+  (superseding `2e832ca615081af8e94db1b996ba30422569dfea` with two terminology
+  strings only; scientific execution remains unchanged).
   Local evidence includes a 679-test Python pass (one platform skip), complete
   78-execution/271-capture Chromium pass, clean wheel/sdist/core/optional-ML and
   project/external-original preservation checks. Focused HTTP/lease corrections
   are separately recorded; hosted capture review and strict delivery are pending.
   Capture mode is evidence collection only; the existing wheel gate requires
   compare mode. The final source/run receipt, not this anchor, identifies delivery.
+- [Initial CP10 capture run 39838670454/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39838670454)
+  is not acceptance: Python/package and all six lifecycle jobs passed; macOS
+  Chromium completed 78/78 and 271 captures; WebKit completed 77/78 and 268
+  captures. Its assisted-audit test filled a required reviewer field before the
+  prior operation's final history/focus work completed. A controlled real-read
+  regression now verifies the operation-complete boundary before input. The
+  exact WebKit text-loss mechanism is not established. Linux exceeded its
+  20-minute whole-job budget after a ten-minute installation step; the bounded
+  job budget is now 35 minutes, with interaction/assertion timeouts unchanged.
+  A clean current-source local capture passed 78/78 with 271 captures; targeted
+  deferred-read checks passed all three viewports. Complete reviewed captures
+  and final strict validation/delivery remain pending. All failed/interrupted
+  evidence is retained; no capture-only wheel is a delivery.
 - Open investigations: native MacBook Europe PMC transport causation and the
   historical macOS navigation-timeout cause remain unresolved. Hosted success
   and harness corrections are not proof those native issues are fixed.

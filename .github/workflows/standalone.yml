@@ -109,7 +109,7 @@ jobs:
   browser-acceptance:
     name: Offline Chromium / reviewed Linux visual baselines
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     outputs:
       visual_mode: '${{ steps.visual-mode.outputs.mode }}'
       acceptance: '${{ steps.browser-report.outputs.acceptance }}'

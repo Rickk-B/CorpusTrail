@@ -131,7 +131,7 @@ CURATION_HASHES = {
 # CP10 may change the HTTP presentation/composition boundary, not the CP9
 # scientific implementation. No scientific/migration digest may be overridden.
 HANDOFF_BASELINE = 'ad4a5496bea422c56cc8ea3cd512a0887ae442c1'
-HANDOFF_COMMIT = '2e832ca615081af8e94db1b996ba30422569dfea'
+HANDOFF_COMMIT = '175f7b48478371bb8fb63ff58fe85b4457bcc307'
 HANDOFF_HASHES = {
     'src/corpustrail/application/_workflow_files.py':'7b9e6fa277c6accc8060bec05ab6db753db86a72bc16a90e7e06179cb41741db',
     'src/corpustrail/application/handoff.py':'9ce8251567ea407ae0d44f0afd46fa03cded2b3c68a36090db134dca9356fa9e',
@@ -141,6 +141,7 @@ HANDOFF_HASHES = {
     'src/corpustrail/local_app/assets/app.js':'1b785756ab7fe9ed622294efe67cb43bb7b3ce14075270eebdb8a26c5917aca7',
     'src/corpustrail/local_app/assets/curation.html':'3c98cf06b885852881e3d5b057b4939be73f47c93394b3cc031116c06f0ffda0',
     'src/corpustrail/local_app/assets/discovery.html':'045171ed593c2e7d9f635a3ad68b1f502d5358d727a835d6e339ccb77c5f6d12',
+    'src/corpustrail/local_app/assets/discovery.js':'e389ffc260836424ed038e4343c7a9a463fadd42efa0515a4a69c9b30891b028',
     'src/corpustrail/local_app/assets/handoff.html':'887e226b9e28401cea7dbacfe7b7cf6cce47321fb59f95c5957edc50297f9887',
     'src/corpustrail/local_app/assets/handoff.js':'c9fa1152b5aa08570c94da549e1f84f693bd549208b3e89753851b35d0f8717f',
     'src/corpustrail/local_app/assets/home.html':'b753d4d9438dc5fdbf0337c6cbc97e7ccb3dffb4c86b0f8d2568e4870455585d',
@@ -150,6 +151,7 @@ HANDOFF_HASHES = {
     'src/corpustrail/local_app/assets/projects.js':'40fc01b2e4882ab4c7a436f02e1a6ec68c14c38329dc87b92f20b7573dbf64e1',
     'src/corpustrail/local_app/assets/references.html':'b5849dc6547324bec71959e721daa5005f0c6012e5a714789f477ef565ed2275',
     'src/corpustrail/local_app/assets/review.html':'271921901cb30c32b9abade6bd11b4ffb5220ff95515a735447e73b0845a017c',
+    'src/corpustrail/local_app/assets/review.js':'9248755f42946dc8113b14120aca43de960e30d77a78ab595b38daca726f4d86',
     'src/corpustrail/local_app/server.py':'7ec72eae556c9fb4d264222455dba5457b4ee1661b734efec3d1e4c94829813b'}
 HANDOFF_HTTP = 'src/corpustrail/local_app/server.py'
 HANDOFF_READ_SUPPORT = {'src/corpustrail/knowledge/service.py', 'src/corpustrail/knowledge/storage.py',

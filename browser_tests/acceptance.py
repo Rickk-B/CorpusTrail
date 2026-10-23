@@ -161,7 +161,7 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#curation-result-count')).to_contain_text('5 matching candidates')
         return data
 
-    def curation_audit(self,*,primary='',capture='curation-audit-preview'):
+    def curation_audit(self,*,primary='',capture='curation-audit-preview',defer_final_history=False):
         self.page.locator('#curation-primary').select_option(primary)
         self.page.locator('#curation-results-form button').click()
         expect(self.page.locator('#curation-result-count')).to_contain_text('frozen candidates')
@@ -173,8 +173,34 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.locator('#curation-audit-form button').click()
         expect(self.page.locator('#curation-audit-preview')).to_be_visible()
         self.layout();self.snapshot(capture)
-        self.page.locator('#curation-audit-commit').click()
-        expect(self.page.locator('#curation-audit-status')).to_contain_text('immutable selected candidates')
+        from contextlib import nullcontext
+        import time
+        from unittest.mock import patch
+        entered,released=threading.Event(),threading.Event()
+        native=self.fixture.curation.outcomes
+        def final_history(*args,**kwargs):
+            entered.set()
+            if not released.wait(10):raise AssertionError('Controlled audit-history gate timed out')
+            return native(*args,**kwargs)  # Real read/service response, never a fabricated API result.
+        guarded=patch.object(self.fixture.curation,'outcomes',side_effect=final_history) if defer_final_history else nullcontext()
+        with guarded:
+            try:
+                if defer_final_history:
+                    with self.page.expect_request(re.compile(r'/api/v1/curation/audits/[^/]+/outcomes\?')):
+                        self.page.locator('#curation-audit-commit').click()
+                    deadline=time.monotonic()+3
+                    while not entered.is_set() and time.monotonic()<deadline:
+                        self.page.wait_for_timeout(50)  # Pump the routed request, not a fixed readiness sleep.
+                    self.assertTrue(entered.is_set(),'Real final audit-history read did not reach its controlled gate')
+                    expect(self.page.locator('main')).to_have_attribute('aria-busy','true')
+                    expect(self.page.locator('#curation-assisted-form button')).to_be_disabled()
+                    released.set()
+                else:self.page.locator('#curation-audit-commit').click()
+                expect(self.page.locator('#curation-audit-status')).to_contain_text('immutable selected candidates')
+                # Status text precedes sessions/outcomes and openAudit's final
+                # focus change. Fill only after that existing operation finishes.
+                expect(self.page.locator('main')).not_to_have_attribute('aria-busy','true')
+            finally:released.set()  # Release the real read even if an assertion fails.
         return self.fixture.project
 
     def test_curation_results_disagreement_audit_correction_and_explicit_reassessment(self):
@@ -264,8 +290,9 @@ class BrowserAcceptance(unittest.TestCase):
         from corpustrail.application.review import ReviewController,_handle
         from corpustrail._internal.values import ContractError
         data=self.open_curation_fixture();project=self.fixture.project
-        self.curation_audit(primary='exclude',capture='curation-assisted-audit-preview');service=CurationService(project)
+        self.curation_audit(primary='exclude',capture='curation-assisted-audit-preview',defer_final_history=True);service=CurationService(project)
         self.page.locator('#curation-reviewer').fill('fixture_reviewer');self.page.locator('#curation-assisted-confirm').check()
+        expect(self.page.locator('#curation-reviewer')).to_have_value('fixture_reviewer')
         self.page.locator('#curation-assisted-form button').click()
         expect(self.page.locator('#review-assisted')).to_be_visible()
         self.assertFalse(self.page.locator('input[name=assessment]:checked').count())
