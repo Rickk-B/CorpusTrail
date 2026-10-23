@@ -60,12 +60,20 @@ This is the single repository coordination record, not a second specification.
   the historical macOS navigation-timeout cause remain unresolved. Hosted success
   does not establish resolution. Production importers, automatic query generation,
   RIS export, real assessment engines, institutional integrations, native installers
-  and phone support remain separately gated. No subsequent implementation is
-  authorized by this acceptance. Next permitted action: use the
+  and phone support remain separately gated beyond explicit subsequent approval.
+  Current authorized work: ready-to-review offline demo plus production RIS
+  import/export (including available abstracts), using native exact identity,
+  populations and explicit human confirmation. Work is in progress; no new
+  validated wheel has been delivered. Starting source is documentation-only
+  `fe00ba0cc23e32f5d4d7ce3751d8848ef1b63ab2`; accepted software remains CP10
+  above. Preserve evidence in the durable `ris-demo-20261023-wiy2hkhl` set.
+  No other format, real model, direct database adapter or release is authorized.
+  The evaluation guide at the accepted baseline is available here:
   [macOS alpha evaluation guide](../user/ALPHA_EVALUATION.md), collect usability
-  feedback and decide the separately proposed beta assignments below. No beta
-  implementation, model download/call, dependency installation or release is
-  authorized by this record. The older offline tutorial lacks an explicit Guided
+  feedback. The earlier proposals below are historical: RIS and the new scoped
+  demo are now explicitly authorized; assessment integration still requires a
+  separate decision. No model download/call, dependency installation or release
+  is authorized by this record. The older offline tutorial lacks an explicit Guided
   Review scope and cannot be retrofitted after its scripted authority events;
   the guide explicitly separates that limitation from the implemented workflow.
 - Delivery used standard public runners under the existing zero-additional-charge

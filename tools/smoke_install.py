@@ -152,7 +152,10 @@ def run(*, dependency_wheels=None) -> dict:
                          'corpustrail/local_app/assets/populations.html', 'corpustrail/local_app/assets/populations.js',
                          'corpustrail/local_app/assets/references.html', 'corpustrail/local_app/assets/references.js',
                          'corpustrail/local_app/assets/review.html', 'corpustrail/local_app/assets/review.js',
-                         'corpustrail/local_app/assets/handoff.html', 'corpustrail/local_app/assets/handoff.js'):
+                         'corpustrail/local_app/assets/handoff.html', 'corpustrail/local_app/assets/handoff.js',
+                         'corpustrail/local_app/assets/ris.html', 'corpustrail/local_app/assets/ris.js',
+                         'corpustrail/demo.py','corpustrail/imports/ris.py','corpustrail/imports/service.py',
+                         'corpustrail/resources/ris-demo-initial.ris','corpustrail/resources/ris-demo-import.ris'):
             if required not in wheel_entries:
                 raise RuntimeError('wheel omitted local frontend asset: ' + required)
         if any(not name.startswith(("corpustrail/", "corpus_trail-")) for name in wheel_entries):

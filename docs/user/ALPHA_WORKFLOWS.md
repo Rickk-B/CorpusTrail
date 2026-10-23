@@ -101,7 +101,7 @@ exact mapping. The native service refuses missing, foreign, conflicting or
 unsupported identifiers/versions; it does not guess from titles or row positions.
 The mapping is question-specific and does not change broad-corpus membership,
 references or ASReview itself. This narrowly supported result upload is not a
-production literature importer. RIS export is not implemented.
+production literature importer. The separately approved [RIS exchange](RIS_EXCHANGE.md) offers explicit confirmed-member, candidate or frozen-population export scopes.
 Treat downloaded metadata as untrusted data if opening CSV in other software;
 CorpusTrail does not execute formulas, macros or links in imported metadata.
 
@@ -117,5 +117,5 @@ Projects, raw evidence, reviews, reference/population versions, model outputs,
 rankings, snapshots and exports are researcher-owned material, not disposable
 cache. [Install/update/remove](REMOVAL_STORAGE.md) software independently. No page
 scans unrelated folders, upgrades old projects automatically or runs on startup.
-Production bibliographic/PDF import, real assessment engines, institutional adapters,
+Other bibliographic formats/PDF import, real assessment engines, institutional adapters,
 automatic queries, native installers and standalone phone support are future tracks.

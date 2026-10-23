@@ -128,11 +128,12 @@ class FixtureTransport:
 
 
 class ApplicationFixture:
-    def __init__(self, *, project_id=None, long_path=False, alpha_workflow=False):
+    def __init__(self, *, project_id=None, long_path=False, alpha_workflow=False, ris_demo=False):
         self.stack = ExitStack()
         self.project_id=project_id or 'browser-'+uuid.uuid4().hex
         self.long_path=long_path
         self.alpha_workflow=alpha_workflow
+        self.ris_demo=ris_demo
         self.curation_registry=EngineRegistry()
         from .handoff_fixtures import WireFixture
         self.model_wire=WireFixture()
@@ -149,7 +150,7 @@ class ApplicationFixture:
         if Path(corpustrail.__file__).resolve().is_relative_to(source):
             raise AssertionError('Browser acceptance requires an installed wheel, not editable source')
         for path in source.rglob('*'):
-            if path.is_file() and path.suffix in {'.py','.html','.css','.js'}:
+            if path.is_file() and path.suffix in {'.py','.html','.css','.js','.ris'}:
                 if installed.joinpath(*path.relative_to(source).parts).read_bytes()!=path.read_bytes():
                     raise AssertionError('Installed package differs from checkout. Rebuild and force-reinstall its wheel.')
         self.temp = self.stack.enter_context(fixture_directory(long_path=self.long_path))
@@ -170,40 +171,48 @@ class ApplicationFixture:
                 raise AssertionError('Nonloopback network forbidden')
             return original(sock, address)
         self.stack.enter_context(patch.object(socket.socket, 'connect', connect))
-        self.project = Project.create(self.root/'materials', ProjectConfig(self.project_id, 'Synthetic materials',
-            'Invented publications for browser acceptance.',
-            providers=tuple(ProviderConfig(x, x) for x in ('openalex', 'crossref', 'europepmc', 'semantic_scholar')),
-            search=(SearchConcept('porous', 'porous materials'),),
-            review=ReviewPolicy(scope=SCOPE), evidence=EvidencePolicy(('europepmc',), max_attempts=1)),
-            created_by='fixture', created_at=AT)
-        self.papers = []
-        for i, title in enumerate((TITLE, 'Publication without a PMCID',
-                'Long scientific title — Μικροδομή ' + 'porous materials and characterization ' * 8,
-                'Pending document publication', 'Metadata-only publication'), 1):
-            raw = ('synthetic-'+str(i)).encode()
-            if self.alpha_workflow and i==5:title=TITLE+' — distinct metadata-only publication'
-            record = BibliographicRecord(title, ABSTRACT if i == 1 else 'Invented second abstract-best source.' if self.alpha_workflow and i in (2,3) else None,
-                authors=('Fixture Researcher',), year=2025, source='Synthetic Journal',
-                identifiers=(() if self.alpha_workflow and i==2 else (Identifier('doi', '10.1234/evidence.'+str(i)),)) +
-                ((Identifier('pmcid', 'PMC123'),) if i == 1 else ()))
-            source = SourceReference('fixture://bibliography/'+str(i), str(i),
-                'sha256:'+hashlib.sha256(raw).hexdigest(), len(raw), 'fixture_discovery', AT, identity_status='verified')
-            self.papers.append(self.project.identities.apply(self.project.identities.plan(record, source),
-                approve_new_identity=True, approve_aliases=True))
-        if self.alpha_workflow:
-            raw=b'Synthetic independent second-provider observation of the same exact publication.'
-            duplicate=SourceReference('fixture://second-provider/exact-paper','second-record','sha256:'+hashlib.sha256(raw).hexdigest(),len(raw),'fixture_discovery',AT,identity_status='verified')
-            matched=self.project.identities.apply(self.project.identities.plan(BibliographicRecord(TITLE,identifiers=(Identifier('doi','10.1234/evidence.1'),)),duplicate),approve_new_identity=True,approve_aliases=True)
-            if matched!=self.papers[0]:raise AssertionError('Exact synthetic overlap must preserve one canonical paper')
-        self.project.evidence.preserve_document(self.papers[3],
-            b'<article><body><p>Unidentified synthetic document.</p></body></article>',
-            representation='jats_xml',media_type='application/xml',source_uri='fixture://pending-document',
-            legitimate_basis='synthetic_fixture',resolver='fixture',resolver_version='v1')
-        source=self.project.identities.observations(self.papers[1])[0]['source']
-        observation=ReviewEvent(self.papers[1],'included','sufficient','metadata','Synthetic earlier human observation',
-            'fixture_reviewer',AT,(EvidenceBasis('metadata',source['source_sha256'],source['source_uri'],artifact_validity='verified'),),
-            authority_state='non_authoritative')
-        self.project.reviews.apply(self.project.reviews.plan(observation),recorded_at=AT)
+        if self.ris_demo:
+            from corpustrail.demo import create
+            self.stack.enter_context(patch('corpustrail.imports.service.now',return_value=AT))
+            with patch('corpustrail.demo.uuid.uuid4',side_effect=[uuid.UUID(int=i) for i in (710,711,712)]):
+                create(self.root/'materials')
+            self.project=Project.open(self.root/'materials')
+            self.papers=self.project.identities.papers()
+        else:
+            self.project = Project.create(self.root/'materials', ProjectConfig(self.project_id, 'Synthetic materials',
+                'Invented publications for browser acceptance.',
+                providers=tuple(ProviderConfig(x, x) for x in ('openalex', 'crossref', 'europepmc', 'semantic_scholar')),
+                search=(SearchConcept('porous', 'porous materials'),),
+                review=ReviewPolicy(scope=SCOPE), evidence=EvidencePolicy(('europepmc',), max_attempts=1)),
+                created_by='fixture', created_at=AT)
+            self.papers = []
+            for i, title in enumerate((TITLE, 'Publication without a PMCID',
+                    'Long scientific title — Μικροδομή ' + 'porous materials and characterization ' * 8,
+                    'Pending document publication', 'Metadata-only publication'), 1):
+                raw = ('synthetic-'+str(i)).encode()
+                if self.alpha_workflow and i==5:title=TITLE+' — distinct metadata-only publication'
+                record = BibliographicRecord(title, ABSTRACT if i == 1 else 'Invented second abstract-best source.' if self.alpha_workflow and i in (2,3) else None,
+                    authors=('Fixture Researcher',), year=2025, source='Synthetic Journal',
+                    identifiers=(() if self.alpha_workflow and i==2 else (Identifier('doi', '10.1234/evidence.'+str(i)),)) +
+                    ((Identifier('pmcid', 'PMC123'),) if i == 1 else ()))
+                source = SourceReference('fixture://bibliography/'+str(i), str(i),
+                    'sha256:'+hashlib.sha256(raw).hexdigest(), len(raw), 'fixture_discovery', AT, identity_status='verified')
+                self.papers.append(self.project.identities.apply(self.project.identities.plan(record, source),
+                    approve_new_identity=True, approve_aliases=True))
+            if self.alpha_workflow:
+                raw=b'Synthetic independent second-provider observation of the same exact publication.'
+                duplicate=SourceReference('fixture://second-provider/exact-paper','second-record','sha256:'+hashlib.sha256(raw).hexdigest(),len(raw),'fixture_discovery',AT,identity_status='verified')
+                matched=self.project.identities.apply(self.project.identities.plan(BibliographicRecord(TITLE,identifiers=(Identifier('doi','10.1234/evidence.1'),)),duplicate),approve_new_identity=True,approve_aliases=True)
+                if matched!=self.papers[0]:raise AssertionError('Exact synthetic overlap must preserve one canonical paper')
+            self.project.evidence.preserve_document(self.papers[3],
+                b'<article><body><p>Unidentified synthetic document.</p></body></article>',
+                representation='jats_xml',media_type='application/xml',source_uri='fixture://pending-document',
+                legitimate_basis='synthetic_fixture',resolver='fixture',resolver_version='v1')
+            source=self.project.identities.observations(self.papers[1])[0]['source']
+            observation=ReviewEvent(self.papers[1],'included','sufficient','metadata','Synthetic earlier human observation',
+                'fixture_reviewer',AT,(EvidenceBasis('metadata',source['source_sha256'],source['source_uri'],artifact_validity='verified'),),
+                authority_state='non_authoritative')
+            self.project.reviews.apply(self.project.reviews.plan(observation),recorded_at=AT)
         self.transport = FixtureTransport()
         self._start_server()
 

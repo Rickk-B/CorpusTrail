@@ -31,6 +31,7 @@ def baseline_directory(environment):
 LIMITED={'laptop':{'welcome','wizard-reviewer','wizard-summary','empty-dashboard','catalogue','discovery-preview','discovery-approval','evidence-availability','evidence-result','evidence-mismatch','missing-pmcid'},
          'narrow':{'welcome','projects','wizard','wizard-reviewer','wizard-summary','empty-dashboard','settings','catalogue','trash-confirmation','discovery-preview','discovery-approval','evidence-availability','evidence-result','evidence-mismatch','missing-pmcid'}}
 for names in LIMITED.values():
+    names.update({'ris-preview','ris-imported','ris-abstract','ris-review','ris-review-summary','ris-export','ris-history','ris-conflict'})
     names.add('evidence-footnotes')
     names.update({'review-session-selection','review-session-selection-skip','review-session-selection-unauthorized',
         'review-active','review-verified-text','review-long-title',
@@ -299,7 +300,7 @@ class Runtime:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population','reference','curation','handoff'),default='all')
+    parser.add_argument('--suite',choices=('all','smoke','project','discovery','evidence','review','population','reference','curation','handoff','ris'),default='all')
     parser.add_argument('--viewports',nargs='+',choices=tuple(VIEWPORTS),default=list(VIEWPORTS))
     parser.add_argument('--visual',choices=('capture','compare'),default='capture')
     parser.add_argument('--browser',choices=('chromium','webkit'),default='chromium')

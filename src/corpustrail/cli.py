@@ -22,6 +22,8 @@ def main(argv=None) -> int:
     app.add_argument('--projects-root', type=Path, help='Allowed project creation/open root (default: ~/CorpusTrailProjects)')
     app.add_argument('--port', type=int, default=8766, help='Loopback port (0 chooses an available port)')
     app.add_argument('--open-browser', action='store_true', help='Explicitly open the local URL in the default browser')
+    demo = sub.add_parser("demo", help="Create a fresh scoped offline RIS demonstration, never overwrite")
+    demo.add_argument("path", type=Path)
     project = sub.add_parser("project").add_subparsers(dest="operation", required=True)
     init = project.add_parser("init")
     init.add_argument("path", type=Path)
@@ -238,6 +240,11 @@ def main(argv=None) -> int:
     leases = ExitStack()
     try:
         from corpustrail.application.project_use import project_use, creation_use
+        if args.command == 'demo':
+            from corpustrail.demo import create
+            with creation_use(args.path):
+                print(json.dumps(create(args.path), sort_keys=True))
+            return 0
         if args.command == 'app':
             from corpustrail.local_app import serve
             from corpustrail.application.projects import _safe_path

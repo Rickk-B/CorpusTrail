@@ -26,6 +26,93 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#operation-summary .badge')).to_contain_text('complete',timeout=15000)
         self.assertEqual(self.page.locator('#tools-message.error').count(),0)
 
+    def ris_page(self):
+        self.visit('/ris');expect(self.page.locator('main')).not_to_have_attribute('aria-busy','true')
+
+    def test_ris_demo_import_review_export_and_restart(self):
+        from pathlib import Path
+        from corpustrail.imports.ris import parse
+        p=self.fixture.project
+        self.assertEqual(len(p.identities.papers()),3)
+        self.assertTrue(all(not p.reviews.history(pid) for pid in p.identities.papers()))
+        self.open_project();self.ris_page()
+        self.page.locator('#ris-sample').click();expect(self.page.locator('main')).not_to_have_attribute('aria-busy','true')
+        self.page.locator('#ris-actor').fill('demo_reviewer')
+        self.page.get_by_role('button',name='Preview RIS Import',exact=True).click()
+        expect(self.page.locator('#ris-preview')).to_be_visible();expect(self.page.locator('main')).not_to_have_attribute('aria-busy','true')
+        self.assertEqual(len(p.identities.papers()),3);self.layout();self.snapshot('ris-preview')
+        self.page.locator('#ris-partial').check();self.page.locator('#ris-confirm').click()
+        expect(self.page.locator('#ris-message')).to_contain_text('RIS import completed')
+        expect(self.page.locator('main')).not_to_have_attribute('aria-busy','true')
+        self.assertEqual(len(p.identities.papers()),5)
+        self.assertTrue(all(p.reviews.membership(pid)['state']=='not_reviewed' for pid in p.identities.papers()))
+        self.layout();self.snapshot('ris-imported')
+        self.page.locator('#ris-records article').filter(has_text='Synthetic photon sensor comparison').get_by_role('link',name='Open publication').click()
+        expect(self.page.locator('#abstract')).to_contain_text('invented abstract')
+        self.layout();self.snapshot('ris-abstract')
+        self.visit('/review');self.page.locator('#reviewer').fill('demo_reviewer');self.page.locator('#review-population').select_option('all')
+        self.page.get_by_role('button',name='Start Guided Review',exact=True).click()
+        expect(self.page.locator('#review-workspace')).to_be_visible();self.layout();self.snapshot('ris-review')
+        self.page.get_by_role('button',name='Skip for now',exact=True).click()
+        self.assertTrue(all(not p.reviews.history(pid) for pid in p.identities.papers()))
+        self.page.get_by_role('button',name='Previous',exact=True).click()
+        for i in range(5):
+            expect(self.page.locator('#review-progress')).to_contain_text('Paper '+str(i+1)+' of 5')
+            title=self.page.locator('#review-paper-title').inner_text()
+            decision='excluded' if 'bookkeeping' in title else 'insufficient_evidence' if 'evidence gap' in title else 'included'
+            self.page.locator('input[name="assessment"][value="'+decision+'"]').check()
+            self.page.locator('#review-extent').select_option('metadata')
+            self.page.locator('#review-rationale').fill('Synthetic human evaluation '+str(i+1)+'; not a scientific label.')
+            self.page.get_by_role('button',name='Save assessment' if i==4 else 'Save & Next',exact=True).click()
+        expect(self.page.locator('#review-progress')).to_contain_text('5 with saved observations')
+        self.assertEqual(sum(len(p.reviews.history(pid)) for pid in p.identities.papers()),5)
+        self.assertTrue(all(p.reviews.membership(pid)['state']=='not_reviewed' for pid in p.identities.papers()))
+        self.page.locator('#review-show-summary').click();expect(self.page.locator('#review-summary')).to_be_visible()
+        self.snapshot('ris-review-summary')
+        self.page.get_by_role('button',name='Finish Review',exact=True).click()
+        expect(self.page.locator('#dashboard-review-result')).to_contain_text('Finishing did not change corpus membership')
+        self.page.locator('#dashboard-review-summary').click()
+        self.page.get_by_role('button',name='Preview corpus updates',exact=True).click()
+        self.assertTrue(all(p.reviews.membership(pid)['state']=='not_reviewed' for pid in p.identities.papers()))
+        self.page.get_by_role('button',name='Confirm corpus updates',exact=True).click()
+        expect(self.page.locator('#review-message')).to_contain_text('confirmed decisions updated')
+        self.assertEqual(sum(p.reviews.membership(pid)['state']=='included' for pid in p.identities.papers()),3)
+        self.ris_page();self.page.locator('#ris-scope').select_option('confirmed');self.page.locator('#ris-export-actor').fill('demo_reviewer')
+        self.page.get_by_role('button',name='Preview RIS Export',exact=True).click()
+        expect(self.page.locator('#ris-export-summary')).to_contain_text('3 publications')
+        self.page.locator('#ris-export-confirm').click();expect(self.page.locator('#ris-downloads')).to_contain_text('Download RIS provenance')
+        expect(self.page.locator('main')).not_to_have_attribute('aria-busy','true');self.layout();self.snapshot('ris-export')
+        with self.page.expect_download() as saved:self.page.get_by_role('button',name='Download RIS',exact=True).click()
+        body=Path(saved.value.path()).read_bytes();self.assertEqual(len(parse(body)),3)
+        self.page.locator('#ris-file').set_input_files({'name':'roundtrip.ris','mimeType':'application/x-research-info-systems','buffer':body})
+        self.page.locator('#ris-name').fill('Round-trip bibliography');self.page.locator('#ris-actor').fill('demo_reviewer')
+        self.page.get_by_role('button',name='Preview RIS Import',exact=True).click()
+        expect(self.page.locator('#ris-preview')).to_be_visible();expect(self.page.locator('main')).not_to_have_attribute('aria-busy','true')
+        expect(self.page.locator('#ris-summary')).to_contain_text('0 new source-origin enrollments')
+        self.page.locator('#ris-confirm').click();expect(self.page.locator('#ris-message')).to_contain_text('RIS import completed')
+        self.assertEqual(len(p.identities.papers()),5)
+        self.restart();self.open_project();self.ris_page();self.layout();self.snapshot('ris-history')
+        self.assertEqual(len(p.identities.papers()),5)
+        self.assertEqual(sum(p.reviews.membership(pid)['state']=='included' for pid in p.identities.papers()),3)
+        self.assertEqual(self.fixture.transport.calls,[])
+
+    def test_ris_conflicts_failures_and_metadata_safety(self):
+        self.open_project();self.ris_page()
+        body=b'TY  - JOUR\nTI  - Synthetic new PMID owner\nPM  - 1234\nER  - \nTY  - JOUR\nTI  - Conflicting source\nDO  - 10.1234/ris.demo.1\nPM  - 1234\nER  - \nTY  - JOUR\nTI  - <script>Untrusted metadata</script>\nL1  - https://example.invalid/private.pdf\nAB  - Missing document is not exclusion.\nER  - \nTY  - JOUR\nTI  - Malformed DOI record\nDO  - invalid\nER  - \n'
+        self.page.locator('#ris-file').set_input_files({'name':'controlled-conflicts.ris','mimeType':'application/x-research-info-systems','buffer':body})
+        self.page.locator('#ris-name').fill('Controlled partial source');self.page.locator('#ris-actor').fill('demo_reviewer')
+        self.page.get_by_role('button',name='Preview RIS Import',exact=True).click()
+        expect(self.page.locator('#ris-preview')).to_be_visible();expect(self.page.locator('main')).not_to_have_attribute('aria-busy','true')
+        expect(self.page.locator('#ris-summary')).to_contain_text('1 identity issues')
+        expect(self.page.locator('#ris-records')).to_contain_text('<script>Untrusted metadata</script>')
+        self.assertEqual(len(self.fixture.project.identities.papers()),3)
+        self.layout();self.snapshot('ris-conflict')
+        self.page.locator('#ris-partial').check();self.page.locator('#ris-confirm').click()
+        expect(self.page.locator('#ris-message')).to_contain_text('RIS import completed')
+        self.assertEqual(len(self.fixture.project.identities.papers()),5)
+        self.assertTrue(all(not self.fixture.project.reviews.history(pid) for pid in self.fixture.project.identities.papers()))
+        self.assertEqual(self.fixture.transport.calls,[])
+
     def test_handoff_empty_workspaces_and_read_only_navigation(self):
         self.open_project();before=fingerprint(self.fixture.root)
         for path,title in (('/prioritization','Review order'),('/knowledge','Knowledge'),('/models','Models'),('/export','Export')):
@@ -377,14 +464,15 @@ class BrowserAcceptance(unittest.TestCase):
             'browser-population-fixture' if 'population' in self._testMethodName else
             'browser-reference-fixture' if 'reference' in self._testMethodName else None,
             long_path='long_paths' in self._testMethodName,
-            alpha_workflow=self._testMethodName=='test_review_guided_save_finish_publish_and_resume')
+            alpha_workflow=self._testMethodName=='test_review_guided_save_finish_publish_and_resume',
+            ris_demo=self._testMethodName.startswith('test_ris_'))
         self.addCleanup(self.fixture.close)
         self.context = self.runtime.browser.new_context(viewport=self.runtime.viewport,
             device_scale_factor=1, locale='en-US', timezone_id='UTC', color_scheme='light',
             reduced_motion='reduce', service_workers='block')
         self.addCleanup(self.runtime.close_context, self)
         self.context.tracing.start(screenshots=True, snapshots=False, sources=False)
-        if 'reference' in self._testMethodName or 'curation' in self._testMethodName or 'handoff' in self._testMethodName:
+        if 'reference' in self._testMethodName or 'curation' in self._testMethodName or 'handoff' in self._testMethodName or self._testMethodName.startswith('test_ris_'):
             # Control only synthetic form operation IDs at their generation
             # boundary. Same-paper contradictory assignments otherwise change
             # hash order across independent screenshots. Counter survives this
@@ -483,7 +571,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.visit('/projects')
         expect(self.page.locator('#project-list article')).to_have_count(1)
         self.page.get_by_role('button', name='Open Project', exact=True).click()
-        expect(self.page.locator('#project-name')).to_have_text('Synthetic materials')
+        expect(self.page.locator('#project-name')).to_have_text(self.fixture.project.config.name)
 
     def snapshot(self, name, full_page=True,subject=None,anchor=None):
         self.runtime.snapshot(self, name, full_page=full_page,subject=subject,anchor=anchor)
@@ -1578,7 +1666,7 @@ class BrowserAcceptance(unittest.TestCase):
         self.page.get_by_role('button',name='View Review Summary',exact=True).click()
         expect(self.page.locator('#review-summary')).to_be_visible()
         self.page.get_by_role('link',name='Back to Project Dashboard',exact=True).click()
-        expect(self.page.locator('#project-name')).to_have_text('Synthetic materials')
+        expect(self.page.locator('#project-name')).to_have_text(self.fixture.project.config.name)
         from corpustrail.project import Project,ProjectConfig,ReviewPolicy
         empty=Project.create(self.fixture.root/'empty',ProjectConfig('empty-review','Empty review project','Invented empty fixture',review=ReviewPolicy(scope=SCOPE)),created_by='fixture')
         self.visit('/projects')

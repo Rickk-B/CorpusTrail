@@ -6,6 +6,10 @@ assessment engine. These instructions were checked against the delivered CLI,
 tutorial, shutdown implementation and accepted installed-package evidence; no
 new Mac execution or acceptance rerun was performed for this guide.
 
+For the separately authorized newer scoped demo and production RIS module, use
+[Offline demonstration and RIS exchange](RIS_EXCHANGE.md). The instructions below
+remain tied to the historical accepted CP10 bundle.
+
 ## 1. Identify and download the accepted build
 
 Sign in to GitHub and download [development bundle 12495277511](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12495277511)

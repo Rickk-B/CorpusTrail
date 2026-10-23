@@ -24,7 +24,7 @@ ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; char
           'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8',
           'evidence.js': 'text/javascript; charset=utf-8', 'review.js':'text/javascript; charset=utf-8',
           'populations.js': 'text/javascript; charset=utf-8','references.js':'text/javascript; charset=utf-8',
-          'curation.js':'text/javascript; charset=utf-8','handoff.js':'text/javascript; charset=utf-8'}
+          'curation.js':'text/javascript; charset=utf-8','handoff.js':'text/javascript; charset=utf-8','ris.js':'text/javascript; charset=utf-8'}
 
 
 def navigation(active, path, *, workflows=(), editable=True):
@@ -44,7 +44,7 @@ def navigation(active, path, *, workflows=(), editable=True):
     if active:
         tools=[item for item in [
             ('/curation','Curation and audits'),('/populations','Candidate sets'),('/references','Reference collections'),
-            ('/prioritization','Review order'),('/knowledge','Knowledge'),('/models','Models'),('/export','Export'),('/settings','Project Settings')]
+            ('/prioritization','Review order'),('/knowledge','Knowledge'),('/models','Models'),('/export','Export'),('/ris','RIS exchange'),('/settings','Project Settings')]
             if item[0][1:] in workflows or item[0]=='/settings' and editable]
         if tools:body += '<details class="nav-tools"><summary>Research tools</summary><div>'+''.join(link(*item) for item in tools)+'</div></details>'
     return '<nav aria-label="Application">'+body+'</nav>'
@@ -92,6 +92,9 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
         from corpustrail.application.handoff import HandoffController
         handoff = HandoffController()
 
+    from corpustrail.application.ris import RISController
+    ris = RISController() if controller is not None else None
+
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
 
@@ -135,7 +138,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/explore','/review','/populations','/references','/curation','/curation/review','/prioritization','/knowledge','/models','/export'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/explore','/review','/populations','/references','/curation','/curation/review','/prioritization','/knowledge','/models','/export','/ris'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
                     active = controller.active_handle is not None if controller is not None else project is not None
@@ -153,11 +156,14 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                         return self.error(409,'project_required','Open a project before using curation.')
                     if path in {'/prioritization','/knowledge','/models','/export'} and (not active or handoff is None):
                         return self.error(409,'project_required','Open a project before using research tools.')
+                    if path=='/ris' and (not active or ris is None):
+                        return self.error(409,'project_required','Open a project before RIS exchange.')
                     page = 'home.html' if home else 'projects.html' if setup else 'curation.html' if path=='/curation' else 'references.html' if path=='/references' else 'populations.html' if path=='/populations' else 'review.html' if path in {'/review','/curation/review'} else 'discovery.html' if path == '/discovery' else 'index.html'
                     if path in {'/discovery','/explore'}:page='discovery.html'
                     if path in {'/prioritization','/knowledge','/models','/export'}:page='handoff.html'
+                    if path=='/ris':page='ris.html'
                     html = assets.joinpath(page).read_text(encoding='utf-8')
-                    workflows=[name for name,service in [('explore',discovery),('review',review),('populations',populations),('references',references),('curation',curation),('prioritization',handoff),('knowledge',handoff),('models',handoff),('export',handoff)] if service is not None]
+                    workflows=[name for name,service in [('explore',discovery),('review',review),('populations',populations),('references',references),('curation',curation),('prioritization',handoff),('knowledge',handoff),('models',handoff),('export',handoff),('ris',ris)] if service is not None]
                     html = re.sub(r'<nav aria-label="Application">.*?</nav>',lambda _:navigation(active,path,workflows=workflows,editable=controller is not None),html,flags=re.S)
                     html = html.replace('SESSION_TOKEN', token).replace('PROJECT_NAV_HIDDEN', '' if active and controller is not None else 'hidden')
                     html = html.replace('DISCOVERY_NAV_HIDDEN', '' if active and discovery is not None else 'hidden')
@@ -177,6 +183,36 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     return self.error(404, 'not_found', 'Page not found.')
                 if self.headers.get_all('X-CorpusTrail-Session') != [token]:
                     return self.error(403, 'session_required', 'Open the local application before reading its API.')
+                if ris is not None and path.startswith('/api/v1/ris/'):
+                    from corpustrail.imports.service import RISService
+                    tail=path[len('/api/v1/ris/'):];parts=tail.split('/')
+                    query=_query(route.query,{'offset','limit','cutoff','revision'})
+                    paging={k:_number(v) for k,v in query.items() if k in {'offset','limit'}}
+                    with controller.use() as current:
+                        service=RISService(current)
+                        if tail=='history':
+                            if set(query)-{'offset','limit','revision'}:raise ContractError('Unsupported history query.')
+                            result=ris.history(current,**paging,revision=query.get('revision'))
+                        elif tail=='populations':
+                            if set(query)-{'offset','limit','cutoff'}:raise ContractError('Unsupported population query.')
+                            result=current.populations.versions(**paging,**({'cutoff':_number(query['cutoff'])} if 'cutoff' in query else {}))
+                        elif tail=='sample' and not query:
+                            body=resources.files('corpustrail.resources').joinpath('ris-demo-import.ris').read_bytes()
+                            return self.send(200,body,'application/x-research-info-systems',download='synthetic-demo.ris')
+                        elif len(parts)==2 and parts[0]=='imports':
+                            if set(query)-{'offset','limit'}:raise ContractError('Unsupported import query.')
+                            result=service.inspect(parts[1],**paging)
+                        elif len(parts)==2 and parts[0]=='source' and not query:
+                            return self.send(200,service.source_bytes(parts[1]),'application/x-research-info-systems',download='original-source.ris')
+                        elif len(parts)==2 and parts[0]=='download' and not query:
+                            body=service.export_bytes(parts[1])
+                            return self.send(200,body,'application/x-research-info-systems',download='bibliography.ris')
+                        elif len(parts)==2 and parts[0]=='receipt' and not query:
+                            from corpustrail.application import _workflow_files as workflow_files
+                            value=workflow_files.read(service.path('exports',parts[1]))
+                            return self.send(200,json.dumps(value,ensure_ascii=False),'application/json',download='ris-export-provenance.json')
+                        else:raise ContractError('Unsupported RIS read.')
+                    return self.send(200,json.dumps(result,ensure_ascii=False))
                 if handoff is not None and path.startswith('/api/v1/tools/'):
                     from corpustrail.application.handoff import fields
                     from corpustrail.application.projects import ProjectController
@@ -443,6 +479,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             routes.update('/api/v1/references/'+name for name in ('preview','commit','upgrade','verify','context_preview','context_commit'))
             routes.update('/api/v1/curation/'+name for name in ('upgrade','plan_preview','plan_commit','start','execute','recover','cancel','validate','audit_preview','audit_commit','assisted_create','correction_preview','correction_commit'))
             routes.add('/api/v1/curation/review/command')
+            routes.update('/api/v1/ris/'+name for name in ('upload','preview','commit','export-preview','export-commit'))
             routes.update('/api/v1/tools/'+name for name in ('prepare','execute','results-upload'))
             if controller is None or self.path not in routes:
                 return self.readonly()
@@ -460,6 +497,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             is_reference = self.path.startswith('/api/v1/references/')
             is_curation = self.path.startswith('/api/v1/curation/')
             is_tools = self.path.startswith('/api/v1/tools/')
+            is_ris = self.path.startswith('/api/v1/ris/')
             try:
                 lengths = self.headers.get_all('Content-Length')
                 if (self.headers.get_all('Content-Type') != ['application/json']
@@ -486,10 +524,13 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 from corpustrail.application.references import SCHEMA as REFERENCE_SCHEMA
                 from corpustrail.application.curation import SCHEMA as CURATION_SCHEMA
                 from corpustrail.application.handoff import SCHEMA as HANDOFF_SCHEMA
-                expected_schema = HANDOFF_SCHEMA if is_tools else CURATION_SCHEMA if is_curation else REFERENCE_SCHEMA if is_reference else POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                from corpustrail.imports.service import SCHEMA as RIS_SCHEMA
+                expected_schema = RIS_SCHEMA if is_ris else HANDOFF_SCHEMA if is_tools else CURATION_SCHEMA if is_curation else REFERENCE_SCHEMA if is_reference else POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
                 if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if is_tools:
+                if is_ris:
+                    with controller.use() as current:result=ris.command(current,self.path.rsplit('/',1)[1],body)
+                elif is_tools:
                     from corpustrail.application.handoff import fields
                     action=self.path.rsplit('/',1)[1]
                     required={'prepare':{'kind','values','request_id'},'execute':{'key','preview_sha256','confirmed','confirm_external'},
@@ -540,7 +581,9 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 self.send(200, json.dumps(result, ensure_ascii=False, allow_nan=False))
             except ProjectCommandError as exc:
                 self.error(exc.status, exc.code, str(exc))
-            except (ContractError, ValueError, TypeError, KeyError, RecursionError):
+            except (ContractError, ValueError, TypeError, KeyError, RecursionError) as exc:
+                if is_ris and isinstance(exc,ContractError):
+                    return self.error(409,'ris_conflict',str(exc))
                 self.error(400, 'invalid_search' if is_discovery else 'invalid_project_form',
                     'Check the query, bounded settings and current plan. No secret values or arbitrary endpoints are accepted.' if is_discovery else
                     'Check the project form and refresh if its version is unsupported. No secret values are accepted.')

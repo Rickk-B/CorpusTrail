@@ -33,7 +33,7 @@ corpustrail = "corpustrail.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-corpustrail = ["operational/schema/*.sql", "operational/schema_manifest.json", "resources/*.json", "local_app/assets/*.html", "local_app/assets/*.css", "local_app/assets/*.js"]
+corpustrail = ["operational/schema/*.sql", "operational/schema_manifest.json", "resources/*.json", "resources/*.ris", "local_app/assets/*.html", "local_app/assets/*.css", "local_app/assets/*.js"]
 
 [tool.ruff]
 target-version = "py311"

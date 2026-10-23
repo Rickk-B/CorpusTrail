@@ -86,6 +86,7 @@ jobs:
           python -I -m unittest discover -s tests -p test_classification.py -v
           python -I -m unittest discover -s tests -p 'test_curation*.py' -v
           python -I -m unittest discover -s tests -p test_handoff_application.py -v
+          python -I -m unittest discover -s tests -p test_ris_exchange.py -v
           python -I -m unittest discover -s tests -p test_discovery_app.py -v
           python -I -m unittest discover -s tests -p test_discovery_transport_diagnostics.py -v
           python -I -m unittest discover -s tests -p test_evidence_app.py -v
@@ -147,7 +148,7 @@ jobs:
   browser-macos-smoke:
     name: Full macOS Chromium and WebKit / offline acceptance
     runs-on: macos-15
-    timeout-minutes: 35
+    timeout-minutes: 45
     outputs:
       visual_mode: '${{ steps.visual-mode.outputs.mode }}'
       chromium_acceptance: '${{ steps.chromium-report.outputs.acceptance }}'

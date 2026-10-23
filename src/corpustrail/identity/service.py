@@ -174,45 +174,49 @@ class IdentityService:
               approve_aliases: bool = False) -> str:
         """Explicit operational enrollment; never a corpus inclusion decision."""
         with connection(self.project.database_path, write=True) as db:
-            existing = db.execute("SELECT payload_json FROM ct_enrollment_operations WHERE plan_id=?",
-                                  (plan.plan_id,)).fetchone()
-            if existing:
-                if existing[0] != canonical(plan.to_dict()):
-                    raise ContractError("enrollment receipt differs")
-                return plan.paper_id
-            if self._plan(db, plan.record, plan.source) != plan:
-                raise ContractError("stale or altered enrollment plan")
-            if plan.action == "create" and approve_new_identity is not True:
-                raise ContractError("new identity needs explicit approval")
-            if plan.new_aliases and approve_aliases is not True:
-                raise ContractError("new exact aliases need explicit source approval")
-            source = plan.source
-            prior = db.execute("SELECT media_type,byte_size FROM raw_artifacts WHERE sha256=?",
-                               (source.source_sha256,)).fetchone()
-            if prior and tuple(prior) != (source.media_type, source.byte_size):
-                raise ContractError("source hash has incompatible artifact metadata")
-            db.execute("INSERT OR IGNORE INTO raw_artifacts VALUES (?,?,?,?)",
-                       (source.source_sha256, source.media_type, source.byte_size, source.observed_at))
-            if plan.action == "create":
-                db.execute("INSERT INTO paper_entities VALUES (?,?,?,'active',NULL)",
-                           (plan.paper_id, source.observed_at, source.producer_id))
-            db.execute("INSERT INTO ct_enrollment_operations VALUES (?,?,?,?)",
-                       (plan.plan_id, plan.paper_id, canonical(plan.to_dict()), plan.config_event_id))
-            db.execute("INSERT OR IGNORE INTO ct_source_bindings VALUES (?,?,?,?)",
-                       (source.source_uri, source.record_locator, plan.paper_id, plan.plan_id))
-            db.execute("INSERT INTO ct_paper_observations VALUES (?,?,?,?,?)",
-                       (identifier("bibliography", plan.to_dict()), plan.paper_id, plan.plan_id,
-                        source.source_sha256, canonical({"record": asdict(plan.record), "source": asdict(source)})))
-            for item in plan.record.identifiers:
-                scheme, value = item.normalized()
-                assertion_id = identifier("id-assertion", {"plan": plan.plan_id, "scheme": scheme, "value": value})
-                db.execute("INSERT INTO identifier_assertions VALUES (?,?,?,?,?,?,?,?)",
-                           (assertion_id, scheme, item.value, value, source.producer_id,
-                            source.record_locator, source.source_sha256, source.observed_at))
-                if (scheme, value) in plan.new_aliases:
-                    db.execute("INSERT INTO paper_identifiers VALUES (?,?,?,?,'verified',?,?,?,?)",
-                               (identifier("alias", [plan.paper_id, scheme, value]), plan.paper_id, scheme, value,
-                                "explicit_source_approval/v1", assertion_id, source.observed_at, source.observed_at))
+            return self._apply(db, plan, approve_new_identity=approve_new_identity, approve_aliases=approve_aliases)
+
+    def _apply(self, db, plan, *, approve_new_identity=False, approve_aliases=False):
+        """Same enrollment guards within an import chunk or isolated preview copy."""
+        existing = db.execute("SELECT payload_json FROM ct_enrollment_operations WHERE plan_id=?",
+                              (plan.plan_id,)).fetchone()
+        if existing:
+            if existing[0] != canonical(plan.to_dict()):
+                raise ContractError("enrollment receipt differs")
+            return plan.paper_id
+        if self._plan(db, plan.record, plan.source) != plan:
+            raise ContractError("stale or altered enrollment plan")
+        if plan.action == "create" and approve_new_identity is not True:
+            raise ContractError("new identity needs explicit approval")
+        if plan.new_aliases and approve_aliases is not True:
+            raise ContractError("new exact aliases need explicit source approval")
+        source = plan.source
+        prior = db.execute("SELECT media_type,byte_size FROM raw_artifacts WHERE sha256=?",
+                           (source.source_sha256,)).fetchone()
+        if prior and tuple(prior) != (source.media_type, source.byte_size):
+            raise ContractError("source hash has incompatible artifact metadata")
+        db.execute("INSERT OR IGNORE INTO raw_artifacts VALUES (?,?,?,?)",
+                   (source.source_sha256, source.media_type, source.byte_size, source.observed_at))
+        if plan.action == "create":
+            db.execute("INSERT INTO paper_entities VALUES (?,?,?,'active',NULL)",
+                       (plan.paper_id, source.observed_at, source.producer_id))
+        db.execute("INSERT INTO ct_enrollment_operations VALUES (?,?,?,?)",
+                   (plan.plan_id, plan.paper_id, canonical(plan.to_dict()), plan.config_event_id))
+        db.execute("INSERT OR IGNORE INTO ct_source_bindings VALUES (?,?,?,?)",
+                   (source.source_uri, source.record_locator, plan.paper_id, plan.plan_id))
+        db.execute("INSERT INTO ct_paper_observations VALUES (?,?,?,?,?)",
+                   (identifier("bibliography", plan.to_dict()), plan.paper_id, plan.plan_id,
+                    source.source_sha256, canonical({"record": asdict(plan.record), "source": asdict(source)})))
+        for item in plan.record.identifiers:
+            scheme, value = item.normalized()
+            assertion_id = identifier("id-assertion", {"plan": plan.plan_id, "scheme": scheme, "value": value})
+            db.execute("INSERT INTO identifier_assertions VALUES (?,?,?,?,?,?,?,?)",
+                       (assertion_id, scheme, item.value, value, source.producer_id,
+                        source.record_locator, source.source_sha256, source.observed_at))
+            if (scheme, value) in plan.new_aliases:
+                db.execute("INSERT INTO paper_identifiers VALUES (?,?,?,?,'verified',?,?,?,?)",
+                           (identifier("alias", [plan.paper_id, scheme, value]), plan.paper_id, scheme, value,
+                            "explicit_source_approval/v1", assertion_id, source.observed_at, source.observed_at))
         return plan.paper_id
 
     def papers(self) -> list[str]:

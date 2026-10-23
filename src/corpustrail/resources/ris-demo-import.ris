@@ -1,0 +1,28 @@
+TY  - JOUR
+TI  - Synthetic sensor measurement
+AU  - Example, Ada
+DO  - https://doi.org/10.1234/ris.demo.1
+AB  - This independent synthetic source supplies another abstract for the same exact DOI.
+ER  - 
+
+TY  - JOUR
+T1  - Synthetic photon sensor comparison — Δοκιμή
+A1  - Example, Zoë
+Y1  - 2026/01/15
+JO  - Invented Multilingual Journal
+DO  - 10.1234/ris.demo.4
+N2  - This invented abstract tests Unicode and the N2 variant.
+      A second line describes fictional measurement methods.
+ER  - 
+
+TY  - JOUR
+TI  - Synthetic evidence gap
+AU  - Example, Ирина
+PY  - 2022
+ER  - 
+
+TY  - JOUR
+TI  - Deliberately malformed synthetic DOI
+DO  - not-a-doi
+AB  - This failed source record must remain visible, not become an exclusion.
+ER  - 

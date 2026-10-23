@@ -88,10 +88,12 @@ The existing `corpustrail review serve` interface retains its legacy per-paper
 contract. [Research tools](docs/user/ALPHA_WORKFLOWS.md) now expose existing local
 review ordering, Knowledge observations and history, optional model configuration
 and exact structured tasks, and unlabelled ASReview export/results mapping.
-Production corpus import remains separately gated; Export is not an importer.
+The [RIS exchange and scoped offline demo](docs/user/RIS_EXCHANGE.md) provide the
+first explicitly approved file import/export route, including available abstracts.
+Import creates candidates, never corpus decisions. Other formats remain gated.
 The [Populations workspace](docs/user/POPULATIONS.md) freezes origin-independent
 candidate versions, retains lineage, combines exact canonical sets and feeds
-Guided Review. Production format importers remain separately gated and unavailable.
+Guided Review. RIS is the implemented import format; other production import formats remain separately gated.
 The [Reference Collections workspace](docs/user/REFERENCES.md) adds explicit
 human-attested example versions, successor corrections and exact locally frozen
 selected contexts. It does not run an assessment engine or publish corpus membership.
@@ -136,7 +138,8 @@ inactive project to native Trash; it never falls back to permanent deletion.
 
 - [User guide](docs/user/GUIDE.md) — configuration, providers, evidence, review,
   prioritization, knowledge, ASReview and reproducibility.
-- [Accepted alpha evaluation on macOS](docs/user/ALPHA_EVALUATION.md)
+- [Ready-to-review offline demo and RIS exchange](docs/user/RIS_EXCHANGE.md)
+- [Accepted CP10 alpha evaluation on macOS](docs/user/ALPHA_EVALUATION.md)
 - [Offline tutorial](docs/user/TUTORIAL.md)
 - [Development checkpoint downloads](docs/developer/DEVELOPMENT_BUILDS.md)
 - [Developer browser and visual acceptance](docs/developer/BROWSER_TESTING.md)
