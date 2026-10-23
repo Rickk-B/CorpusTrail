@@ -67,6 +67,9 @@ This is the single repository coordination record, not a second specification.
   validated wheel has been delivered. Starting source is documentation-only
   `fe00ba0cc23e32f5d4d7ce3751d8848ef1b63ab2`; accepted software remains CP10
   above. Preserve evidence in the durable `ris-demo-20261023-wiy2hkhl` set.
+  The native 24-test RIS suite and existing 52-test identity foundation pass;
+  focused actual-wheel Chromium completed 6/6 workflows and 24 captures. Full
+  regressions, reviewed platform references and hosted delivery are pending.
   No other format, real model, direct database adapter or release is authorized.
   The evaluation guide at the accepted baseline is available here:
   [macOS alpha evaluation guide](../user/ALPHA_EVALUATION.md), collect usability

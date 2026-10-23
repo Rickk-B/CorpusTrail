@@ -41,7 +41,7 @@ class PopulationController:
         return {'schema': SCHEMA, 'available': project.populations.ready(), 'discovery_sources': sources,
             'project_id': config['project_id'], 'config_event_id': revision,
             'cutoff': cutoff, 'next_offset': offset + limit if len(rows) > limit else None,
-            'production_imports_available': False}
+            'production_imports_available': True, 'production_import_formats': ['ris']}
 
     def command(self, project, action, body):
         try:

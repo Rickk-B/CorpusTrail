@@ -49,10 +49,10 @@ Populations** explicitly creates a new project-local backup and adds the tables.
 Close older app versions first; keep the backup. Configuration, evidence, reviews,
 decisions and sessions are preserved. Older builds cannot open upgraded databases.
 
-Production BibTeX, RIS, CSV, Zotero and PDF importers are **not implemented**.
-There is no upload, folder scanner, synchronization or Import button. Synthetic
-tests exercise an interface to already preserved/enrolled observations, not a
-researcher-facing importer. Cross-project combinations are not supported.
+The separately approved [RIS exchange](RIS_EXCHANGE.md) imports bibliographic
+records through this existing source interface. Other formats, PDF ingestion,
+folder scanning and direct library synchronization remain unimplemented. Earlier
+synthetic interface tests alone did not implement that production importer. Cross-project combinations are not supported.
 
 Read pages contain at most 100 entries; individual selection units accept up to
 500 IDs. Larger sources can be frozen directly or combined from versions. No fixed
