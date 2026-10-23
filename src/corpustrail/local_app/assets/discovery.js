@@ -96,7 +96,7 @@ get('approve').onclick=()=>action(async()=>{
   // The backend still requires both flags, the one-time nonce and exact plan hash.
   if(!view||view.status!=='prepared'||!previewNonce||get('approval-area').hidden)throw Error('Review a current exact plan before explicitly approving both operations.');
   renderPlan(await api('approve',{handle:view.handle,request_id:crypto.randomUUID(),preview_nonce:previewNonce,confirm_external:true,approve_identities:true}));
-  previewNonce=null;message('Plan approved. Run Discovery is a separate explicit action.');await historyPage();
+  previewNonce=null;message('Plan approved. Run Search is a separate explicit action.');await historyPage();
 });
 get('run').onclick=()=>action(async()=>{renderPlan(await api('start',{handle:view.handle,request_id:crypto.randomUUID()}));message('The approved exact search has started.');poll();if(!['queued','running'].includes(view.status))await paperPage();await historyPage();});
 get('edit').onclick=()=>action(async()=>{await api('invalidate',{handle:view.handle});setFields(view.plan);stopPolling();view=null;previewNonce=null;get('plan-section').hidden=true;get('job-section').hidden=true;get('search-setup').hidden=false;message('Previous preview/approval invalidated. Preview edited settings before approval.');get('query').focus();await historyPage();});

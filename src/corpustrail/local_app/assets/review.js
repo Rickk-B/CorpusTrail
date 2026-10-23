@@ -92,7 +92,7 @@ async function overview() {
   el('review-overview').hidden=false; el('review-workspace').hidden=true;
   el('review-create').hidden=!setup.populations.some(p=>p.count)||!setup.definition;
   el('review-empty').textContent=!setup.definition?'Set an explicit broad-corpus definition in Project Settings before starting Guided Review.':
-    setup.populations[0].count?'Choose a reviewing identity and a fixed publication set.':'No publications to review yet. Use Discovery or return to Corpus.';
+    setup.populations[0].count?'Choose a reviewing identity and a fixed publication set.':'No publications to review yet. Use Explore or return to Corpus.';
   const select=el('review-population');select.replaceChildren(new Option('Choose a population',''));
   setup.populations.forEach(p=>{ const option=new Option(p.label+' ('+p.count+')',p.selection);option.disabled=!p.count;select.add(option); });
   await savedPopulations();
