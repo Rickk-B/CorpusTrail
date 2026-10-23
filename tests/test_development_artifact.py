@@ -262,6 +262,7 @@ class DevelopmentArtifactTests(unittest.TestCase):
             if name in TOOL['POPULATION_HASHES']:
                 expected=TOOL['POPULATION_HASHES'][name]
             expected=TOOL['CURATION_HASHES'].get(name,expected)
+            if name=='src/corpustrail/application/populations.py' and (ROOT/'src/corpustrail/imports/service.py').is_file():expected=TOOL['RIS_HASHES'][name]
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
 
     def test_population_review_hashes_match_current_scientific_source(self):
@@ -295,11 +296,48 @@ class DevelopmentArtifactTests(unittest.TestCase):
     def test_curation_hashes_match_exact_frozen_scientific_source(self):
         for name,expected in TOOL['CURATION_HASHES'].items():
             if name==TOOL['HANDOFF_HTTP'] and (ROOT/'src/corpustrail/application/handoff.py').is_file():
-                self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['HANDOFF_HASHES'][name])
+                self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['RIS_HASHES'][name] if (ROOT/'src/corpustrail/imports/service.py').is_file() else TOOL['HANDOFF_HASHES'][name])
             else:self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
             if (ROOT/'.git').exists():
                 original=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['CURATION_COMMIT']+':'+name])
                 self.assertEqual(hashlib.sha256(original).hexdigest(),expected)
+
+    def test_ris_exact_source_and_forbidden_scientific_overlap(self):
+        for name,wanted in TOOL['RIS_HASHES'].items():
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),wanted)
+            if (ROOT/'.git').exists():
+                body=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['RIS_COMMIT']+':'+name])
+                self.assertEqual(hashlib.sha256(body).hexdigest(),wanted)
+        native='src/corpustrail/operational/schema/041_curation_audits.sql'
+        globals_=TOOL['check_ris'].__globals__
+        with patch.dict(globals_,{'RIS_HASHES':{**TOOL['RIS_HASHES'],native:'0'*64}}):
+            with self.assertRaisesRegex(ValueError,'cannot override'):TOOL['check_ris'](self.root,self.sha)
+
+    def test_ris_identity_factoring_refuses_policy_changes(self):
+        original="""class IdentityService:
+    def plan(self): return 'unchanged'
+    def apply(self, plan, *, approve_new_identity=False, approve_aliases=False):
+        'Original documentation'
+        with connection(self.project.database_path, write=True) as db:
+            if not approve_aliases: raise ValueError('explicit approval')
+            db.execute('native write')
+        return plan.paper_id
+"""
+        factored="""class IdentityService:
+    def plan(self): return 'unchanged'
+    def apply(self, plan, *, approve_new_identity=False, approve_aliases=False):
+        'Original documentation'
+        with connection(self.project.database_path, write=True) as db:
+            return self._apply(db, plan, approve_new_identity=approve_new_identity, approve_aliases=approve_aliases)
+    def _apply(self, db, plan, *, approve_new_identity=False, approve_aliases=False):
+        'Factored documentation'
+        if not approve_aliases: raise ValueError('explicit approval')
+        db.execute('native write')
+        return plan.paper_id
+"""
+        TOOL['check_identity_composition'](original,factored)
+        for changed in (factored.replace('not approve_aliases','False'),factored.replace("return 'unchanged'","return 'changed'"),factored.replace('approve_aliases=approve_aliases','approve_aliases=True')):
+            with self.assertRaises(ValueError):TOOL['check_identity_composition'](original,changed)
 
     def test_handoff_exact_source_and_forbidden_scientific_overlap(self):
         native='src/corpustrail/operational/schema/041_curation_audits.sql'

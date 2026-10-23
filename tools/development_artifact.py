@@ -27,6 +27,7 @@ FRONTEND.update({'corpustrail/local_app/assets/populations.html', 'corpustrail/l
 FRONTEND.update({'corpustrail/local_app/assets/references.html', 'corpustrail/local_app/assets/references.js'})
 FRONTEND.update({'corpustrail/local_app/assets/curation.html', 'corpustrail/local_app/assets/curation.js'})
 FRONTEND.update({'corpustrail/local_app/assets/handoff.html', 'corpustrail/local_app/assets/handoff.js'})
+FRONTEND.update({'corpustrail/local_app/assets/ris.html','corpustrail/local_app/assets/ris.js'})
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
 # Checkpoint 2 delegates writes to unchanged scientific/configuration services.
@@ -158,6 +159,67 @@ HANDOFF_READ_SUPPORT = {'src/corpustrail/knowledge/service.py', 'src/corpustrail
     'src/corpustrail/application/_workflow_files.py', 'src/corpustrail/application/handoff.py'}
 
 
+
+# Separately authorized post-alpha RIS/demo boundary; all CP1–10 receipts remain frozen.
+RIS_BASELINE = 'f077bb7722ac2b6f3c911a434cb8a541dc8a5745'
+RIS_COMMIT = 'f367af1a701f62e13c892e63f046695a0e95c32f'
+RIS_PATHS = {'src/corpustrail/local_app/assets/home.html', 'src/corpustrail/resources/ris-demo-initial.ris', 'src/corpustrail/demo.py', 'src/corpustrail/imports/ris.py', 'src/corpustrail/resources/ris-demo-import.ris', 'src/corpustrail/imports/service.py', 'src/corpustrail/application/populations.py', 'src/corpustrail/cli.py', 'src/corpustrail/imports/__init__.py', 'src/corpustrail/application/ris.py', 'src/corpustrail/local_app/assets/ris.js', 'src/corpustrail/local_app/server.py', 'src/corpustrail/local_app/assets/populations.html', 'src/corpustrail/local_app/assets/ris.html', 'src/corpustrail/identity/service.py', 'src/corpustrail/local_app/assets/handoff.js'}
+RIS_HASHES = {'src/corpustrail/application/populations.py': '279d738f347211cd52f933c27ecba8b1d5c004eedc4da15fc43ce3f2e18f6772', 'src/corpustrail/application/ris.py': '25ae3fbfa1d21869f673c3bedc4ee7e191cef807fadb4b34a64fb83b54128e55', 'src/corpustrail/cli.py': 'e4a826c1a07c63392c3a61e39ff0b1999374ae59bd9be478c5bc1a7fbd05392e', 'src/corpustrail/demo.py': 'a5154789f18d4d9c40a842eefd9afda0916255d8365194894f30992c72dcb446', 'src/corpustrail/identity/service.py': '5a20522b35605cdc3a4e31194993e324da399898f36a90dd29cedfdb312cc230', 'src/corpustrail/imports/__init__.py': '7dcbc87c8d2c13f928950ceea90fb3b19c34e0700fd40f13473f2148dc8e9348', 'src/corpustrail/imports/ris.py': '5c44ec245ff6a268664cffd7e86e418bf855fdeeef975de8cb8fb9f8d907a4e2', 'src/corpustrail/imports/service.py': '41a833d9b37e3ec570ca303a1372e0a85ce8946b5479639c598c0704e786df61', 'src/corpustrail/local_app/assets/handoff.js': 'a500659b416f0e68f30b01d04694a3ac3d4b334d82aa4fbe4875816c89e93f46', 'src/corpustrail/local_app/assets/home.html': '96502282c9aa55cd0c35a13736f9601769344f9e970936a4706826f2c5dc2a30', 'src/corpustrail/local_app/assets/populations.html': 'f88c7ebef6db1f1fd3fcdaae5c844def452b8abaaf3c9aea9f274270ff5eaeaf', 'src/corpustrail/local_app/assets/ris.html': 'e8f4564cfff4ff93b5f46b35545bfebe7ecd97961e858081624dfae909cae5e5', 'src/corpustrail/local_app/assets/ris.js': 'b9ca3f17f4f7243ad8647612fbd7117ea676143a28dad8e3c2526f1e8cf1fede', 'src/corpustrail/local_app/server.py': '804f6928423f18f1498a9acaaed9813ec319e817fd09043848a071527f1d3c21', 'src/corpustrail/resources/ris-demo-import.ris': '5ba4252a7919279c27e34bc7e80c41e6da79c8fc8f3a0dc69ec25e0815e44635', 'src/corpustrail/resources/ris-demo-initial.ris': 'c7485b3728602b93e2dcd58ac86d169f57b3ad4862a2c2987f061eaa7c20274f'}
+
+def check_identity_composition(old, new):
+    """Only factor the exact old transaction body; no identity-policy bypass."""
+    import copy
+    original=ast.parse(old);current=ast.parse(new)
+    a=next(n for n in original.body if isinstance(n,ast.ClassDef) and n.name=='IdentityService')
+    b=next(n for n in current.body if isinstance(n,ast.ClassDef) and n.name=='IdentityService')
+    before={n.name:n for n in a.body if isinstance(n,ast.FunctionDef)}
+    after={n.name:n for n in b.body if isinstance(n,ast.FunctionDef)}
+    if set(after)!=set(before)|{'_apply'}:raise ValueError('RIS may only factor the existing identity transaction')
+    expected=before['apply'].body[1].body+before['apply'].body[2:]
+    if [ast.dump(n) for n in expected]!=[ast.dump(n) for n in after['_apply'].body[1:]]:
+        raise ValueError('RIS changed native identity validation or approval guards')
+    public=after['apply'];old_apply=before['apply']
+    delegation=ast.parse('self._apply(db, plan, approve_new_identity=approve_new_identity, approve_aliases=approve_aliases)',mode='eval').body
+    if (len(public.body)!=2 or not isinstance(public.body[1],ast.With)
+            or ast.dump(public.body[1].items[0])!=ast.dump(old_apply.body[1].items[0])
+            or len(public.body[1].body)!=1 or not isinstance(public.body[1].body[0],ast.Return)
+            or ast.dump(public.body[1].body[0].value)!=ast.dump(delegation)):
+        raise ValueError('RIS must preserve the public enrollment transaction and explicit approval flags')
+    restored=copy.deepcopy(current)
+    owner=next(n for n in restored.body if isinstance(n,ast.ClassDef) and n.name=='IdentityService')
+    owner.body=[copy.deepcopy(old_apply) if isinstance(n,ast.FunctionDef) and n.name=='apply' else n
+                for n in owner.body if not (isinstance(n,ast.FunctionDef) and n.name=='_apply')]
+    if ast.dump(restored)!=ast.dump(original):raise ValueError('RIS changed identity behavior beyond transaction composition')
+
+
+def check_ris(root, expected):
+    fixed={'src/corpustrail/application/ris.py','src/corpustrail/cli.py','src/corpustrail/demo.py',
+           'src/corpustrail/identity/service.py','src/corpustrail/imports/__init__.py',
+           'src/corpustrail/imports/ris.py','src/corpustrail/imports/service.py',
+           'src/corpustrail/local_app/assets/ris.html','src/corpustrail/local_app/assets/ris.js',
+           'src/corpustrail/local_app/server.py','src/corpustrail/resources/ris-demo-import.ris',
+           'src/corpustrail/resources/ris-demo-initial.ris',
+           'src/corpustrail/application/populations.py','src/corpustrail/local_app/assets/home.html',
+           'src/corpustrail/local_app/assets/populations.html','src/corpustrail/local_app/assets/handoff.js'}
+    if set(RIS_HASHES)!=fixed or RIS_PATHS!=fixed or set(RIS_HASHES)&set(HANDOFF_HASHES)!={HANDOFF_HTTP,'src/corpustrail/local_app/assets/home.html','src/corpustrail/local_app/assets/populations.html','src/corpustrail/local_app/assets/handoff.js'}:
+        raise ValueError('RIS cannot override other scientific services or frozen migrations')
+    if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',RIS_COMMIT,expected]).returncode:
+        raise ValueError('RIS delivery must descend from its exact reviewed implementation')
+    changed=set(git(root,'diff','--name-only',RIS_BASELINE,RIS_COMMIT,'--','src/corpustrail').splitlines())
+    if changed!=fixed:raise ValueError('RIS receipt must cover its exact complete source delta')
+    for name,wanted in RIS_HASHES.items():
+        path=root/name;frozen=subprocess.check_output(['git','-C',str(root),'show',RIS_COMMIT+':'+name])
+        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=wanted or hashlib.sha256(frozen).hexdigest()!=wanted:
+            raise ValueError('RIS source differs from its exact reviewed implementation')
+    name='src/corpustrail/identity/service.py'
+    check_identity_composition(git(root,'show',RIS_BASELINE+':'+name),(root/name).read_text(encoding='utf-8'))
+    name='src/corpustrail/application/populations.py'
+    baseline=git(root,'show',RIS_BASELINE+':'+name)
+    expected_population=baseline.replace("'production_imports_available': False","'production_imports_available': True, 'production_import_formats': ['ris']")
+    if (root/name).read_text(encoding='utf-8').strip()!=expected_population.strip():
+        raise ValueError('RIS may only update population capability metadata, not scientific operations')
+
+
 def check_handoff(root, expected):
     if not HANDOFF_HASHES or not re.fullmatch('[0-9a-f]{40}',HANDOFF_COMMIT):
         raise ValueError('UI handoff requires its exact implementation receipt')
@@ -173,10 +235,12 @@ def check_handoff(root, expected):
     if changed!=set(HANDOFF_HASHES):raise ValueError('UI handoff receipt must cover its complete exact source delta')
     if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',HANDOFF_COMMIT,expected]).returncode:
         raise ValueError('UI handoff must descend from its reviewed implementation')
+    ris=(root/'src/corpustrail/imports/service.py').is_file()
+    if ris:check_ris(root,expected)
     for name,wanted in HANDOFF_HASHES.items():
         path=root/name
         frozen=subprocess.check_output(['git','-C',str(root),'show',HANDOFF_COMMIT+':'+name])
-        if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=wanted
+        if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=(RIS_HASHES[name] if ris and name in RIS_HASHES else wanted)
                 or hashlib.sha256(frozen).hexdigest()!=wanted):
             raise ValueError('UI handoff source differs from its exact reviewed implementation')
 
@@ -210,6 +274,8 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
         xml_compatibility = bool(changed & XML_COMPATIBILITY_EXTRA_PATHS)
         allowed = CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS
+        ris=(root/'src/corpustrail/imports/service.py').is_file()
+        if ris:check_ris(root,expected);allowed|=set(RIS_HASHES)
         handoff=(root/'src/corpustrail/application/handoff.py').is_file()
         if handoff:
             check_handoff(root,expected)
@@ -267,6 +333,10 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                 if classification and name in CLASSIFICATION_HASHES:
                     expected_hash=CLASSIFICATION_HASHES[name]
                 if curation:expected_hash=CURATION_HASHES.get(name,expected_hash)
+                if ris and name=='src/corpustrail/application/populations.py':
+                    original=subprocess.check_output(['git','-C',str(root),'show',POPULATION_COMMIT+':'+name])
+                    if hashlib.sha256(original).hexdigest()!=expected_hash:raise ValueError('Historical population controller bytes differ')
+                    expected_hash=RIS_HASHES[name]
                 path=root/name
                 if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected_hash:
                     raise ValueError('Population source differs from the frozen reviewed implementation')
@@ -341,7 +411,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         checkpoint3 = (root/'src/corpustrail/application/discovery.py').is_file()
         checkpoint4 = (root/'src/corpustrail/application/evidence.py').is_file()
         scientific = {'src/corpustrail/discovery/service.py', 'src/corpustrail/providers/metadata.py', 'src/corpustrail/evidence/service.py'}
-        return {**previous, 'name': 'Checkpoint 10 — complete UI handoff and alpha acceptance' if handoff else 'Checkpoint 9 — curation methods, audit views and iterative correction' if curation else 'Checkpoint 8 — generic classifier plans, assessment storage and validation hooks' if classification else 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
+        return {**previous, 'name': 'Post-alpha scoped offline demo and production RIS exchange' if ris else 'Checkpoint 10 — complete UI handoff and alpha acceptance' if handoff else 'Checkpoint 9 — curation methods, audit views and iterative correction' if curation else 'Checkpoint 8 — generic classifier plans, assessment storage and validation hooks' if classification else 'Checkpoint 7 — large reference collections and context provenance' if references else 'Checkpoint 6 — origin-independent candidate populations' if populations else 'Checkpoint 5 — guided human review and explicit corpus membership' if guided_review else 'Checkpoint 4 — evidence acquisition and inspection' if checkpoint4 else 'Checkpoint 3 — exact discovery and local jobs' if checkpoint3 else 'Checkpoint 2 — guided project/configuration and definition',
                 'accepted_checkpoint1_commit_sha': accepted_checkpoint1,
                 'application_source_unchanged': not bool(changed),
                 'configuration_writes_supported': True,
@@ -374,7 +444,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     'pre_reference_source_sha256':POPULATION_HASHES,
                     'population_schema':'corpustrail-candidate-population/v1','policy':'exact-canonical-union/v1',
                     'migration':38,'read_compatible_schema':37,'upgrade':'explicit_with_backup',
-                    'production_importers':False,'membership_authority_unchanged':True} if populations else None,
+                    'production_importers':ris,'production_import_formats':['ris'] if ris else [],'membership_authority_unchanged':True} if populations else None,
                 'references':{'schema':'corpustrail-reference-code-review/v1','implementation_commit_sha':REFERENCE_COMMIT,
                     'source_sha256':{name:CURATION_HASHES.get(name,CLASSIFICATION_HASHES.get(name,value)) if curation else CLASSIFICATION_HASHES.get(name,value) if classification else value for name,value in REFERENCE_HASHES.items()},
                     'pre_classifier_source_sha256':REFERENCE_HASHES,'reference_schema':'corpustrail-reference-set/v1',
@@ -401,7 +471,12 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                 'ui_handoff':{'schema':'corpustrail-ui-handoff-code-review/v1','implementation_commit_sha':HANDOFF_COMMIT,
                     'source_sha256':HANDOFF_HASHES,'api_schema':'corpustrail-local-handoff/v1','migration':None,
                     'alpha_baseline':True,'beta_release':False,'native_installer':False,'real_model_validation':False,
-                    'production_importers':False,'membership_authority_unchanged':True,'researcher_acceptance':False} if handoff else None,
+                    'production_importers':ris,'production_import_formats':['ris'] if ris else [],'membership_authority_unchanged':True,'researcher_acceptance':False} if handoff else None,
+                'ris_exchange':{'schema':'corpustrail-ris-exchange-code-review/v1','implementation_commit_sha':RIS_COMMIT,
+                    'accepted_alpha_baseline':RIS_BASELINE,'source_sha256':RIS_HASHES,'profile':'corpustrail-ris/v1',
+                    'migration':None,'import_formats':['ris'],'export_formats':['ris'],'offline_scoped_demo':True,
+                    'identity_policy_unchanged':True,'membership_authority_unchanged':True,'original_source_preserved':True,
+                    'native_enrollment_change':'exact_transaction_body_factoring_only','researcher_acceptance':False} if ris else None,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
                           'The source/build SHA identifies this development artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):
