@@ -266,6 +266,39 @@ class VisualInfrastructureTests(unittest.TestCase):
         with patch.dict('os.environ',{'NODE_OPTIONS':'--unexpected'}):
             with self.assertRaises(ValueError),driver_environment('webkit'):pass
 
+    def test_ris_fixture_orders_sources_deterministically_and_restores_its_clock(self):
+        import base64
+        import hashlib
+        import uuid
+        from importlib.resources import files
+        from corpustrail.imports import service
+        from corpustrail._internal import values
+        from corpustrail.application.ris import RISController
+        from .fixtures import ApplicationFixture, AT
+        original=service.now;global_clock=values.now;exports=[]
+        for _ in range(3):
+            fixture=ApplicationFixture(ris_demo=True)
+            try:
+                project=fixture.project;body=files('corpustrail.resources').joinpath('ris-demo-import.ris').read_bytes()
+                self.assertEqual(service.now(),'2026-01-02T00:00:00+00:00')
+                self.assertIs(values.now,global_clock)
+                key=uuid.uuid4().hex
+                RISController().upload(project,request_id=key,offset=0,body=base64.b64encode(body).decode(),final=True,
+                    sha256='sha256:'+hashlib.sha256(body).hexdigest(),filename='synthetic.ris')
+                ris=service.RISService(project)
+                preview=ris.prepare_import(request_id=uuid.uuid4().hex,upload=key,actor='fixture',name='Ordered sources')
+                result=ris.commit_import(key=preview['id'],preview_sha256=preview['preview_sha256'],confirmed=True,accept_partial=True)
+                self.assertEqual(result['status'],'complete')
+                sensor=next(pid for pid in project.identities.papers() if project.discovery.metadata(pid)['fields']['title']=='Synthetic sensor measurement')
+                metadata=project.discovery.metadata(sensor)
+                self.assertTrue(metadata['fields']['abstract'].startswith('This invented sensor measurement'))
+                self.assertEqual(sorted(o['source']['observed_at'] for o in project.identities.observations(sensor)),[AT,'2026-01-02T00:00:00+00:00'])
+                exports.append(ris.export_preview(scope='all_candidates',actor='fixture')['sha256'])
+                self.assertTrue(all(not project.reviews.history(pid) for pid in project.identities.papers()))
+            finally:fixture.close()
+            self.assertIs(service.now,original)
+        self.assertEqual(len(set(exports)),1)
+
     def test_discovery_fixture_clock_controls_stored_plan_and_restores_on_close(self):
         from corpustrail.application import discovery
         from corpustrail._internal import values

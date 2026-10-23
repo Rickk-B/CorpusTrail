@@ -72,8 +72,15 @@ This is the single repository coordination record, not a second specification.
   local capture completed 84/84 executions and 295 unique images with no browser
   errors or external requests. The first 705-test run found one obsolete Home
   capability assertion, corrected and reverified in all 38 project-app tests.
-  Offline package verification, reviewed platform references and hosted delivery
-  are pending. Capture-mode CI is evidence collection and cannot deliver a wheel.
+  Offline wheel/sdist verification passes in core and optional-ML environments
+  (705 tests in each of four isolated installs). The first hosted capture
+  [39961763108/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39961763108)
+  exposed noncanonical macOS unit-test temporary paths; a controlled alias
+  regression verifies the test-only correction (25 RIS tests pass). Six before/after
+  probes also demonstrated and removed tied synthetic source timestamps without
+  changing native metadata policy or global time; 35 infrastructure tests and
+  six focused RIS browser executions pass. Fresh reviewed platform references
+  and final hosted delivery are pending. Capture mode cannot deliver a wheel.
   No other format, real model, direct database adapter or release is authorized.
   The evaluation guide at the accepted baseline is available here:
   [macOS alpha evaluation guide](../user/ALPHA_EVALUATION.md), collect usability

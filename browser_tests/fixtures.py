@@ -173,9 +173,13 @@ class ApplicationFixture:
         self.stack.enter_context(patch.object(socket.socket, 'connect', connect))
         if self.ris_demo:
             from corpustrail.demo import create
-            self.stack.enter_context(patch('corpustrail.imports.service.now',return_value=AT))
+            ris_clock=self.stack.enter_context(patch('corpustrail.imports.service.now',return_value=AT))
             with patch('corpustrail.demo.uuid.uuid4',side_effect=[uuid.UUID(int=i) for i in (710,711,712)]):
                 create(self.root/'materials')
+            # Later user imports have a strictly later synthetic timestamp.
+            # Equal timestamps otherwise defer native metadata precedence to
+            # observation hashes containing the live configuration-event ID.
+            ris_clock.return_value='2026-01-02T00:00:00+00:00'
             self.project=Project.open(self.root/'materials')
             self.papers=self.project.identities.papers()
         else:
