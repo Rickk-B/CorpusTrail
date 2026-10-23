@@ -43,6 +43,19 @@ This is the single repository coordination record, not a second specification.
   deferred-read checks passed all three viewports. Complete reviewed captures
   and final strict validation/delivery remain pending. All failed/interrupted
   evidence is retained; no capture-only wheel is a delivery.
+- [Complete CP10 capture run 39929496555/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39929496555)
+  from `3e6fc53bb3e8af3df40f42ebf2fa3ed91bbd3aaf` passed all 11 validation
+  jobs; the wheel job was correctly skipped in capture mode. Each renderer
+  completed 78/78 functional executions and 271 distinct captures. Explicit
+  engineering review inspected complete inventories and representative original,
+  previous-reference and full-size-diff images across all three viewports. Each
+  namespace records per-capture hashes and rationale: 224 existing references
+  intentionally change with navigation/footer/alpha-fixture updates, 36 new
+  handoff captures are added, and 11 earlier PNGs are preserved byte-for-byte.
+  This is not researcher acceptance or a claim that every original was read
+  full-size. No visual threshold, privacy mask, interaction timeout or existing
+  path-only exception policy changed. Strict compare mode is now restored;
+  final workflow-produced wheel/provenance/retention verification remains pending.
 - Open investigations: native MacBook Europe PMC transport causation and the
   historical macOS navigation-timeout cause remain unresolved. Hosted success
   and harness corrections are not proof those native issues are fixed.
