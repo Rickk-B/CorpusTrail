@@ -111,10 +111,12 @@ Keep its commit receipt: successive checkpoints share the development version.
    That review interface retains its original write/authority behavior. Do not
    confuse it with the new read-only browser.
 
-CP1–9 and the warm refresh are researcher-accepted. Hosted Linux Chromium,
+CP1–10 and the warm refresh are researcher-accepted. The
+[accepted macOS alpha evaluation guide](ALPHA_EVALUATION.md) gives exact download,
+existing-environment update and disposable offline-demo steps. Hosted Linux Chromium,
 macOS Chromium/WebKit and Windows/macOS lifecycle checks are technical evidence,
 not a claim of native Safari or every personal Python environment working.
-CP10 researcher acceptance remains separate. No desktop installer is claimed.
+CP10 acceptance completes the alpha baseline, not a beta/public release. No desktop installer is claimed.
 The product uses standard-library Python and packaged local assets.
 
 ## New Project / Open Existing Project

@@ -5,15 +5,16 @@
 Read this section when starting work and update it at completion/interruption.
 This is the single repository coordination record, not a second specification.
 
-- Researcher-accepted: CP1–9 and the warm presentation refresh. CP10 is
-  **technically delivered, awaiting researcher acceptance**. This completes the
-  approved alpha UI baseline; it is not a beta or a published release.
+- Researcher-accepted: **CP1–10** and the warm presentation refresh. The researcher
+  formally accepted CP10 on 23 October 2026. The approved alpha baseline is
+  complete; this is not a beta or public release.
 - Validated software: `f077bb7722ac2b6f3c911a434cb8a541dc8a5745`, tree
   `affc087d36c57b1157f40f656c55f0657b3fe567`,
   [run 39935463128/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128):
   all 12 jobs passed.
-  Any later commit changing only this coordination record is not a new software
-  delivery; the source/run/wheel receipt below remains authoritative.
+  The pre-acceptance handover was documentation-only commit
+  `79996f64b8c09fa525b692e3e980a743af05db0d`. Subsequent documentation-only
+  commits likewise do not change the accepted software/run/wheel identity.
 - [Development bundle 12495277511](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12495277511):
   `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 379,534 bytes,
   SHA-256 `34b1315558ceee6a993d69660e230d1034ca4f921022ea60d2b93ef8a8467487`.
@@ -60,10 +61,88 @@ This is the single repository coordination record, not a second specification.
   does not establish resolution. Production importers, automatic query generation,
   RIS export, real assessment engines, institutional integrations, native installers
   and phone support remain separately gated. No subsequent implementation is
-  authorized by this delivery. Researcher UX/alpha acceptance is the next decision.
+  authorized by this acceptance. Next permitted action: use the
+  [macOS alpha evaluation guide](../user/ALPHA_EVALUATION.md), collect usability
+  feedback and decide the separately proposed beta assignments below. No beta
+  implementation, model download/call, dependency installation or release is
+  authorized by this record. The older offline tutorial lacks an explicit Guided
+  Review scope and cannot be retrofitted after its scripted authority events;
+  the guide explicitly separates that limitation from the implemented workflow.
 - Delivery used standard public runners under the existing zero-additional-charge
   approval. No release/PyPI/main/tag change, artifact deletion, billing/security
   change or paid service was introduced. Mac coordination documents remain separate.
+
+## CP10 researcher acceptance — 23 October 2026
+
+The researcher formally accepted CP10 in the instruction requesting alpha
+evaluation and beta proposals. CP1–10 are now researcher-accepted. This records
+an existing human decision; it does not publish a release or authorize beta work.
+
+- Accepted software: `f077bb7722ac2b6f3c911a434cb8a541dc8a5745`.
+- Tree: `affc087d36c57b1157f40f656c55f0657b3fe567`.
+- [Run 39935463128/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128):
+  all 12 jobs passed; each renderer completed 78/78 functional executions and
+  271/271 strict comparisons, with no path-only exception used.
+- [Accepted bundle 12495277511](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12495277511):
+  `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 379,534 bytes,
+  SHA-256 `34b1315558ceee6a993d69660e230d1034ca4f921022ea60d2b93ef8a8467487`.
+- Created `2026-10-23T10:31:02Z`; expires `2027-01-21T09:56:09Z`,
+  90 days from run creation, not upload. Browser evidence retains seven days.
+- Later pre-acceptance handover: `79996f64b8c09fa525b692e3e980a743af05db0d`;
+  neither it nor this acceptance/guide update is a new software build.
+
+Native MacBook Europe PMC discovery transport causation and the historical macOS
+navigation-timeout cause remain unresolved. Acceptance does not claim either was
+fixed. Earlier failed/capture runs, reviewed images and exact-source recovery
+remain historical evidence in the unchanged durable CP10 preservation set.
+
+## Proposed first beta assignments — awaiting researcher decisions
+
+This is a concise proposal in the existing coordination record, not an amendment
+to the authoritative implementation plan or authorization to code/install/call.
+No beta version, performance threshold or external provider has been selected.
+
+| Priority | Proposed bounded assignment and useful outcome | Dependencies / acceptance |
+|---|---|---|
+| 0 | Evaluate the accepted alpha using the linked Mac guide. Then scope only demonstrated usability/reliability gaps, including a ready-to-review scoped offline fixture if useful. Keep native Europe PMC diagnostics separate. | Researcher observations; no acceptance rerun or inferred transport fix. Native-only checks/network requests require their own explicit scope. |
+| 1 | One production **RIS file import** route, initially a named Zotero collection export plus a documented RIS dialect. Preview, explicit commit, per-record outcomes/history and exact source-to-candidate linkage. | Approve the input route and representative sanitized files; determine encoding/dialect/size bounds and any parser dependency before coding. Preserve original bytes, exact identity/conflicts, overlapping observations, immutable populations and frozen reviews. Import never creates human attestation, trusted PDF evidence or membership. Test retries, interruption, confinement, malicious/malformed input and partial failures. |
+| 2 | One optional **local assessment adapter**, candidate: a local-only Ollama-compatible endpoint with one pinned, license-reviewed model/quantization on agreed existing hardware, implementing the CP8 typed assessment contract. | Approve runtime/model, downloads, hardware/memory/context limits and localhost-only/no-cloud policy. Reuse exact frozen full-set/bounded inputs, failure/uncertainty storage and consent guards. Verify real software interoperability, input/output hashes, restart/replay, time/memory, invalid outputs and no authority mutation. Do not equate the current structured-Knowledge adapter with this classifier. No paid services or new mandatory dependency. |
+| 3 | Separately validate that adapter's scientific usefulness before recommending it for operational corpus assessment. | Researcher-approved corpus definition, independently human-attested references, held-out roles, leakage/self-match controls, evidence-depth and multilingual coverage, uncertainty/failure reporting and agreed error/recall criteria. Preserve versioned inputs/model settings and explicit human confirmation. Successful HTTP/schema tests are not scientific validation; raw model scores are not calibrated probabilities. |
+
+RIS is the suggested first route for broad exchange coverage, not a promise that
+all vendor dialects or attachments will work. [Zotero's format documentation](https://www.zotero.org/support/dev/data_formats#ris)
+notes its broad use and divergent tag conventions. BibTeX is useful for LaTeX
+collections but introduces brace/escaping/macro handling; CSV needs explicit
+column semantics; CSL JSON is structured and a good alternative if the first
+source is primarily Zotero, but less suited to general database export coverage.
+None is implemented or selected by this proposal. An export is not a full library
+backup or continuous synchronization.
+
+For assessment, local-only is preferred under the no-new-payment constraint.
+[Ollama compatibility](https://docs.ollama.com/api/openai-compatibility) covers a
+subset of the protocol, not automatic CorpusTrail compatibility; its
+[local-only controls](https://docs.ollama.com/faq#how-do-i-disable-ollamas-cloud-features)
+need verification because a localhost server can relay to cloud models. A local
+embedding classifier is an alternative with different model/retrieval/validation
+work; a second runtime or hybrid engine is unnecessary initially. External model
+services remain optional future candidates with explicit transfer/cost decisions,
+not a default or assumed free tier. Open-source code does not imply every model
+weight license, service, download or hardware choice is free or suitable.
+
+Retain both **file import** and **direct database/service connections** as future
+source-adapter options through the common observation/identity/population services.
+A direct bibliographic API or local library connection needs its own permission,
+terms, authentication, pagination and failure policy; it is not arbitrary database
+file access or automatic sync. Zotero is a source integration, not an assessment
+engine. Do not introduce a general plugin marketplace/framework for these first
+two adapters. Query assistance and RIS export are independent proposals; desktop
+installers need separate platform-safety scope. Phone feasibility remains last.
+
+Decisions needed before implementation: approve or replace the first import route
+and sanitized input scope; approve or replace the local assessment pilot and its
+runtime/model/resource/download boundaries; approve the independent scientific
+validation protocol. No paid capacity, real data/model transfer or installation
+is authorized merely by accepting this documentation.
 
 ## CP9 researcher acceptance — 22 October 2026
 

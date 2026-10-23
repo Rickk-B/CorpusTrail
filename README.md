@@ -136,6 +136,7 @@ inactive project to native Trash; it never falls back to permanent deletion.
 
 - [User guide](docs/user/GUIDE.md) — configuration, providers, evidence, review,
   prioritization, knowledge, ASReview and reproducibility.
+- [Accepted alpha evaluation on macOS](docs/user/ALPHA_EVALUATION.md)
 - [Offline tutorial](docs/user/TUTORIAL.md)
 - [Development checkpoint downloads](docs/developer/DEVELOPMENT_BUILDS.md)
 - [Developer browser and visual acceptance](docs/developer/BROWSER_TESTING.md)
