@@ -178,6 +178,12 @@ print(json.dumps({'version':corpustrail.__version__,'distribution':importlib.met
 """
         imported, _ = invoke([str(python), "-I", "-B", "-c", check], outside, env)
         version, _ = invoke([str(cli), "--version"], outside, env)
+        ris_demo, _ = invoke([str(cli), 'demo', str(root/'scoped-ris-demonstration')], outside, env)
+        ris_result=json.loads(ris_demo)
+        if (ris_result['canonical_candidates']!=3 or ris_result['human_observations']!=0
+                or ris_result['membership_decisions']!=0 or ris_result['network_used'] is not False):
+            raise RuntimeError('installed scoped RIS demo must begin unreviewed and offline')
+        invoke([str(cli), 'project', 'status', str(root/'scoped-ris-demonstration')], outside, env)
         cli_project = root / "cli-project"
         initialized, _ = invoke([str(cli), "project", "init", str(cli_project), "--project-id", "smoke-topic",
             "--name", "Materials sensors", "--description", "Synthetic offline topic", "--created-by", "fixture"], outside, env)

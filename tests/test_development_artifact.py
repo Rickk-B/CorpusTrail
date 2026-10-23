@@ -262,7 +262,6 @@ class DevelopmentArtifactTests(unittest.TestCase):
             if name in TOOL['POPULATION_HASHES']:
                 expected=TOOL['POPULATION_HASHES'][name]
             expected=TOOL['CURATION_HASHES'].get(name,expected)
-            if name=='src/corpustrail/application/populations.py' and (ROOT/'src/corpustrail/imports/service.py').is_file():expected=TOOL['RIS_HASHES'][name]
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
 
     def test_population_review_hashes_match_current_scientific_source(self):
@@ -274,6 +273,7 @@ class DevelopmentArtifactTests(unittest.TestCase):
             if name in TOOL['CLASSIFICATION_HASHES']:
                 expected=TOOL['CLASSIFICATION_HASHES'][name]
             expected=TOOL['CURATION_HASHES'].get(name,expected)
+            if name=='src/corpustrail/application/populations.py' and (ROOT/'src/corpustrail/imports/service.py').is_file():expected=TOOL['RIS_HASHES'][name]
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
 
     def test_reference_review_hashes_match_exact_scientific_source(self):

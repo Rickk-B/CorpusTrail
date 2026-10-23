@@ -109,6 +109,10 @@ remain historical evidence in the unchanged durable CP10 preservation set.
 
 ## Proposed first beta assignments — awaiting researcher decisions
 
+Historical proposal: the researcher subsequently authorized RIS import/export
+and the ready-to-review offline demo. The current handover tracks that work.
+The optional assessment pilot and other integrations remain unapproved.
+
 This is a concise proposal in the existing coordination record, not an amendment
 to the authoritative implementation plan or authorization to code/install/call.
 No beta version, performance threshold or external provider has been selected.
