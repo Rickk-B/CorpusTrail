@@ -27,9 +27,12 @@ AT='2026-01-01T00:00:00+00:00'
 class RISExchangeTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
-        locks=patch('corpustrail.application.project_use.lock_directory',return_value=Path(self.temp.name)/'locks')
+        # macOS temporary parents may contain /var -> /private/var.
+        # Pass the actual canonical test-owned directory to the unchanged guard.
+        base=Path(self.temp.name).resolve()
+        locks=patch('corpustrail.application.project_use.lock_directory',return_value=base/'locks')
         locks.start();self.addCleanup(locks.stop)
-        self.root=Path(self.temp.name)/'project'
+        self.root=base/'project'
         self.project=Project.create(self.root,ProjectConfig('ris-test','Synthetic RIS test','Invented metadata only',
             review=ReviewPolicy(scope='Synthetic sensor literature',authorized_reviewers=('reviewer',))),created_by='fixture',created_at=AT)
         self.service=RISService(self.project,clock=lambda:AT);self.controller=RISController()
@@ -51,6 +54,26 @@ class RISExchangeTests(unittest.TestCase):
     def counts(self):
         with connection(self.project.database_path) as db:
             return {t:db.execute('SELECT COUNT(*) FROM '+t).fetchone()[0] for t in ('paper_entities','ct_paper_observations','ct_review_events','ct_population_versions','knowledge_assertions','ct_reference_assignments')}
+
+    @unittest.skipUnless(__import__('os').name=='posix', 'POSIX temporary-parent alias regression')
+    def test_test_fixture_canonicalizes_symbolic_temporary_parent(self):
+        # Reproduce the macOS fixture failure without weakening real path guards.
+        from functools import partial
+        from corpustrail.application.project_use import no_links, ProjectUseError
+        real=Path(self.temp.name).resolve()/'canonical-parent';real.mkdir()
+        alias=real.parent/'parent-alias';alias.symlink_to(real,target_is_directory=True)
+        original=tempfile.TemporaryDirectory
+        child=RISExchangeTests('runTest')
+        try:
+            with patch('tempfile.TemporaryDirectory',partial(original,dir=alias)):
+                child.setUp()
+            with self.assertRaises(ProjectUseError):no_links(Path(child.temp.name)/'locks',missing=True)
+            self.assertTrue(child.root.is_relative_to(real))
+            self.assertNotIn('parent-alias',str(child.root))
+            result=child.commit(child.prepare(child.body()))
+            self.assertEqual(result['status'],'complete')
+            self.assertEqual(result['result']['unique_canonical_publications'],3)
+        finally:child.doCleanups()
 
     def test_preview_is_scientifically_read_only_then_explicit_import(self):
         before=self.counts();value=self.prepare(self.body());self.assertEqual(self.counts(),before)
