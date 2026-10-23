@@ -14,6 +14,7 @@ TOOLS = {'tools/smoke_install.py', 'tools/smoke_asreview.py', 'tools/release_man
 TOOLS.update({'tools/discovery_environment_diagnostic.py','tools/repository_audit.py'})
 TOOLS.update({'tools/reference_acceptance.py','tools/reference_storage_benchmark.py'})
 TOOLS.add('tools/classification_acceptance.py')
+RIS_SAMPLES = {'src/corpustrail/resources/ris-demo-initial.ris', 'src/corpustrail/resources/ris-demo-import.ris'}
 FIXTURE_DATA = {'examples/synthetic-materials/records.json', 'examples/synthetic-discovery/responses.json',
                 'examples/synthetic-discovery/article.xml'}
 EXCLUDED = ['docs/PHASE* engineering archives', 'docs/*_smoke*.json build/runtime receipts',
@@ -30,7 +31,7 @@ EXCLUDED = ['docs/PHASE* engineering archives', 'docs/*_smoke*.json build/runtim
 def eligible(path):
     if any(part in {'__pycache__', '.venv', 'build', 'dist'} or part.endswith('.egg-info') for part in Path(path).parts):
         return False
-    if path in ROOT_FILES | RECEIPTS | TOOLS | FIXTURE_DATA:
+    if path in ROOT_FILES | RECEIPTS | TOOLS | FIXTURE_DATA | RIS_SAMPLES:
         return True
     if path.startswith('src/corpustrail/'):
         if path.startswith('src/corpustrail/local_app/assets/'):
@@ -58,7 +59,7 @@ def build(root):
             raise ValueError('real PDF signature forbidden in release population')
         records.append({'path': path, 'bytes': len(raw), 'sha256': 'sha256:' + hashlib.sha256(raw).hexdigest()})
     paths = {x['path'] for x in records}
-    required = ROOT_FILES | RECEIPTS | TOOLS | FIXTURE_DATA | {
+    required = ROOT_FILES | RECEIPTS | TOOLS | FIXTURE_DATA | RIS_SAMPLES | {
         'src/corpustrail/resources/origins.json', 'src/corpustrail/tutorial.py',
         '.github/workflows/standalone.yml', 'docs/user/TUTORIAL.md'}
     if required - paths:

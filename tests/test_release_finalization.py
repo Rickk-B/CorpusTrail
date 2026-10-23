@@ -38,6 +38,8 @@ class ReleaseFinalizationTests(unittest.TestCase):
         self.assertNotIn('docs/developer/ALPHA_HARDENING_REPORT.md', paths)
         self.assertTrue({'LICENSE', 'SECURITY.md', 'CONTRIBUTING.md', 'CHANGELOG.md'} <= paths)
         self.assertTrue(m['RECEIPTS'] <= paths)
+        self.assertTrue(m['RIS_SAMPLES'] <= paths)
+        self.assertFalse(m['eligible']('src/corpustrail/resources/private-library.ris'))
         self.assertEqual(result['license'], 'MIT')
         self.assertEqual(result['pending'], ['explicit next-release authorization'])
         self.assertEqual(result['version'], corpustrail.__version__)
