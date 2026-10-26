@@ -229,6 +229,9 @@ class ApplicationFixture:
         self.stack.enter_context(patch('corpustrail.application.references.now',return_value=AT))
 
     def _start_server(self):
+        # A real launcher restart constructs a fresh remote registry/connection.
+        # Retain only the explicitly installed offline examples across this fixture restart.
+        self.curation_registry._engines = {k:v for k,v in self.curation_registry._engines.items() if v[0].describe().execution != 'network'}
         self.controller = ProjectController(projects_root=self.root)
         self.stack.callback(self.controller.close)
         self.controller._removal_service = ProjectRemoval(self.controller, ConfirmationOnlyTrash())
@@ -238,7 +241,10 @@ class ApplicationFixture:
         from corpustrail.application.handoff import HandoffController
         from .handoff_fixtures import OrderingFixture,service
         self.handoff=HandoffController(clock=lambda:AT,model_service=lambda p:service(self,p),priority_adapter=OrderingFixture())
-        self.server = make_server(port=0, controller=self.controller, discovery=self.discovery, evidence=self.evidence,curation=self.curation,handoff=self.handoff)
+        from corpustrail.application.chatgpt import ChatGPTController
+        from .chatgpt_fixtures import client
+        self.chatgpt=ChatGPTController(self.curation,connection_client=client(self),clock=lambda:AT,synthetic=True)
+        self.server = make_server(port=0, controller=self.controller, discovery=self.discovery, evidence=self.evidence,curation=self.curation,handoff=self.handoff,chatgpt=self.chatgpt)
         self.stack.callback(self.server.server_close)
         self.disconnects = 0
         def handler_error(*_):

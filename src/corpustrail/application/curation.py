@@ -38,6 +38,7 @@ class CurationController:
         methods = [{'id': 'manual', 'label': 'Manual only — method-blind human review', 'available': True,
             'notice': 'No model or classifier required. Human observations and corpus publication remain separate.'}]
         for engine in installed:
+            if engine['execution'] == 'network': continue  # Remote plans use their exact-payload authorization workspace.
             methods.append({'id': engine['engine_id'], 'version': engine['version'], 'available': True,
                 'label': ('Synthetic offline example — ' if self.synthetic else 'Installed offline adapter — ') + engine['engine_id'],
                 'synthetic_example': self.synthetic, 'input_modes': engine['input_modes'],
@@ -86,8 +87,10 @@ class CurationController:
             synthetic = bool(prepared.get('fixture_only') or prepared.get('synthetic_only'))
         return {'schema': SCHEMA, **value, 'plan': head, 'engine_available': available,
             'synthetic_example': synthetic, 'local_worker_active': active, 'diagnostic': error,
+            'requires_transfer_authorization': head['engine']['execution'] == 'network',
             'validation_protocol': self.classifier(project).validation_protocol(value['plan_id'])['protocol'],
-            'notice': 'Synthetic software architecture example, not a scientific relevance prediction.' if synthetic else 'Non-authoritative engine observations; inspect actual score meanings and calibration state. No stopping rule is provided.'}
+            'notice': 'Synthetic software architecture example, not a scientific relevance prediction.' if synthetic else 'Non-authoritative engine observations; inspect actual score meanings and calibration state. No stopping rule is provided.' +
+            (' Requested model: ' + head['engine']['configured_model'] + '. Use the adapter workspace for any new exact-payload authorization.' if head['engine']['execution'] == 'network' else '')}
 
     def results(self, project, run_id, **options):
         value = CurationReads(project).results(run_id, **options)
@@ -155,7 +158,18 @@ class CurationController:
             item = data['items'][0]; title = None
         body = item['text']
         if offset > len(body): raise ContractError('text segment is outside the frozen representation')
-        return {'schema': SCHEMA, 'text': body[offset:offset + limit], 'offset': offset, 'frozen_title':title,
+        proposal = {}
+        if section == 'target' and source.get('result') and source['result']['engine']['adapter_id'] == 'chatgpt-plan':
+            result = source['result']
+            if result['kind'] == 'assessment':
+                observation = result['assessment']
+                proposal = {'model_proposal': {k: observation[k] for k in
+                    ('outcome', 'evidence_sufficiency', 'rationale', 'uncertainty', 'limitations', 'reported_model')}}
+            else:
+                proposal = {'model_proposal': {'execution_failure': result['failure'].get('diagnostics', {}).get('category', result['failure']['reason'])}}
+            proposal['model_proposal'].update(configured_model=result['engine']['configured_model'],
+                authority='non_authoritative', calibration='not_calibrated')
+        return {**proposal, 'schema': SCHEMA, 'text': body[offset:offset + limit], 'offset': offset, 'frozen_title':title,
             'total_characters': len(body), 'next_offset': offset + limit if offset + limit < len(body) else None,
             'representation': item['representation'], 'paper_id': item['paper_id'],
             'notice': 'Exact frozen engine input, not current evidence or an attestation that a person read it. Structured text reuses the verified stored representation; no XML is rendered here.'}
@@ -179,12 +193,15 @@ class CurationController:
             lease.close()
             with self._lock: self._workers.pop((str(project.root), run_id), None)
 
-    def execute(self, project, run_id, expected_revision):
+    def execute(self, project, run_id, expected_revision, *, remote_authorized=False):
         key = (str(project.root), run_id)
         with self._lock:
             if self._closed: raise ContractError('this launcher is stopping')
             if key in self._workers: return self.run(project, run_id)
             state = self.classifier(project).inspect_run(run_id)
+            plan = self.classifier(project).inspect_plan(state['plan_id'])
+            if plan['engine']['execution'] == 'network' and remote_authorized is not True:
+                raise ContractError('Use the remote adapter workspace for exact-payload authorization; no implicit continuation is allowed.')
             if state['revision'] != expected_revision: raise ContractError('run state changed; inspect it before execution')
             if state['terminal']: return self.run(project, run_id)
             if any(t.is_alive() for t, _ in self._workers.values()):

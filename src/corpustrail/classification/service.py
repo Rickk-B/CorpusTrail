@@ -38,7 +38,7 @@ class ClassificationService:
         version_id(population_version_id); exact_id(reference_version_id, 'reference-version')
         if not isinstance(policy, ClassifierPolicy) or not isinstance(budgets, Budgets) or not isinstance(validation, ValidationProtocol):
             raise ContractError('typed assessment policy, budgets and validation protocol required')
-        if input_mode not in {'full_set', 'bounded_context'} or evidence_basis not in {'best_available', 'metadata', 'abstract', 'structured_text', 'frozen_context'}:
+        if input_mode not in {'full_set', 'bounded_context'} or evidence_basis not in {'best_available', 'metadata', 'abstract', 'structured_text', 'frozen_context', 'title_abstract'}:
             raise ContractError('choose an explicit supported input/evidence mode')
         if (input_mode == 'bounded_context') != (evidence_basis == 'frozen_context'):
             raise ContractError('bounded input uses the exact frozen_context basis; full-set input chooses its own explicit evidence rule')
@@ -177,10 +177,14 @@ class ClassificationService:
             return {'plan_id': pid, 'sha256': head['transfer_sha256'],
                     'request': json.loads(storage.blob(db, head['transfer_sha256']))}
 
-    def start_run(self, pid, *, request_id, actor, created_at, parent_run_id=None, transfer_sha256=None):
+    def start_run(self, pid, *, request_id, actor, created_at, parent_run_id=None, transfer_sha256=None, transmission_sha256=None):
         command_id(request_id); timestamp(created_at); bounded_text(actor, 'execution actor', 200)
         command = {'plan_id': pid, 'request_id': request_id, 'actor': actor, 'created_at': created_at,
                    'parent_run_id': parent_run_id, 'transfer_sha256': transfer_sha256}
+        if transmission_sha256 is not None:
+            from corpustrail._internal.values import sha256
+            sha256(transmission_sha256)
+            command['transmission_sha256'] = transmission_sha256
         json_value(command)
         rid = identifier('assessment-run', command)
         with project_use(self.project.root), self._connection(write=True) as db:
@@ -192,8 +196,12 @@ class ClassificationService:
                 return {'run_id': rid, 'replayed': True}
             self._execution_guard(db, head)
             if parent_run_id is not None: storage.run(db, parent_run_id)
-            if head['engine']['locality'] == 'remote_declared_mock' and transfer_sha256 != head['transfer_sha256']:
+            if head['engine']['locality'] in {'remote_declared_mock', 'remote'} and transfer_sha256 != head['transfer_sha256']:
                 raise ContractError('explicit consent for the exact candidate/reference/definition payload is required')
+            if head['engine']['execution'] == 'network' and transmission_sha256 is None:
+                raise ContractError('remote execution requires exact transmitted-payload authorization')
+            if head['engine']['execution'] != 'network' and transmission_sha256 is not None:
+                raise ContractError('transmission authorization is only for explicit remote execution')
             if head['engine']['locality'] == 'local' and transfer_sha256 is not None:
                 raise ContractError('local execution has no remote transfer authorization')
             db.execute('INSERT INTO ct_classifier_runs(run_id,plan_id,parent_run_id,request_id,payload_json) VALUES (?,?,?,?,?)',
@@ -297,7 +305,7 @@ class ClassificationService:
     @staticmethod
     def _preservable_response(value, maximum):
         try:
-            raw = asdict(value) if type(value) in (Assessment, AssessmentFailure) else value
+            raw = value.to_dict() if type(value) is AssessmentFailure else asdict(value) if type(value) is Assessment else value
             return json_value(raw, maximum).encode(), 'retained_untrusted_json'
         except Exception:
             # Never persist raw exception messages, secrets, arbitrary repr(),
@@ -404,6 +412,8 @@ class ClassificationService:
                         for pos, record, output in zip(positions, records, outputs):
                             self._write_result(db, run, rid, head, pos, record, output, at, forced_reason=reason)
                     spent += len(units)
+                    if head['engine']['execution'] == 'network' and callable(getattr(engine, 'halted', None)) and engine.halted():
+                        stopped = cancelled(); break
                 status = self.inspect_run(rid)
                 state = ('interrupted' if stopped else 'completed' if status['terminal'] and not status['primary_counts']['failed']
                          else 'failed' if status['terminal'] and status['primary_counts']['failed'] == head['candidate_count'] else 'partial')

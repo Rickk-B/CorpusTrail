@@ -83,3 +83,31 @@ root layout and does not access another project or private fixtures.
 `ModelResponse`, `AdapterRegistry` and `ModelService`. These v0 APIs are experimental,
 not scientifically validated extractors. See [adapter contracts, consent and
 custom extensions](MODEL_ADAPTERS.md). No default model or required SDK is introduced.
+
+## Optional ChatGPT assessment workspace
+
+`/chatgpt` is a project-bound optional page reached from Models. Its protected
+loopback API uses `corpustrail-local-chatgpt/v1`. Existing Host/Origin, session,
+CSRF, CSP and bounded-JSON rules apply. Reads never initiate sign-in or model
+requests. No endpoint accepts a credential, arbitrary URL or filesystem path.
+
+- GET `/api/v1/chatgpt/configuration`: sanitized local connection and gate status.
+- GET `/api/v1/chatgpt/populations` and `/references`: existing server-side version
+  pagination (`offset`, `limit`, `cutoff`). No full collection browser loading.
+- GET `/api/v1/chatgpt/previews/{32-hex}`: immutable actual transfer preview.
+- POST `/connect`, `/cancel-connect`, `/models`, `/disconnect`, `/acknowledge-plan`
+  under the same prefix: exact `{schema, confirmed:true}`. Connect returns an
+  ephemeral browser authorization URL; never log, export or persist that URL.
+- POST `/preview`: `request_id`, `actor`, `population_version_id`,
+  `reference_version_id`, `model`. Explicitly freezes local inputs, not an
+  assessment. Returns `preview_id` and `preview_sha256` with the actual manifest.
+- POST `/confirm`: `request_id`, `preview_id`, `preview_sha256`, `confirmed:true`,
+  `confirm_external:true`. Account eligibility, separate no-charge verification,
+  current configuration and actual wire hashes are rechecked. The exact receipt
+  links the new CP8 run. Repeated confirmation never resends completed requests.
+
+Cancellation/results/history/proposal inspection use existing operational Curation
+routes. The new fields and outputs are not added to method-blind review DTOs.
+A dedicated OAuth callback listens only on a fresh `127.0.0.1` port, validates
+state/PKCE/nonce and registration, and returns a non-secret link to the known app
+origin. It is not a scientific API or an arbitrary redirect endpoint.

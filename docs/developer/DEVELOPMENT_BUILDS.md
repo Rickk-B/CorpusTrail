@@ -5,6 +5,60 @@
 Read this section at task start; update it at completion/interruption. This is the
 single repository coordination record, not another implementation specification.
 
+### ChatGPT assessment adapter — offline delivery in progress, 26 October 2026
+
+- Researcher-accepted: CP1–10 and the presentation refresh. RIS/demo researcher
+  acceptance remains pending. The ChatGPT adapter is separately authorized for
+  implementation and offline delivery, not researcher-accepted or live-validated.
+- Starting source: documentation-only `14443e5f790a317e22b62ecc09ecd862e5097684`,
+  tree `bc624ea0a5e02a0874ae160d6536d19aa179404e`. OAuth foundation, approved optional
+  PyJWT cryptographic extra and uncommitted handover were preserved before work.
+  Current pending source is available with `git status`; no work was reset/discarded.
+- Implemented: Models → optional ChatGPT assessment; private connection, signed
+  PKCE identity verification, explicit model catalog/disconnect; immutable combined
+  title/abstract inputs; readable exact-wire preview and separate consent; typed
+  stored proposals/failures through CP8/CP9; readable Curation model provenance;
+  per-paper durable units, partial output, cancellation and no automatic resend.
+  Existing assertion extraction, labels, sufficiency, references/held-out policy,
+  method-blind isolation, authority and scientific migrations remain unchanged.
+- The researcher explicitly approved `broad-corpus-assessment/v2` remote execution,
+  immutable `corpustrail-title-abstract-input/v1`, exact transmitted-payload consent
+  and bounded `corpustrail-assessment-diagnostics/v1`. Offline v1 records retain
+  their original shape. No SQL migration, real-model performance claim or new
+  membership/publication authority. Core remains runtime-dependency-free; the
+  approved optional extra is documented in the [walkthrough](../user/CHATGPT_ASSESSMENT.md).
+- Offline evidence so far: 25 new connection/assessment/API security tests and
+  30 existing classification tests pass; focused Ruff passes. New packaged-browser
+  workflow completes 6/6 executions across three viewports with 18 captures.
+  These are captures, not yet strict acceptance. Initial missing OS-library launch,
+  narrow hash wrapping, fixture-status and test response-shape failures are retained.
+  Existing preserved runtime libraries enabled local Chromium without OS installation.
+  All nine dependency wheel targets resolve (Python 3.11–3.13 × Linux x86-64,
+  macOS ARM64, Windows AMD64); native optional-extra execution remains to be verified.
+- Current next actions: pin the exact implementation commit in the narrowly audited
+  source receipt, run full local/package regressions, inspect complete capture evidence,
+  then hosted offline native/capture acceptance, explicit per-image review and final
+  strict acceptance. No old receipt hashes, masks, tolerances or scientific authority
+  checks are weakened. Current delivery/validated wheel below still refers to RIS/demo.
+- Live sign-in and model execution remain blocked pending owner participation,
+  explicit payload authorization, actual account eligibility and verified prevention
+  of extra charges. Sign-in/models/weekly allowances do not prove credit fallback is
+  disabled. No HTTP form grants verification; no API-key fallback, credit purchase,
+  billing change or live provider/model call is authorized or performed. The official
+  [OSS route](https://developers.openai.com/siwc/token-sharing-open-source) is used;
+  interoperability and scientific assessment validation remain separate future steps.
+- Durable evidence: `chatgpt-delivery-20261026-sq6_bgzo` under the established WSL
+  backup root, with prior work, failed/passing tests, intermediate wheels/captures
+  and an individually reviewed provenance patch. Earlier `chatgpt-adapter-20261026-67ojkilg`,
+  `chatgpt-assessment-20261026-djahy0li` and sealed RIS/demo recovery sets are unchanged.
+  Maintain this same agent-neutral record at interruption/completion for Codex,
+  Claude Code or humans; do not create another handover.
+- Native Europe PMC transport causation and historical navigation-timeout causation
+  remain unresolved. No Mac coordination-document edit, paid activation, artifact
+  deletion, main/tag/release/PyPI change or further checkpoint work is authorized.
+
+### Previously delivered RIS/demo state — unchanged
+
 - Researcher-accepted: **CP1–10** and the warm presentation refresh. CP10 acceptance
   is recorded below for software `f077bb7722ac2b6f3c911a434cb8a541dc8a5745`,
   [run 39935463128/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128).

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="corpustrail-session" content="SESSION_TOKEN"><title>CorpusTrail — ChatGPT assessment</title>
+<link rel="stylesheet" href="/assets/app.css"><script src="/assets/chatgpt.js" defer></script></head>
+<body><header><a href="/home" class="brand">CorpusTrail</a><span class="badge">Local research workspace</span></header>
+<nav aria-label="Application"></nav><main aria-busy="true">
+<h1>Optional ChatGPT assessment</h1>
+<p>Assess title-and-abstract relevance to your broad corpus. Manual review always works without a model or account.</p>
+<p class="notice">Projects and scientific history stay locally stored. Only an explicitly authorized, frozen request is processed by OpenAI. Proposals never confirm corpus membership.</p>
+<div class="pager"><a href="/models">Models</a><a href="/curation">Curation and audits</a><a href="/review">Manual review</a></div>
+<p id="chatgpt-message" role="status" aria-live="polite"></p>
+<section id="chatgpt-connection" aria-labelledby="connection-heading"><h2 id="connection-heading">ChatGPT connection</h2><div id="connection-state"></div><div id="connection-actions" class="pager"></div>
+<a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener noreferrer">Manage ChatGPT usage</a>
+<p class="muted">ChatGPT-plan eligibility and usage limits depend on your account. Allowing credits after plan limits can incur charges. Sign-in alone does not establish zero extra charges. No API-key fallback or credit purchase is supported.</p></section>
+<section id="chatgpt-select" aria-labelledby="selection-heading"><h2 id="selection-heading">Choose a bounded assessment</h2>
+<p>Choose a frozen candidate set of one to ten papers and an existing reference version. Eligible metadata/abstract reference examples are included in the exact preview. Full-text references are refused by this initial adapter.</p>
+<p><a href="/populations">Create or inspect candidate sets</a> · <a href="/references">Reference collections</a></p>
+<form id="chatgpt-form" class="tools-form"><label>Acting person<input id="chatgpt-actor" required maxlength="200" autocomplete="off"></label>
+<label>Available model<select id="chatgpt-model" required><option value="" disabled selected>Refresh the connected account’s model list</option></select></label>
+<label>Frozen candidate version<select id="chatgpt-population" required><option value="" disabled selected>Choose a candidate version</option></select></label><button id="chatgpt-more-populations" type="button" hidden>More candidate versions</button>
+<label>Reference version<select id="chatgpt-reference" required><option value="" disabled selected>Choose a reference version</option></select></label><button id="chatgpt-more-references" type="button" hidden>More reference versions</button>
+<button id="chatgpt-preview" type="submit">Freeze inputs and preview cloud request</button></form></section>
+<section id="chatgpt-preview-section" hidden aria-labelledby="preview-heading"><h2 id="preview-heading" tabindex="-1">Exact cloud transfer preview</h2><div id="preview-content"></div><div id="preview-actions" class="pager"></div></section>
+<section id="chatgpt-run" hidden><h2>Assessment progress</h2><div id="run-content"></div><div id="run-actions" class="pager"></div></section>
+<dialog id="chatgpt-plan-notice" aria-labelledby="plan-notice-heading"><h2 id="plan-notice-heading">You’re using your ChatGPT plan</h2><p>Eligible requests use the connected ChatGPT plan. CorpusTrail is free and open source. Extra-charge prevention is a separate check; no assessment starts on sign-in.</p><button type="button" id="chatgpt-plan-got-it">Got it</button></dialog>
+</main><footer>CorpusTrail · Local research workspace</footer></body></html>

@@ -24,7 +24,7 @@ ASSETS = {'app.js': 'text/javascript; charset=utf-8', 'app.css': 'text/css; char
           'projects.js': 'text/javascript; charset=utf-8', 'discovery.js': 'text/javascript; charset=utf-8',
           'evidence.js': 'text/javascript; charset=utf-8', 'review.js':'text/javascript; charset=utf-8',
           'populations.js': 'text/javascript; charset=utf-8','references.js':'text/javascript; charset=utf-8',
-          'curation.js':'text/javascript; charset=utf-8','handoff.js':'text/javascript; charset=utf-8','ris.js':'text/javascript; charset=utf-8'}
+          'curation.js':'text/javascript; charset=utf-8','handoff.js':'text/javascript; charset=utf-8','ris.js':'text/javascript; charset=utf-8','chatgpt.js':'text/javascript; charset=utf-8'}
 
 
 def navigation(active, path, *, workflows=(), editable=True):
@@ -64,7 +64,7 @@ def _number(value):
 
 
 @leased_server_factory
-def make_server(project=None, *, port=8766, controller=None, discovery=None, evidence=None, curation=None, handoff=None):
+def make_server(project=None, *, port=8766, controller=None, discovery=None, evidence=None, curation=None, handoff=None, chatgpt=None):
     """Reads never write; only controller-enabled project POSTs can configure."""
     if type(port) is not int or not 0 <= port <= 65535:
         raise ContractError('port must be between 0 and 65535')
@@ -94,6 +94,10 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
 
     from corpustrail.application.ris import RISController
     ris = RISController() if controller is not None else None
+
+    if controller is not None and chatgpt is None:
+        from corpustrail.application.chatgpt import ChatGPTController
+        chatgpt = ChatGPTController(curation)
 
     class Handler(BaseHTTPRequestHandler):
         timeout = 20
@@ -138,7 +142,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 if route.scheme or route.netloc or route.fragment:
                     raise ContractError('invalid local request target')
                 path = route.path
-                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/explore','/review','/populations','/references','/curation','/curation/review','/prioritization','/knowledge','/models','/export','/ris'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
+                if path in {'/', '/home', '/dashboard', '/papers', '/projects', '/projects/new', '/settings', '/discovery','/explore','/review','/populations','/references','/curation','/curation/review','/prioritization','/knowledge','/models','/export','/ris','/chatgpt'} or re.fullmatch(r'/papers/[0-9a-f]{64}', path):
                     if route.query:
                         raise ContractError('page route does not accept query parameters')
                     active = controller.active_handle is not None if controller is not None else project is not None
@@ -158,10 +162,13 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                         return self.error(409,'project_required','Open a project before using research tools.')
                     if path=='/ris' and (not active or ris is None):
                         return self.error(409,'project_required','Open a project before RIS exchange.')
+                    if path == '/chatgpt' and (not active or chatgpt is None):
+                        return self.error(409, 'project_required', 'Open a project before ChatGPT assessment.')
                     page = 'home.html' if home else 'projects.html' if setup else 'curation.html' if path=='/curation' else 'references.html' if path=='/references' else 'populations.html' if path=='/populations' else 'review.html' if path in {'/review','/curation/review'} else 'discovery.html' if path == '/discovery' else 'index.html'
                     if path in {'/discovery','/explore'}:page='discovery.html'
                     if path in {'/prioritization','/knowledge','/models','/export'}:page='handoff.html'
                     if path=='/ris':page='ris.html'
+                    if path=='/chatgpt':page='chatgpt.html'
                     html = assets.joinpath(page).read_text(encoding='utf-8')
                     workflows=[name for name,service in [('explore',discovery),('review',review),('populations',populations),('references',references),('curation',curation),('prioritization',handoff),('knowledge',handoff),('models',handoff),('export',handoff),('ris',ris)] if service is not None]
                     html = re.sub(r'<nav aria-label="Application">.*?</nav>',lambda _:navigation(active,path,workflows=workflows,editable=controller is not None),html,flags=re.S)
@@ -183,6 +190,18 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                     return self.error(404, 'not_found', 'Page not found.')
                 if self.headers.get_all('X-CorpusTrail-Session') != [token]:
                     return self.error(403, 'session_required', 'Open the local application before reading its API.')
+                if chatgpt is not None and path.startswith('/api/v1/chatgpt/'):
+                    tail = path[len('/api/v1/chatgpt/'):]
+                    query = _query(route.query, {'offset', 'limit', 'cutoff'})
+                    paging = {k: _number(v) for k, v in query.items()}
+                    with controller.use() as current:
+                        if tail == 'configuration' and not query: result = chatgpt.configuration(current)
+                        elif tail in {'populations', 'references'}:
+                            result = (current.populations if tail == 'populations' else current.references).versions(**paging)
+                        elif re.fullmatch(r'previews/[0-9a-f]{32}', tail) and not query:
+                            result = chatgpt.inspect(current, tail.split('/')[1])
+                        else: raise ContractError('Unsupported ChatGPT read.')
+                    return self.send(200, json.dumps(result, ensure_ascii=False))
                 if ris is not None and path.startswith('/api/v1/ris/'):
                     from corpustrail.imports.service import RISService
                     tail=path[len('/api/v1/ris/'):];parts=tail.split('/')
@@ -480,6 +499,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             routes.update('/api/v1/curation/'+name for name in ('upgrade','plan_preview','plan_commit','start','execute','recover','cancel','validate','audit_preview','audit_commit','assisted_create','correction_preview','correction_commit'))
             routes.add('/api/v1/curation/review/command')
             routes.update('/api/v1/ris/'+name for name in ('upload','preview','commit','export-preview','export-commit'))
+            routes.update('/api/v1/chatgpt/'+name for name in ('connect','cancel-connect','disconnect','models','preview','confirm','acknowledge-plan'))
             routes.update('/api/v1/tools/'+name for name in ('prepare','execute','results-upload'))
             if controller is None or self.path not in routes:
                 return self.readonly()
@@ -498,6 +518,7 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
             is_curation = self.path.startswith('/api/v1/curation/')
             is_tools = self.path.startswith('/api/v1/tools/')
             is_ris = self.path.startswith('/api/v1/ris/')
+            is_chatgpt = self.path.startswith('/api/v1/chatgpt/')
             try:
                 lengths = self.headers.get_all('Content-Length')
                 if (self.headers.get_all('Content-Type') != ['application/json']
@@ -525,10 +546,13 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
                 from corpustrail.application.curation import SCHEMA as CURATION_SCHEMA
                 from corpustrail.application.handoff import SCHEMA as HANDOFF_SCHEMA
                 from corpustrail.imports.service import SCHEMA as RIS_SCHEMA
-                expected_schema = RIS_SCHEMA if is_ris else HANDOFF_SCHEMA if is_tools else CURATION_SCHEMA if is_curation else REFERENCE_SCHEMA if is_reference else POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
+                from corpustrail.application.chatgpt import SCHEMA as CHATGPT_SCHEMA
+                expected_schema = CHATGPT_SCHEMA if is_chatgpt else RIS_SCHEMA if is_ris else HANDOFF_SCHEMA if is_tools else CURATION_SCHEMA if is_curation else REFERENCE_SCHEMA if is_reference else POPULATION_SCHEMA if is_population else REVIEW_SCHEMA if is_review else EVIDENCE_SCHEMA if is_evidence else DISCOVERY_SCHEMA if is_discovery else TRASH_SCHEMA if '/trash/' in self.path else SCHEMA
                 if not isinstance(body, dict) or body.pop('schema', None) != expected_schema:
                     raise ValueError('invalid form version')
-                if is_ris:
+                if is_chatgpt:
+                    with controller.use() as current: result = chatgpt.command(current, self.path.rsplit('/', 1)[1], body)
+                elif is_ris:
                     with controller.use() as current:result=ris.command(current,self.path.rsplit('/',1)[1],body)
                 elif is_tools:
                     from corpustrail.application.handoff import fields
@@ -599,9 +623,11 @@ def make_server(project=None, *, port=8766, controller=None, discovery=None, evi
         do_CONNECT = readonly
 
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    if chatgpt is not None: chatgpt.return_url = 'http://127.0.0.1:' + str(server.server_port) + '/chatgpt'
     if discovery is not None:
         original_close = server.server_close
         def close():
+            if chatgpt is not None: chatgpt.close()
             discovery.close()
             if evidence is not None: evidence.close()
             if curation is not None: curation.close()

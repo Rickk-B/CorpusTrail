@@ -288,7 +288,7 @@ class DevelopmentArtifactTests(unittest.TestCase):
 
     def test_classification_hashes_match_exact_scientific_source(self):
         for name,expected in TOOL['CLASSIFICATION_HASHES'].items():
-            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['CURATION_HASHES'].get(name,expected))
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['current_source_hash'](name,TOOL['CURATION_HASHES'].get(name,expected)))
             if (ROOT/'.git').exists():
                 original=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['CLASSIFICATION_COMMIT']+':'+name])
                 self.assertEqual(hashlib.sha256(original).hexdigest(),expected)
@@ -296,15 +296,15 @@ class DevelopmentArtifactTests(unittest.TestCase):
     def test_curation_hashes_match_exact_frozen_scientific_source(self):
         for name,expected in TOOL['CURATION_HASHES'].items():
             if name==TOOL['HANDOFF_HTTP'] and (ROOT/'src/corpustrail/application/handoff.py').is_file():
-                self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['RIS_HASHES'][name] if (ROOT/'src/corpustrail/imports/service.py').is_file() else TOOL['HANDOFF_HASHES'][name])
-            else:self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)
+                self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['current_source_hash'](name,TOOL['RIS_HASHES'][name] if (ROOT/'src/corpustrail/imports/service.py').is_file() else TOOL['HANDOFF_HASHES'][name]))
+            else:self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['current_source_hash'](name,expected))
             if (ROOT/'.git').exists():
                 original=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['CURATION_COMMIT']+':'+name])
                 self.assertEqual(hashlib.sha256(original).hexdigest(),expected)
 
     def test_ris_exact_source_and_forbidden_scientific_overlap(self):
         for name,wanted in TOOL['RIS_HASHES'].items():
-            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),wanted)
+            self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),TOOL['current_source_hash'](name,wanted))
             if (ROOT/'.git').exists():
                 body=subprocess.check_output(['git','-C',str(ROOT),'show',TOOL['RIS_COMMIT']+':'+name])
                 self.assertEqual(hashlib.sha256(body).hexdigest(),wanted)
@@ -312,6 +312,16 @@ class DevelopmentArtifactTests(unittest.TestCase):
         globals_=TOOL['check_ris'].__globals__
         with patch.dict(globals_,{'RIS_HASHES':{**TOOL['RIS_HASHES'],native:'0'*64}}):
             with self.assertRaisesRegex(ValueError,'cannot override'):TOOL['check_ris'](self.root,self.sha)
+
+    def test_chatgpt_scope_and_frozen_hash_tampering_remain_blocking(self):
+        native='src/corpustrail/operational/schema/041_curation_audits.sql'
+        globals_=TOOL['check_chatgpt'].__globals__
+        with patch.dict(globals_,{'CHATGPT_HASHES':{**TOOL['CHATGPT_HASHES'],native:'0'*64}}):
+            with self.assertRaisesRegex(ValueError,'cannot override'):TOOL['check_chatgpt'](ROOT,TOOL['CHATGPT_COMMIT'])
+        name='src/corpustrail/chatgpt/engine.py'
+        with patch.dict(globals_,{'CHATGPT_HASHES':{**TOOL['CHATGPT_HASHES'],name:'0'*64}}):
+            with self.assertRaisesRegex(ValueError,'differs from its exact implementation'):TOOL['check_chatgpt'](ROOT,TOOL['CHATGPT_COMMIT'])
+        TOOL['check_chatgpt'](ROOT,TOOL['CHATGPT_COMMIT'])
 
     def test_ris_identity_factoring_refuses_policy_changes(self):
         original="""class IdentityService:

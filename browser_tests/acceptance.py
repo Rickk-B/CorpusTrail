@@ -15,6 +15,67 @@ from .lifecycle import RequestLedger, finalize_case, settle_reads
 class BrowserAcceptance(unittest.TestCase):
     runtime = None  # Explicit runner-owned browser/report; never auto-discovered.
 
+    def chatgpt_page(self):
+        self.visit('/chatgpt');expect(self.page.locator('main')).to_have_attribute('aria-busy','false')
+
+    def chatgpt_preview(self, data):
+        self.page.locator('#chatgpt-actor').fill('fixture_reviewer')
+        self.page.locator('#chatgpt-model').select_option('synthetic-model')
+        self.page.locator('#chatgpt-population').select_option(data['population'])
+        self.page.locator('#chatgpt-reference').select_option(data['reference'])
+        self.page.locator('#chatgpt-preview').click()
+        expect(self.page.locator('#chatgpt-preview-section')).to_be_visible()
+        self.assertEqual(self.fixture.chatgpt_wire.sent,[])
+
+    def test_chatgpt_exact_preview_proposals_disconnect_and_restart(self):
+        from .curation_fixtures import seed
+        from .chatgpt_fixtures import connect
+        data=seed(self.fixture);self.open_project();self.chatgpt_page()
+        expect(self.page.locator('#connection-state')).to_contain_text('Not connected')
+        self.layout();self.snapshot('chatgpt-disconnected')
+        connect(self.fixture,notice=False);self.chatgpt_page()
+        expect(self.page.locator('#chatgpt-plan-notice')).to_be_visible()
+        self.page.locator('#chatgpt-plan-got-it').click();expect(self.page.locator('#chatgpt-plan-notice')).not_to_be_visible()
+        self.chatgpt_preview(data);self.page.locator('#chatgpt-preview-section').scroll_into_view_if_needed()
+        self.layout();self.snapshot('chatgpt-preview')
+        expect(self.page.locator('#chatgpt-confirm')).to_be_disabled()
+        self.page.locator('#chatgpt-consent').check();self.page.locator('#chatgpt-confirm').click()
+        expect(self.page.locator('#run-content')).to_contain_text('completed',timeout=15000)
+        self.assertEqual(len(self.fixture.chatgpt_wire.sent),5)
+        self.assertTrue(all(self.fixture.project.reviews.membership(pid)['state']=='not_reviewed' for pid in self.fixture.papers))
+        self.layout();self.snapshot('chatgpt-completed')
+        self.page.get_by_role('link',name='Inspect proposals and audits').click()
+        expect(self.page.locator('#curation-run-heading')).to_contain_text('ChatGPT title/abstract assessment')
+        self.assertIn('synthetic-model',self.page.locator('main').inner_text())
+        results=self.fixture.curation.classifier(self.fixture.project).runs()['items']
+        remote=next(r for r in results if self.fixture.curation.classifier(self.fixture.project).inspect_plan(r['plan_id'])['engine']['adapter_id']=='chatgpt-plan')
+        self.assertEqual(self.fixture.curation.classifier(self.fixture.project).results(remote['run_id'])['items'][0]['assessment']['reported_model'],'synthetic-reported-model')
+        self.page.get_by_role('button',name='Inspect Evidence, Context and Correction').first.click()
+        expect(self.page.locator('#curation-optional-proposal')).to_contain_text('Reported model: synthetic-reported-model')
+        self.layout();self.snapshot('chatgpt-proposal')
+        self.fixture.restart();self.open_project();self.chatgpt_page()
+        expect(self.page.locator('#connection-state')).to_contain_text('Connected: Synthetic offline registration')
+        self.page.locator('#chatgpt-disconnect').click()
+        expect(self.page.locator('#connection-state')).to_contain_text('Not connected')
+        self.assertEqual(len(self.fixture.chatgpt_wire.sent),5)
+        self.assertTrue(any(r['engine']['adapter_id']=='chatgpt-plan' for r in self.fixture.curation.runs(self.fixture.project)['items']))
+
+    def test_chatgpt_no_charge_gate_and_usage_limit_preserve_work(self):
+        from .curation_fixtures import seed
+        from .chatgpt_fixtures import connect
+        data=seed(self.fixture);connect(self.fixture,permitted=False)
+        self.open_project();self.chatgpt_page();self.chatgpt_preview(data)
+        self.page.locator('#chatgpt-consent').check();expect(self.page.locator('#chatgpt-confirm')).to_be_disabled()
+        expect(self.page.locator('#preview-content')).to_contain_text('No browser checkbox can grant')
+        self.layout();self.snapshot('chatgpt-blocked')
+        connect(self.fixture,permitted=True);self.fixture.chatgpt_wire.limit=True
+        self.chatgpt_page();self.chatgpt_preview(data)
+        self.page.locator('#chatgpt-consent').check();self.page.locator('#chatgpt-confirm').click()
+        expect(self.page.locator('#run-content')).to_contain_text('partial',timeout=15000)
+        self.assertEqual(len(self.fixture.chatgpt_wire.sent),1)
+        self.assertTrue(all(self.fixture.project.reviews.membership(pid)['state']=='not_reviewed' for pid in self.fixture.papers))
+        self.layout();self.snapshot('chatgpt-usage-limit')
+
     def tools_page(self,path):
         self.visit(path);expect(self.page.locator('#tools-content')).to_have_attribute('aria-busy','false')
 
@@ -460,7 +521,7 @@ class BrowserAcceptance(unittest.TestCase):
     def setUp(self):
         # Review order uses canonical IDs. Stabilize only synthetic visual IDs;
         # every run still has a private root, lock directory and browser context.
-        self.fixture = ApplicationFixture(project_id='browser-handoff-fixture' if 'handoff' in self._testMethodName else 'browser-curation-fixture' if 'curation' in self._testMethodName else 'browser-guided-fixture' if 'review' in self._testMethodName else
+        self.fixture = ApplicationFixture(project_id='browser-chatgpt-fixture' if 'chatgpt' in self._testMethodName else 'browser-handoff-fixture' if 'handoff' in self._testMethodName else 'browser-curation-fixture' if 'curation' in self._testMethodName else 'browser-guided-fixture' if 'review' in self._testMethodName else
             'browser-population-fixture' if 'population' in self._testMethodName else
             'browser-reference-fixture' if 'reference' in self._testMethodName else None,
             long_path='long_paths' in self._testMethodName,
@@ -472,7 +533,7 @@ class BrowserAcceptance(unittest.TestCase):
             reduced_motion='reduce', service_workers='block')
         self.addCleanup(self.runtime.close_context, self)
         self.context.tracing.start(screenshots=True, snapshots=False, sources=False)
-        if 'reference' in self._testMethodName or 'curation' in self._testMethodName or 'handoff' in self._testMethodName or self._testMethodName.startswith('test_ris_'):
+        if 'chatgpt' in self._testMethodName or 'reference' in self._testMethodName or 'curation' in self._testMethodName or 'handoff' in self._testMethodName or self._testMethodName.startswith('test_ris_'):
             # Control only synthetic form operation IDs at their generation
             # boundary. Same-paper contradictory assignments otherwise change
             # hash order across independent screenshots. Counter survives this

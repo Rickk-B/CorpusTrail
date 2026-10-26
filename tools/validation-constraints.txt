@@ -8,3 +8,9 @@ numpy==2.4.2
 scipy==1.17.0
 joblib==1.6.0
 threadpoolctl==3.7.0
+
+# Approved optional ChatGPT cryptographic verification (offline tests only).
+PyJWT==2.15.1
+cryptography==50.0.2
+cffi==2.1.1
+pycparser==3.12

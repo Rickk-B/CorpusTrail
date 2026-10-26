@@ -193,3 +193,39 @@ No new UI assets or visual references are required by CP8. Browser acceptance
 adds actual offline service execution after the existing reference-context workflow,
 then verifies the actual method-blind API and restart. Existing strict comparisons
 and the earlier separately approved path-only exception retain their meaning.
+
+## Separately approved ChatGPT-plan extension
+
+The original CP8 offline contract above remains historical and readable. The
+researcher separately approved `broad-corpus-assessment/v2` remote execution,
+`corpustrail-assessment-plan/v2` with immutable
+`corpustrail-title-abstract-input/v1`, exact transmitted-payload authorization and
+bounded `corpustrail-assessment-diagnostics/v1`. Offline v1 records retain their
+original shapes; no SQL migration is needed. `AssessmentFailure` omits empty
+new diagnostics to preserve its legacy serialized shape. Scientific outcomes,
+sufficiency validation, reference eligibility/held-out policy and membership
+services are unchanged. The source receipt independently checks those boundaries.
+
+The optional adapter prepares one exact Responses request per paper, includes
+only eligible frozen metadata/abstract reference examples, and refuses unsupported
+full-text examples or excessive bytes. The controller records the actual bodies,
+destination, model, exact input hashes and actor before explicit confirmation.
+The run links the immutable transmission manifest hash. Immediately before send,
+the adapter recomputes and compares each actual wire hash. Any changed destination,
+model or body invalidates consent. Core inputs/engine/configuration checks still
+apply. No remote transfer runs through the default Curation Execute action.
+
+Completed proposals and bounded actual responses stay in existing classifier
+records/blobs; failures retain their distinct type and sanitized category,
+request/response hashes and bounded partial text where available. Interrupted,
+invalid, authentication and usage-limit outcomes cannot become an uncertain
+scientific result. A failure stops later submissions without discarding completed
+work or inventing a judgment for the unassessed tail. There is no automatic retry,
+retraining, membership publication or authority creation. Assertion extraction is
+unchanged. The optional cryptographic libraries do not become core dependencies.
+
+The private connection store and no-charge gate are separate from project truth.
+No HTTP form grants plan-only verification; a login/catalog/consent checkbox does
+not establish it. Offline tests inject synthetic credentials/transport/permit
+state only into disposable fixtures. Do not call that real interoperability or
+scientific validation. See the [walkthrough](../user/CHATGPT_ASSESSMENT.md).

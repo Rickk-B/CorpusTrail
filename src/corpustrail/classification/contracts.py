@@ -66,10 +66,11 @@ class EngineDescription:
         for value in (self.engine_id, self.version, self.provider_id, self.adapter_id,
                       self.adapter_version, self.configured_model): name(value)
         sha256(self.implementation_sha256)
-        if self.capability != CAPABILITY or self.execution != 'offline':
-            raise ContractError('CP8 supports installed offline assessment implementations only')
-        if self.locality not in {'local', 'remote_declared_mock'}:
-            raise ContractError('declare local execution or a consent-tested offline remote mock')
+        expected = 'broad-corpus-assessment/v2' if self.execution == 'network' else CAPABILITY
+        if self.capability != expected or self.execution not in {'offline', 'network'}:
+            raise ContractError('explicit versioned installed assessment capability required')
+        if self.locality not in {'local', 'remote_declared_mock', 'remote'} or (self.execution == 'network') != (self.locality == 'remote'):
+            raise ContractError('network execution requires remote locality and exact transmitted-payload consent')
         if not isinstance(self.input_modes, tuple) or not self.input_modes or not set(self.input_modes) <= {'full_set', 'bounded_context'}:
             raise ContractError('explicit supported input modes required')
         if not isinstance(self.score_types, tuple) or not set(self.score_types) <= SCORE_TYPES:
@@ -239,13 +240,20 @@ class AssessmentFailure:
     paper_id: str
     reason: str
     retryable: bool = False
+    diagnostics: dict = field(default_factory=dict)
 
     def to_dict(self):
         from corpustrail.references.contracts import exact_id
         exact_id(self.paper_id, 'ct-paper')
         if self.reason not in {'unavailable', 'resource_exhausted', 'unsupported_evidence', 'engine_error', 'invalid_output', 'interrupted_no_response'} or type(self.retryable) is not bool:
             raise ContractError('sanitized typed execution failure required')
-        return asdict(self)
+        if not isinstance(self.diagnostics, dict): raise ContractError('bounded non-secret failure diagnostics required')
+        result = asdict(self)
+        if self.diagnostics:
+            json_value(self.diagnostics, 60000)
+            result['diagnostic_schema'] = 'corpustrail-assessment-diagnostics/v1'
+        else: result.pop('diagnostics')  # Preserve the exact legacy v1 failure shape.
+        return result
 
 
 @dataclass(frozen=True)

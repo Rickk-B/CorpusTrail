@@ -44,7 +44,7 @@ jobs:
         run: |
           python -m venv /tmp/ct-ml
           CT_WHEEL=$(ls dist/*.whl)
-          /tmp/ct-ml/bin/python -m pip install -c tools/validation-constraints.txt "${CT_WHEEL}[prioritization]"
+          /tmp/ct-ml/bin/python -m pip install -c tools/validation-constraints.txt "${CT_WHEEL}[prioritization,chatgpt]"
           /tmp/ct-ml/bin/python -m pip download -c tools/validation-constraints.txt --only-binary=:all: --dest /tmp/ct-dependency-wheels 'scikit-learn>=1.5,<2'
           cd /tmp
           /tmp/ct-ml/bin/python -I -m unittest discover -s "$GITHUB_WORKSPACE/tests" -p 'test_*.py'
@@ -95,6 +95,11 @@ jobs:
           python -I -m unittest discover -s tests -p test_jats_compatibility.py -v
           python -I -m unittest discover -s tests -p test_jats_text_preservation.py -v
           python -c "import platform; print(platform.platform(), platform.machine())"
+      - name: Optional ChatGPT verification / offline signed-token and assessment contracts
+        shell: bash
+        run: |
+          python -m pip install -c tools/validation-constraints.txt '.[chatgpt]'
+          python -I -m unittest discover -s tests -p 'test_chatgpt*.py' -v
       - name: Install only the approved macOS native bindings
         if: runner.os == 'macOS'
         run: |
@@ -246,4 +251,4 @@ jobs:
           ARTIFACT_URL: '${{ steps.upload.outputs.artifact-url }}'
         run: |
           printf '\n[Download validated development wheel](%s)\n\nNot a public release. Artifact source/build commit: `%s`.\n\nCheckpoint 1 implementation commit: `%s`.\n\nPrevious CI/distribution commit: `%s`.\n' "$ARTIFACT_URL" "$GITHUB_SHA" "$CHECKPOINT_IMPLEMENTATION_SHA" "$CHECKPOINT_DISTRIBUTION_SHA" >> "$GITHUB_STEP_SUMMARY"
-          printf '\nAccepted Checkpoint 1 visual baseline: `%s`. This wheel includes guided configuration, discovery, evidence acquisition, human review, frozen candidate populations, reference/context provenance and Checkpoint 8 generic assessment infrastructure. Only deterministic offline test engines are exercised; no real model integration or scientific performance is claimed. Reference labels and assessments do not publish membership. It is built from the source SHA above.\n' "$ACCEPTED_CHECKPOINT1_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf '\nAccepted Checkpoint 1 visual baseline: `%s`. This wheel includes guided configuration, discovery, evidence acquisition, human review, frozen candidate populations, reference/context provenance and Checkpoint 8 generic assessment infrastructure. Only offline fixtures are exercised, including optional ChatGPT protocol verification; no live interoperability or scientific performance is claimed. Reference labels and assessments do not publish membership. It is built from the source SHA above.\n' "$ACCEPTED_CHECKPOINT1_SHA" >> "$GITHUB_STEP_SUMMARY"

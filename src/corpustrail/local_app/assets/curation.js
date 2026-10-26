@@ -73,7 +73,7 @@ async function refreshRun(){
   el('curation-run-status').textContent='Execution state: '+runData.status+' · '+(runData.terminal?'Terminal':'Explicit continuation may remain')+(runData.local_worker_active?' · bounded local work active':'');
   el('curation-run-notice').textContent=runData.notice+(runData.diagnostic?' '+runData.diagnostic:'');
   el('curation-score-notice').textContent='Scores keep the engine’s declared semantics; they are not probabilities by assumption. Calibration: '+(runData.plan.calibration?json(runData.plan.calibration):'No calibration binding.');
-  el('curation-run-details').textContent=json(runData);el('curation-execute').hidden=runData.terminal||!runData.engine_available||runData.local_worker_active;
+  el('curation-run-details').textContent=json(runData);el('curation-execute').hidden=runData.terminal||!runData.engine_available||runData.local_worker_active||runData.requires_transfer_authorization;
   el('curation-stop').hidden=!runData.local_worker_active;el('curation-recover').hidden=runData.local_worker_active||runData.terminal;
   el('curation-validate').hidden=runData.validation_protocol.purpose==='operational';
   el('curation-validation-notice').textContent=runData.validation_protocol.purpose==='operational'?'Operational/reference agreement is not independent validation. No recall, precision or specificity is inferred from these examples.':'Frozen '+runData.validation_protocol.purpose+' roles. Metrics use explicit known-label denominators; sparse or synthetic sets and repeatedly corrected test sets do not establish fresh scientific performance.';
@@ -88,7 +88,13 @@ async function results(offset=0){
   if(!data.items.length)el('curation-results').append(make('p','No candidates match these filters. Clear filters to inspect the entire population.'));
   el('curation-results-previous').disabled=offset===0;el('curation-results-next').disabled=data.next_offset===null;
 }
-async function targetSegment(offset=0){const data=await api('curation/runs/'+hash(currentRun)+'/papers/'+hash(currentPaper)+'?'+query({section:'target',offset,limit:16000}));el('curation-paper-heading').textContent=data.frozen_title||'Frozen publication input';el('curation-paper-text').textContent=data.text;el('curation-paper-next').hidden=data.next_offset===null;el('curation-paper-next').dataset.offset=data.next_offset??'';}
+async function targetSegment(offset=0){const data=await api('curation/runs/'+hash(currentRun)+'/papers/'+hash(currentPaper)+'?'+query({section:'target',offset,limit:16000}));el('curation-paper-heading').textContent=data.frozen_title||'Frozen publication input';el('curation-paper-text').textContent=data.text;
+  let proposal=el('curation-optional-proposal');if(proposal)proposal.remove();
+  if(data.model_proposal){const p=data.model_proposal;proposal=make('section','');proposal.id='curation-optional-proposal';proposal.append(make('h3','Model proposal — separate human confirmation required'),make('p','Requested model: '+p.configured_model+' · Reported model: '+(p.reported_model||'not reported')),make('p','Non-authoritative · not calibrated · no scientific performance validation.'));
+    if(p.execution_failure)proposal.append(make('p','Execution failure: '+p.execution_failure+' — no scientific judgment.'));
+    else{proposal.append(make('p','Relevance proposal: '+p.outcome+' · Evidence sufficiency: '+p.evidence_sufficiency),make('p',p.rationale),make('p','Uncertainty: '+p.uncertainty));for(const warning of p.limitations)proposal.append(make('p',warning));}
+    el('curation-paper-text').before(proposal);
+  }el('curation-paper-next').hidden=data.next_offset===null;el('curation-paper-next').dataset.offset=data.next_offset??'';}
 async function inputReferences(offset=0){
   const data=await api('curation/runs/'+hash(currentRun)+'/papers/'+hash(currentPaper)+'?'+query({section:'references',offset,limit:10}));
   el('curation-input-references').replaceChildren();el('curation-reference-context-notice').textContent='Exact supplied references, including frozen labels and representation identities. Self-match / held-out rules and selection omissions remain in the plan/context provenance. '+(data.total??data.total_count??'')+' entries.';

@@ -128,12 +128,22 @@ def freeze(project, db, fields, *, sink=None):
             available = evidence.freeze(project, db, pid, [])
             basis = fields['evidence_basis']
             if basis == 'best_available': basis = next(k for k in ('structured_text', 'abstract', 'metadata') if k in available['available'])
-            if basis not in available['available']: raise ContractError('explicit candidate evidence basis is unavailable; replan without silent fallback')
-            snapshot = evidence.freeze(project, db, pid, [basis])
-            entry = snapshot['available'][basis]
+            if basis == 'title_abstract':
+                used = ['metadata'] + (['abstract'] if 'abstract' in available['available'] else [])
+                snapshot = evidence.freeze(project, db, pid, used)
+                abstract = evidence.resolve(project, db, pid, snapshot['available']['abstract']) if 'abstract' in used else None
+                text = canonical({'schema': 'corpustrail-title-abstract-input/v1',
+                                  'title': snapshot['available']['metadata']['bibliography']['title'],
+                                  'abstract': abstract, 'abstract_missing': abstract is None})
+                entry = {'kind': 'title_abstract', 'sha256': digest_bytes(text.encode())}
+            else:
+                if basis not in available['available']: raise ContractError('explicit candidate evidence basis is unavailable; replan without silent fallback')
+                snapshot = evidence.freeze(project, db, pid, [basis])
+                entry = snapshot['available'][basis]
+                text = evidence.resolve(project, db, pid, entry)
             selected = [r for r in reference_rows if r['decision'] == 'eligible' and (protocol['self_match'] != 'exclude' or r['paper_id'] != pid)]
             target = {'paper_id': pid, 'representation': {'kind': basis, 'sha256': entry['sha256']},
-                      'text': evidence.resolve(project, db, pid, entry)}
+                      'text': text}
             payload = {'schema': 'corpustrail-classifier-input/v1', 'definition': scope, 'target': target,
                 'reference_version_id': fields['reference_version_id'], 'eligibility_policy': POLICY,
                 'reference_input_manifest_sha256': content_hash([r['input_blob_sha256'] for r in selected]),
@@ -141,7 +151,8 @@ def freeze(project, db, fields, *, sink=None):
                 'reference_selection': {'strategy': 'complete-eligible-reference-set/v1', 'self_match': protocol['self_match']}}
             # Full-set reference evidence is normalized in the shared reference
             # manifest, not copied N times into N candidate inspection rows.
-            hashes = [entry['sha256']]
+            hashes = [snapshot['available'][k]['sha256'] for k in snapshot['used']]
+            if basis == 'title_abstract': target['source_hashes'] = hashes
             context_id = None; selected_count = len(selected)
         else:
             context_id, head, payload = contexts[pid]
@@ -156,7 +167,7 @@ def freeze(project, db, fields, *, sink=None):
             'input_blob_sha256': digest_bytes(body), 'input_bytes': len(body)}
         if sink: sink('candidate', position, record, body)
         input_hashes.append(content_hash(record)); input_total += len(body)
-    descriptor = {'schema': SCHEMA, 'project_id': config['project_id'], 'population_version_id': fields['population_version_id'],
+    descriptor = {'schema': 'corpustrail-assessment-plan/v2' if fields['evidence_basis'] == 'title_abstract' else SCHEMA, 'project_id': config['project_id'], 'population_version_id': fields['population_version_id'],
         'population_manifest_sha256': population['manifest_sha256'], 'candidate_count': len(candidates),
         'definition': scope, 'definition_sha256': scope_sha, 'config_event_id': revision,
         'reference_version_id': fields['reference_version_id'], 'reference_manifest_sha256': reference['manifest_sha256'],

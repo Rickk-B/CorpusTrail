@@ -40,3 +40,10 @@ No separate third-party code attribution was identified as required beyond the
 MIT notice for adapted project code. This notice adds no restrictions
 to the MIT License. Article acquisition does not grant redistribution rights:
 keep actual project evidence outside the software repository.
+
+Optional ChatGPT connection verification uses separately installed PyJWT (MIT),
+cryptography (Apache-2.0 OR BSD-3-Clause), cffi (MIT-0 in the tested 2.1.1 wheel)
+and pycparser (BSD-3-Clause). Their dependency wheels contain the complete
+applicable notices, including bundled cryptographic components. They are not
+vendored or relicensed by CorpusTrail. Installing them neither includes a
+ChatGPT subscription nor guarantees account eligibility or zero-charge inference.

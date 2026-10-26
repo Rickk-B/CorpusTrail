@@ -105,6 +105,12 @@ adds bounded result/disagreement views, frozen random or stratified audits,
 explicit assisted human review, successor references and separately requested
 reassessment. Manual review always works without an engine. Synthetic examples
 demonstrate software contracts, not scientific performance.
+The optional [ChatGPT-plan title/abstract adapter](docs/user/CHATGPT_ASSESSMENT.md)
+adds exact cloud-transfer previews and proposals through Curation. It is tested
+with offline protocol fixtures; real-account interoperability and scientific
+performance remain unvalidated. Install the optional `chatgpt` extra separately.
+Live use stays blocked until owner participation, eligibility, exact consent and
+verified prevention of extra charges. No API-key billing fallback is provided.
 Assessments never publish membership or change human authority.
 See the [local UI guide](docs/user/LOCAL_UI.md) for installation and launch steps.
 The one-command launcher is the installation bridge, not a native installer.

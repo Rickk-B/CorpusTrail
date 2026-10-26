@@ -28,6 +28,7 @@ FRONTEND.update({'corpustrail/local_app/assets/references.html', 'corpustrail/lo
 FRONTEND.update({'corpustrail/local_app/assets/curation.html', 'corpustrail/local_app/assets/curation.js'})
 FRONTEND.update({'corpustrail/local_app/assets/handoff.html', 'corpustrail/local_app/assets/handoff.js'})
 FRONTEND.update({'corpustrail/local_app/assets/ris.html','corpustrail/local_app/assets/ris.js'})
+FRONTEND.update({'corpustrail/local_app/assets/chatgpt.html','corpustrail/local_app/assets/chatgpt.js'})
 # Explicitly reviewed presentation boundary, not permission for scientific changes.
 PRESENTATION_PATHS = {'src/' + name for name in FRONTEND} | {'src/corpustrail/application/reads.py'}
 # Checkpoint 2 delegates writes to unchanged scientific/configuration services.
@@ -192,6 +193,91 @@ def check_identity_composition(old, new):
     if ast.dump(restored)!=ast.dump(original):raise ValueError('RIS changed identity behavior beyond transaction composition')
 
 
+# Independently reviewed adapter extension; historical receipts stay immutable.
+CHATGPT_BASELINE = '14443e5f790a317e22b62ecc09ecd862e5097684'
+CHATGPT_COMMIT = '0000000000000000000000000000000000000000'
+CHATGPT_PATHS = {
+    'src/corpustrail/application/chatgpt.py',
+    'src/corpustrail/application/curation.py',
+    'src/corpustrail/chatgpt/__init__.py',
+    'src/corpustrail/chatgpt/connection.py',
+    'src/corpustrail/chatgpt/credentials.py',
+    'src/corpustrail/chatgpt/engine.py',
+    'src/corpustrail/chatgpt/transport.py',
+    'src/corpustrail/classification/contracts.py',
+    'src/corpustrail/classification/inputs.py',
+    'src/corpustrail/classification/service.py',
+    'src/corpustrail/local_app/assets/chatgpt.html',
+    'src/corpustrail/local_app/assets/chatgpt.js',
+    'src/corpustrail/local_app/assets/curation.js',
+    'src/corpustrail/local_app/assets/handoff.js',
+    'src/corpustrail/local_app/server.py',
+}
+CHATGPT_HASHES = {
+    'src/corpustrail/application/chatgpt.py': '5e861c358818237e0c74c60f812aef3afe5193f74e0b75c3aedfee2568f5342b',
+    'src/corpustrail/application/curation.py': '97e71eb8fe5e9cc61b1bb1ef7bcf8f554e984d75c56552b97ba1a534e62784c6',
+    'src/corpustrail/chatgpt/__init__.py': '1c0d389d6e7df4e3a93d9870b5ddf690f1759fdb7f4e7710e91e679515df4591',
+    'src/corpustrail/chatgpt/connection.py': 'e6021b86baf6cfe2a98f26ec89e9d3d68a79f1229dd96ce1782be89d21ea18c5',
+    'src/corpustrail/chatgpt/credentials.py': '1fce99a2fd99f6ac363ac48406997ab954be64aad7ff7b05dba3d0103447856e',
+    'src/corpustrail/chatgpt/engine.py': '20c4384d3e8462827e64771090d34c5ce4dfb2c0b06f2e1093d2f3b9a8c1e4a5',
+    'src/corpustrail/chatgpt/transport.py': 'b7b3a3abaa3a323616e5c8f98f4319b28e8c5dcec6c4cbf405c46c8889aa2836',
+    'src/corpustrail/classification/contracts.py': '9ef04c2c1f27911606d0885f6bf648664ac02e3d8f3a4acd5effc21002bb54d4',
+    'src/corpustrail/classification/inputs.py': '6cb3d8f76478467436b634f3cff6ca79449293cca85b58a44eba04a222fd993b',
+    'src/corpustrail/classification/service.py': '6e33792cc72b410ad31ff98c875c459fc56e900a86a15330f00919310aee9cc9',
+    'src/corpustrail/local_app/assets/chatgpt.html': '03a6234888258965ef7a482451480c4744ee87346fa18dad92cf205a85b2330a',
+    'src/corpustrail/local_app/assets/chatgpt.js': 'fd6625c26691c8f37e62ee887023a74eaf0e6682e85c21e50655d3f42649950a',
+    'src/corpustrail/local_app/assets/curation.js': 'e98d1ad5625f09e7ed4f5336634b72040bb9f529e27cba5fd908f23f037c5e5e',
+    'src/corpustrail/local_app/assets/handoff.js': '3a6dd2fb53df736d6145a976237e3d9045d3709fcd6a16432da789fbb3958cd8',
+    'src/corpustrail/local_app/server.py': 'e77972eeb3f86e0c48d0b767e8e8f34e784e6e99ffe8e15ff6d475bc9c686b27',
+}
+
+def current_source_hash(name, historical, *, root=ROOT):
+    # Called only after check_chatgpt in the artifact gate. Exact new hashes are
+    # independently pinned; this does not alter any historical source receipt.
+    return CHATGPT_HASHES.get(name, historical) if (root/'src/corpustrail/chatgpt/engine.py').is_file() else historical
+
+
+def check_chatgpt(root, expected):
+    fixed = {
+        'src/corpustrail/application/chatgpt.py',
+        'src/corpustrail/application/curation.py',
+        'src/corpustrail/chatgpt/__init__.py',
+        'src/corpustrail/chatgpt/connection.py',
+        'src/corpustrail/chatgpt/credentials.py',
+        'src/corpustrail/chatgpt/engine.py',
+        'src/corpustrail/chatgpt/transport.py',
+        'src/corpustrail/classification/contracts.py',
+        'src/corpustrail/classification/inputs.py',
+        'src/corpustrail/classification/service.py',
+        'src/corpustrail/local_app/assets/chatgpt.html',
+        'src/corpustrail/local_app/assets/chatgpt.js',
+        'src/corpustrail/local_app/assets/curation.js',
+        'src/corpustrail/local_app/assets/handoff.js',
+        'src/corpustrail/local_app/server.py',
+    }
+    if CHATGPT_PATHS != fixed or set(CHATGPT_HASHES) != fixed:
+        raise ValueError('ChatGPT cannot override other scientific services or frozen migrations')
+    if subprocess.run(['git','-C',str(root),'merge-base','--is-ancestor',CHATGPT_COMMIT,expected]).returncode:
+        raise ValueError('ChatGPT must descend from its exact implementation')
+    changed=set(git(root,'diff','--name-only',CHATGPT_BASELINE,CHATGPT_COMMIT,'--','src/corpustrail').splitlines())
+    if changed != fixed: raise ValueError('ChatGPT receipt must cover its exact complete source delta')
+    for name,wanted in CHATGPT_HASHES.items():
+        path=root/name;frozen=subprocess.check_output(['git','-C',str(root),'show',CHATGPT_COMMIT+':'+name])
+        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=wanted or hashlib.sha256(frozen).hexdigest()!=wanted:
+            raise ValueError('ChatGPT source differs from its exact implementation')
+    name='src/corpustrail/classification/service.py'
+    before=ast.parse(git(root,'show',CHATGPT_BASELINE+':'+name));after=ast.parse((root/name).read_text(encoding='utf-8'))
+    def validator(tree):
+        return next(n for c in tree.body if isinstance(c,ast.ClassDef) and c.name=='ClassificationService'
+                    for n in c.body if isinstance(n,ast.FunctionDef) and n.name=='_validated_output')
+    if ast.dump(validator(before)) != ast.dump(validator(after)):
+        raise ValueError('ChatGPT may not change scientific outcome or sufficiency validation')
+    name='src/corpustrail/classification/inputs.py'
+    before=git(root,'show',CHATGPT_BASELINE+':'+name).split('    input_hashes = [];')[0]
+    after=(root/name).read_text(encoding='utf-8').split('    input_hashes = [];')[0]
+    if before != after: raise ValueError('ChatGPT may not change reference eligibility or held-out protections')
+
+
 def check_ris(root, expected):
     fixed={'src/corpustrail/application/ris.py','src/corpustrail/cli.py','src/corpustrail/demo.py',
            'src/corpustrail/identity/service.py','src/corpustrail/imports/__init__.py',
@@ -209,7 +295,7 @@ def check_ris(root, expected):
     if changed!=fixed:raise ValueError('RIS receipt must cover its exact complete source delta')
     for name,wanted in RIS_HASHES.items():
         path=root/name;frozen=subprocess.check_output(['git','-C',str(root),'show',RIS_COMMIT+':'+name])
-        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=wanted or hashlib.sha256(frozen).hexdigest()!=wanted:
+        if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=current_source_hash(name,wanted,root=root) or hashlib.sha256(frozen).hexdigest()!=wanted:
             raise ValueError('RIS source differs from its exact reviewed implementation')
     name='src/corpustrail/identity/service.py'
     check_identity_composition(git(root,'show',RIS_BASELINE+':'+name),(root/name).read_text(encoding='utf-8'))
@@ -240,7 +326,7 @@ def check_handoff(root, expected):
     for name,wanted in HANDOFF_HASHES.items():
         path=root/name
         frozen=subprocess.check_output(['git','-C',str(root),'show',HANDOFF_COMMIT+':'+name])
-        if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=(RIS_HASHES[name] if ris and name in RIS_HASHES else wanted)
+        if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=current_source_hash(name,RIS_HASHES[name] if ris and name in RIS_HASHES else wanted,root=root)
                 or hashlib.sha256(frozen).hexdigest()!=wanted):
             raise ValueError('UI handoff source differs from its exact reviewed implementation')
 
@@ -274,6 +360,9 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
         changed = set(git(root, 'diff', '--name-only', accepted_checkpoint1, expected, '--', 'src/corpustrail/').splitlines())
         xml_compatibility = bool(changed & XML_COMPATIBILITY_EXTRA_PATHS)
         allowed = CHECKPOINT2_PATHS | CHECKPOINT3_PATHS | CHECKPOINT4_PATHS
+        if (root/'src/corpustrail/chatgpt/engine.py').is_file():
+            check_chatgpt(root,expected)
+            allowed |= CHATGPT_PATHS
         ris=(root/'src/corpustrail/imports/service.py').is_file()
         if ris:check_ris(root,expected);allowed|=set(RIS_HASHES)
         handoff=(root/'src/corpustrail/application/handoff.py').is_file()
@@ -290,7 +379,8 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                 # HTTP's new bytes were separately checked above against the
                 # exact CP10 commit. Its original CP9 bytes stay verified here.
                 current=frozen if handoff and name==HANDOFF_HTTP else path.read_bytes()
-                if (path.is_symlink() or not path.is_file() or hashlib.sha256(current).hexdigest()!=expected_hash
+                current_expected=expected_hash if handoff and name==HANDOFF_HTTP else current_source_hash(name,expected_hash,root=root)
+                if (path.is_symlink() or not path.is_file() or hashlib.sha256(current).hexdigest()!=current_expected
                         or hashlib.sha256(frozen).hexdigest()!=expected_hash):
                     raise ValueError('Curation source differs from the frozen reviewed implementation')
             allowed |= set(CURATION_HASHES) | {'src/corpustrail/local_app/assets/curation.html','src/corpustrail/local_app/assets/curation.js'}
@@ -302,6 +392,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                 path=root/name
                 frozen=subprocess.check_output(['git','-C',str(root),'show',CLASSIFICATION_COMMIT+':'+name])
                 current_hash=CURATION_HASHES.get(name,expected_hash) if curation else expected_hash
+                current_hash=current_source_hash(name,current_hash,root=root)
                 if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=current_hash
                         or hashlib.sha256(frozen).hexdigest()!=expected_hash):
                     raise ValueError('Classification source differs from the frozen reviewed implementation')
@@ -315,6 +406,7 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                 frozen=subprocess.check_output(['git','-C',str(root),'show',REFERENCE_COMMIT+':'+name])
                 current_hash=CLASSIFICATION_HASHES.get(name,expected_hash) if classification else expected_hash
                 if curation:current_hash=CURATION_HASHES.get(name,current_hash)
+                current_hash=current_source_hash(name,current_hash,root=root)
                 if (path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=current_hash
                         or hashlib.sha256(frozen).hexdigest()!=expected_hash):
                     raise ValueError('Reference source differs from the frozen reviewed implementation')
@@ -477,6 +569,13 @@ def check_implementation(root, implementation, expected, *, distribution=None, a
                     'migration':None,'import_formats':['ris'],'export_formats':['ris'],'offline_scoped_demo':True,
                     'identity_policy_unchanged':True,'membership_authority_unchanged':True,'original_source_preserved':True,
                     'native_enrollment_change':'exact_transaction_body_factoring_only','researcher_acceptance':False} if ris else None,
+                'chatgpt_assessment': {'schema':'corpustrail-chatgpt-adapter-review/v1','implementation_commit_sha':CHATGPT_COMMIT,
+                    'source_sha256':CHATGPT_HASHES,'assessment_capability':'broad-corpus-assessment/v2',
+                    'input_projection':'corpustrail-title-abstract-input/v1','transfer_consent':'exact-transmitted-payload',
+                    'migration':None,'offline_protocol_verified':True,'live_interoperability_verified':False,
+                    'membership_authority_unchanged':True,'assertion_extraction_unchanged':True,
+                    'live_no_extra_charge_gate':'requires_separate_owner_evidence','researcher_acceptance':False}
+                    if (root/'src/corpustrail/chatgpt/engine.py').is_file() else None,
                 'notice': 'Original Checkpoint 1 and accepted visual baseline are historical lineage. '
                           'The source/build SHA identifies this development artifact; it is not built from an earlier checkpoint.'}
     if not re.fullmatch(r'[0-9a-f]{40}', implementation):
