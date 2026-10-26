@@ -121,10 +121,10 @@ whitespace is normalized; original bytes remain unchanged. Unicode is retained.
 |---|---|
 | Title | TI, then T1, then CT. |
 | Abstract | AB preferred, then N2; multiline and blank paragraphs supported. Missing stays missing. Different alternatives remain in original source with a warning. |
-| Authors | Repeated AU and A1, preserving supported list order and Unicode; identical entries deduplicated. |
+| Authors | Repeated AU followed by A1, retaining order within each tag group and Unicode; identical entries deduplicated. |
 | Publication year | PY, then Y1, then DA; an exact four-digit year or its date prefix. Unrecognized dates remain raw with a warning. |
 | Journal/source | JF, JO, T2, JA in that preference order; no provider/journal conflation. |
-| DOI | DO and exact DOI URLs in UR; existing DOI normalization/validation only. |
+| DOI | DO; UR only for `http://doi.org/` or `https://doi.org/` links. Existing DOI normalization/validation only; other URL forms remain raw metadata. |
 | PMID / PMCID | Explicit PM PMID; AN only with `PMID:` prefix; C2 only with explicit `PMC` form. A bare accession number is not guessed to be PMID. |
 | Other supported exact IDs | C1 `OpenAlex: …`, `SemanticScholar: …` use existing normalizers. |
 | Source-origin token | C1 `CorpusTrail-Origin: ` plus 64 hex characters is an opaque namespaced source identity, not a DOI/PMID or human assertion. It preserves direct RIS round trips without title matching. |

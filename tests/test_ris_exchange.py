@@ -129,6 +129,32 @@ class RISExchangeTests(unittest.TestCase):
         parser=Options();parser.feed(files('corpustrail.local_app').joinpath('assets/ris.html').read_text())
         self.assertEqual(parser.values,['','confirmed','all_candidates','population'])
 
+    def test_ris_links_an_existing_native_source_and_preserves_its_metadata(self):
+        from corpustrail._internal.pipeline import preserve
+        body=b'Synthetic previously collected provider response; no network.'
+        earlier='2025-12-31T00:00:00+00:00'
+        digest=preserve(self.project,body,'application/json',earlier)
+        source=SourceReference('fixture://discovery/provider-page','record:one',digest,len(body),
+            'fixture.discovery/v1',earlier,producer_type='deterministic',identity_status='verified')
+        record=BibliographicRecord('Earlier collected title','Earlier source abstract',
+            identifiers=(Identifier('doi','10.1234/ris.demo.1'),))
+        plan=self.project.identities.plan(record,source)
+        paper=self.project.identities.apply(plan,approve_new_identity=True,approve_aliases=True)
+        result=self.commit(self.prepare(self.body()))
+        self.assertEqual(result['result']['counts']['new'],2)
+        self.assertEqual(result['result']['counts']['linked'],1)
+        self.assertEqual(len(self.project.identities.papers()),3)
+        observations=self.project.identities.observations(paper)
+        self.assertEqual(len(observations),2)
+        self.assertEqual({o['source']['source_uri'].split(':')[0] for o in observations},{'fixture','ris'})
+        selected=self.project.discovery.metadata(paper)['fields']
+        self.assertEqual(selected['title'],'Earlier collected title')
+        self.assertEqual(selected['abstract'],'Earlier source abstract')
+        self.assertEqual(artifact(self.project,digest).read_bytes(),body)
+        self.assertTrue(self.project.populations.verify(result['result']['population']['version_id']))
+        self.assertEqual(self.counts()['ct_review_events'],0)
+        self.assertTrue(all(r['state']=='not_reviewed' for r in self.project.reviews.corpus()))
+
     def test_exact_replay_and_repeated_import_keep_identity_and_observations(self):
         value=self.commit(self.prepare(self.body()));before=self.counts()
         self.commit(value);self.assertEqual(self.counts(),before)
