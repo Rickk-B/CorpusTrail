@@ -195,7 +195,7 @@ def check_identity_composition(old, new):
 
 # Independently reviewed adapter extension; historical receipts stay immutable.
 CHATGPT_BASELINE = '14443e5f790a317e22b62ecc09ecd862e5097684'
-CHATGPT_COMMIT = '0000000000000000000000000000000000000000'
+CHATGPT_COMMIT = '855d410f265a00be94136d216c90c87d6718c478'
 CHATGPT_PATHS = {
     'src/corpustrail/application/chatgpt.py',
     'src/corpustrail/application/curation.py',
