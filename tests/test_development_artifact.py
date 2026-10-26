@@ -313,11 +313,14 @@ class DevelopmentArtifactTests(unittest.TestCase):
         with patch.dict(globals_,{'RIS_HASHES':{**TOOL['RIS_HASHES'],native:'0'*64}}):
             with self.assertRaisesRegex(ValueError,'cannot override'):TOOL['check_ris'](self.root,self.sha)
 
-    def test_chatgpt_scope_and_frozen_hash_tampering_remain_blocking(self):
+    def test_chatgpt_scope_override_remains_blocking(self):
         native='src/corpustrail/operational/schema/041_curation_audits.sql'
         globals_=TOOL['check_chatgpt'].__globals__
         with patch.dict(globals_,{'CHATGPT_HASHES':{**TOOL['CHATGPT_HASHES'],native:'0'*64}}):
             with self.assertRaisesRegex(ValueError,'cannot override'):TOOL['check_chatgpt'](ROOT,TOOL['CHATGPT_COMMIT'])
+    @unittest.skipUnless((ROOT/'.git').exists(), 'Git history is checked in full-history source jobs; isolated wheel/sdist payloads contain no Git objects')
+    def test_chatgpt_frozen_hash_tampering_remains_blocking(self):
+        globals_=TOOL['check_chatgpt'].__globals__
         name='src/corpustrail/chatgpt/engine.py'
         with patch.dict(globals_,{'CHATGPT_HASHES':{**TOOL['CHATGPT_HASHES'],name:'0'*64}}):
             with self.assertRaisesRegex(ValueError,'differs from its exact implementation'):TOOL['check_chatgpt'](ROOT,TOOL['CHATGPT_COMMIT'])
