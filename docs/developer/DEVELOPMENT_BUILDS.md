@@ -27,8 +27,8 @@ single repository coordination record, not another implementation specification.
   their original shape. No SQL migration, real-model performance claim or new
   membership/publication authority. Core remains runtime-dependency-free; the
   approved optional extra is documented in the [walkthrough](../user/CHATGPT_ASSESSMENT.md).
-- Current exact adapter implementation: `2c2a4f80` prefix (see the full
-  `CHATGPT_COMMIT` in the source/build receipt). All current adapter bytes are
+- Current exact adapter implementation: `2c2a4f87b9fc93aecc1025420acbd1a4b5faaf3e`
+  (the `CHATGPT_COMMIT` pinned in the source/build receipt). All current adapter bytes are
   pinned independently; original CP1–10/RIS hashes and frozen migrations remain
   unchanged. The source gate also proves outcome/sufficiency validation and
   reference/held-out logic unchanged. This is not a validated delivered wheel yet.
