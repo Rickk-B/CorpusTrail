@@ -27,19 +27,35 @@ single repository coordination record, not another implementation specification.
   their original shape. No SQL migration, real-model performance claim or new
   membership/publication authority. Core remains runtime-dependency-free; the
   approved optional extra is documented in the [walkthrough](../user/CHATGPT_ASSESSMENT.md).
-- Offline evidence so far: 25 new connection/assessment/API security tests and
-  30 existing classification tests pass; focused Ruff passes. New packaged-browser
-  workflow completes 6/6 executions across three viewports with 18 captures.
-  These are captures, not yet strict acceptance. Initial missing OS-library launch,
-  narrow hash wrapping, fixture-status and test response-shape failures are retained.
-  Existing preserved runtime libraries enabled local Chromium without OS installation.
-  All nine dependency wheel targets resolve (Python 3.11–3.13 × Linux x86-64,
-  macOS ARM64, Windows AMD64); native optional-extra execution remains to be verified.
-- Current next actions: pin the exact implementation commit in the narrowly audited
-  source receipt, run full local/package regressions, inspect complete capture evidence,
-  then hosted offline native/capture acceptance, explicit per-image review and final
-  strict acceptance. No old receipt hashes, masks, tolerances or scientific authority
-  checks are weakened. Current delivery/validated wheel below still refers to RIS/demo.
+- Current exact adapter implementation: `2c2a4f80` prefix (see the full
+  `CHATGPT_COMMIT` in the source/build receipt). All current adapter bytes are
+  pinned independently; original CP1–10/RIS hashes and frozen migrations remain
+  unchanged. The source gate also proves outcome/sufficiency validation and
+  reference/held-out logic unchanged. This is not a validated delivered wheel yet.
+- Local verification: 26 new connection/assessment/security tests, 30 existing
+  classification tests, 12 import/isolation checks and 45 browser infrastructure/
+  path-policy tests pass. The complete installed optional-ML/crypto suite passed
+  735 tests before one source-history test was split for explicit Git-less-package
+  handling. Independent wheel/sdist/core/optional-ML acceptance now passes all
+  four 736-test executions with documented optional/history/native skips.
+  First package attempt failed because a new source-history check incorrectly
+  required Git objects inside an intentionally isolated copy; its full evidence
+  is retained, and source jobs still run the complete frozen-history checks.
+- Full local Chromium capture: 90/90 functional executions, 313 unique captures.
+  A final focused installed-wheel run passes 6/6 new executions/18 captures,
+  including keyboard focus, source preservation, Curation inspection and restart.
+  These are captures, not strict visual acceptance. The new Models card and fresh
+  source-version-dependent synthetic comparison IDs need explicit reference review;
+  every unrelated previously approved PNG will retain its bytes. Existing visual
+  thresholds, masks, navigation waits, unique paths and failure diagnostics stay.
+- Next: commit capture-only workflow mode, push once for complete offline hosted
+  platform/capture evidence (wheel gate remains closed), inspect each proposed
+  image change, restore comparison and run final strict acceptance. Actual native
+  optional-extra verification and final artifact/retention remain pending.
+  The existing supported jobs now install the approved extra explicitly; all
+  nine Python/platform dependency-wheel targets resolve. No runtime dependency
+  is added to core. Initial setup/test failures and all intermediate artifacts
+  are preserved rather than treated as delivery.
 - Live sign-in and model execution remain blocked pending owner participation,
   explicit payload authorization, actual account eligibility and verified prevention
   of extra charges. Sign-in/models/weekly allowances do not prove credit fallback is

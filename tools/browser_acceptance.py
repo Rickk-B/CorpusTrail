@@ -308,6 +308,7 @@ def main():
     parser.add_argument('--output',type=Path,help='New output directory; existing reports are never overwritten')
     parser.add_argument('--approve-baselines',type=Path,help='Explicitly approve a passing complete capture report after image review')
     parser.add_argument('--reviewed',action='store_true')
+    parser.add_argument('--reviewed-change-list',type=Path,help='Explicit reviewed image-to-SHA mapping; retain other previously approved PNG bytes. Final strict comparisons still cover every capture.')
     parser.add_argument('--allow-cp7-path-reflow',action='store_true',help='Explicit macOS path-only exception; strict failures remain reported')
     args=parser.parse_args()
     sys.path.insert(0,str(ROOT))
@@ -315,7 +316,8 @@ def main():
         from browser_tests.visual import approve
         report=args.approve_baselines.resolve()
         environment=json.loads((report/'report.json').read_text(encoding='utf-8'))['environment']
-        approve(report,baseline_directory(environment),reviewed=args.reviewed)
+        changes=json.loads(args.reviewed_change_list.read_text(encoding='utf-8')) if args.reviewed_change_list else None
+        approve(report,baseline_directory(environment),reviewed=args.reviewed,replace_images=changes)
         return 0
     if args.output is None:parser.error('--output is required when running acceptance')
     args.output.mkdir(parents=True,exist_ok=False)

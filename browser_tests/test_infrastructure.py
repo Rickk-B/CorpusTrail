@@ -211,6 +211,30 @@ class VisualInfrastructureTests(unittest.TestCase):
         value=json.loads((self.root/'approved'/'manifest.json').read_text(encoding='utf-8'))
         self.assertEqual(len(value['images_sha256']['desktop-example.png']),64)
 
+    def test_selective_review_preserves_bytes_and_unreviewed_differences_still_fail_strictly(self):
+        import hashlib
+        self.candidate();destination=self.root/'approved'
+        approve(self.root,destination,reviewed=True)
+        original=(destination/'desktop-example.png').read_bytes()
+        Image.new('RGB',(10,10),'black').save(self.root/'screenshots'/'desktop-example.png')
+        new=self.root/'screenshots'/'narrow-new.png';Image.new('RGB',(10,10),'green').save(new)
+        report=json.loads((self.root/'report.json').read_text());report['screenshots'].append({'path':'screenshots/narrow-new.png'})
+        (self.root/'report.json').write_text(json.dumps(report),encoding='utf-8')
+        with self.assertRaises(ValueError):approve(self.root,destination,reviewed=True,replace_images={})
+        selected={'narrow-new.png':hashlib.sha256(new.read_bytes()).hexdigest()}
+        approve(self.root,destination,reviewed=True,replace_images=selected)
+        self.assertEqual((destination/'desktop-example.png').read_bytes(),original)
+        self.assertFalse(compare(destination/'desktop-example.png',self.root/'screenshots'/'desktop-example.png',self.difference)['passed'])
+        manifest=json.loads((destination/'manifest.json').read_text())
+        self.assertEqual(manifest['reviewed_changes_sha256'],selected)
+        self.assertIn('desktop-example.png',manifest['preserved_images_sha256'])
+
+    def test_selective_review_rejects_wrong_hash_or_tampered_preserved_reference(self):
+        self.candidate();destination=self.root/'approved';approve(self.root,destination,reviewed=True)
+        with self.assertRaises(ValueError):approve(self.root,destination,reviewed=True,replace_images={'desktop-example.png':'0'*64})
+        Image.new('RGB',(10,10),'black').save(destination/'desktop-example.png')
+        with self.assertRaises(ValueError):approve(self.root,destination,reviewed=True,replace_images={})
+
     def test_failed_compare_partial_or_other_platform_cannot_be_approved(self):
         for change in ({'passed':False},{'mode':'compare'},{'suite':'evidence'},
                        {'viewports':['desktop']},{'environment':{'platform':'unknown','browser':'chromium'}}):

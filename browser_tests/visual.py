@@ -54,7 +54,7 @@ def compare(expected, actual, difference):
     return {'passed':passed,'changed_pixels':changed,'changed_ratio':ratio,'max_tile_ratio':tile_ratio}
 
 
-def approve(report, destination, *, reviewed):
+def approve(report, destination, *, reviewed, replace_images=None):
     """Explicit review action, separate from running or failing any test."""
     import shutil
     if not reviewed:
@@ -78,10 +78,30 @@ def approve(report, destination, *, reviewed):
     destination.mkdir(parents=True,exist_ok=True)
     if destination.is_symlink() or any((destination/name).is_symlink() for name in (*images,'manifest.json')):
         raise ValueError('Baseline approval cannot follow symlinks')
-    for name in images:
+    selected = dict(images) if replace_images is None else replace_images
+    if not isinstance(selected, dict) or set(selected)-set(images) or any(images[name] != digest for name,digest in selected.items()):
+        raise ValueError('Reviewed changes must pin the actual captured image hashes')
+    previous_sha = None
+    preserved = {}
+    if set(images)-set(selected):
+        previous_path = destination/'manifest.json'
+        if not previous_path.is_file(): raise ValueError('Unreviewed new images cannot be approved')
+        previous_sha = hashlib.sha256(previous_path.read_bytes()).hexdigest()
+        previous = json.loads(previous_path.read_text(encoding='utf-8'))
+        if previous['environment'] != value['environment']: raise ValueError('Preserved references require the same reviewed renderer')
+        for name in set(images)-set(selected):
+            old = previous['images_sha256'].get(name)
+            path = destination/name
+            if old is None or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != old:
+                raise ValueError('Unreviewed new or changed baseline cannot be preserved')
+            preserved[name] = old
+    for name in selected:
         shutil.copyfile(report/'screenshots'/name,destination/name)
+    images.update(preserved)
     (destination/'manifest.json').write_text(json.dumps({'schema':'corpustrail-browser-baselines/v1',
         'environment':value['environment'],'images_sha256':images,
+        'reviewed_changes_sha256':selected, 'preserved_images_sha256':preserved,
+        'previous_manifest_sha256':previous_sha,
         'capture_source_sha':value.get('source_sha'),
         'capture_report_sha256':hashlib.sha256((report/'report.json').read_bytes()).hexdigest(),
         'review':'Explicitly approved after direct image inspection; not automatic test updates.'},indent=2)+'\n',encoding='utf-8')

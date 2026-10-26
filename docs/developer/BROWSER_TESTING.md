@@ -306,3 +306,20 @@ approval still requires a passing complete three-viewport capture, distinct path
 matching environment/source provenance and direct visual inspection. Restore strict
 `compare` before final delivery. No tolerance, diagnostic deadline, navigation
 timeout, unique-path safeguard or failure-preservation rule is relaxed by CP7.
+
+### Preserve existing reference bytes during a scoped review
+
+An optional `--reviewed-change-list PATH` on the existing approval command accepts
+an explicitly reviewed JSON map of image filenames to their actual captured
+SHA-256 values. It still requires `--reviewed`, a passing complete three-viewport
+capture, correct platform/engine namespace and the existing path/duplicate guards.
+Every new image must be selected. Unselected existing references retain their
+previously approved bytes, hashes and renderer provenance; their previous
+manifest hash is recorded. Selecting an image does not follow from generation or
+a green functional result: inspect old/new/full-size differences and record the
+rationale first. No runtime comparison, tolerance or delivery gate changes.
+
+Preserving an old reference is not a claim that the current capture matches it.
+The final strict run compares **all** captures and rejects unexplained differences;
+only the separately documented pre-existing path-only exception remains eligible.
+This avoids regenerating unrelated PNGs merely because their encoded bytes differ.
