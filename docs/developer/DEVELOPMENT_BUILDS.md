@@ -79,8 +79,14 @@ This is the single repository coordination record, not a second specification.
   regression verifies the test-only correction (25 RIS tests pass). Six before/after
   probes also demonstrated and removed tied synthetic source timestamps without
   changing native metadata policy or global time; 35 infrastructure tests and
-  six focused RIS browser executions pass. Fresh reviewed platform references
-  and final hosted delivery are pending. Capture mode cannot deliver a wheel.
+  six focused RIS browser executions pass. Fresh deterministic capture run
+  [40309771616/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40309771616)
+  passed all 11 validation jobs and correctly skipped its wheel. Each renderer
+  has 84 functional executions and 295 unique captures. Explicit review retains
+  226 earlier PNGs per renderer and approves 24 new RIS states plus 45 existing
+  Home/Population/Export capability-text images. Strict comparison is restored;
+  final strict acceptance and the validated wheel remain pending. The direct
+  native-source/RIS linkage regression also passes (26 RIS tests total).
   No other format, real model, direct database adapter or release is authorized.
   The evaluation guide at the accepted baseline is available here:
   [macOS alpha evaluation guide](../user/ALPHA_EVALUATION.md), collect usability
