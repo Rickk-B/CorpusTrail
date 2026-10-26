@@ -42,6 +42,11 @@ class IsolationTests(unittest.TestCase):
                         if isinstance(node, ast.ImportFrom) and node.level:
                             continue
                         optional = {'sklearn','numpy','scipy'} if path.relative_to(root).as_posix()=='prioritization/_algorithm.py' else set()
+                        if path.relative_to(root).as_posix() == 'chatgpt/connection.py':
+                            optional = {'jwt'}
+                            if top == 'jwt':
+                                verifier_imports = {n for fn in ast.walk(tree) if isinstance(fn, ast.FunctionDef) and fn.name == 'verify' for n in ast.walk(fn)}
+                                self.assertIn(node, verifier_imports, 'Optional JWT verification must stay lazy inside the identity verifier')
                         if path.relative_to(root).as_posix() == 'application/trash.py':
                             optional = {'objc', 'Foundation'}
                             if top in optional:
@@ -49,12 +54,25 @@ class IsolationTests(unittest.TestCase):
                         self.assertIn(top, sys.stdlib_module_names | {"corpustrail"} | optional, (path, name))
                         allowed_network = {"providers/network.py", "providers/metadata.py", "curation/http.py",
                                            "_internal/loopback_http.py",
-                                           "models/integrations/compatible_endpoint.py", "local_app/server.py"}
+                                           "models/integrations/compatible_endpoint.py", "local_app/server.py",
+                                           "chatgpt/connection.py", "chatgpt/transport.py"}
                         if path.relative_to(root).as_posix() not in allowed_network:
                             self.assertNotIn(top, denied, (path, name))
                 if isinstance(node, ast.Call):
                     self.assertFalse(isinstance(node.func, ast.Name) and node.func.id in {"__import__", "eval", "exec"}, path)
                     self.assertFalse(isinstance(node.func, ast.Attribute) and node.func.attr in {"import_module", "spec_from_file_location", "extend_path"}, path)
+
+    def test_remote_boundary_still_rejects_other_network_imports_and_eager_jwt(self):
+        root=Path(corpustrail.__file__).parent
+        for name,body in (('chatgpt/engine.py','import urllib.request'),
+                          ('chatgpt/credentials.py','import socket'),
+                          ('chatgpt/connection.py','import jwt')):
+            tree=ast.parse(body)
+            with patch.object(Path,'rglob',return_value=[root/name]),patch('ast.parse',return_value=tree):
+                with self.assertRaises(AssertionError):self.test_all_python_imports_are_standalone_or_standard_library()
+        tree=ast.parse('def verify():\n    import jwt\n')
+        with patch.object(Path,'rglob',return_value=[root/'chatgpt/connection.py']),patch('ast.parse',return_value=tree):
+            self.test_all_python_imports_are_standalone_or_standard_library()
 
     def test_core_has_no_project_specific_literal_paths_or_semantics(self):
         root = Path(corpustrail.__file__).parent
@@ -96,7 +114,7 @@ class IsolationTests(unittest.TestCase):
         from corpustrail.curation import ReviewService
         self.assertTrue(IdentityService and ReviewService)
         # Other tests may explicitly fit the optional model. Check a fresh interpreter.
-        code = 'import sys; from corpustrail.project import Project; from corpustrail.classification import ClassificationService; from corpustrail.export import ExportService; from corpustrail.prioritization import PrioritizationService; from corpustrail.knowledge import KnowledgeStore,KnowledgeView,Registry; from corpustrail.curation.http import make_server; assert not set(sys.modules)&'+repr(set(('anthropic','openai','asreview','sklearn','yaml','upe_core','upe_relevance','search_databases')))
+        code = 'import sys; from corpustrail.project import Project; from corpustrail.classification import ClassificationService; from corpustrail.export import ExportService; from corpustrail.prioritization import PrioritizationService; from corpustrail.knowledge import KnowledgeStore,KnowledgeView,Registry; from corpustrail.curation.http import make_server; assert not set(sys.modules)&'+repr(set(('anthropic','openai','jwt','cryptography','cffi','asreview','sklearn','yaml','upe_core','upe_relevance','search_databases')))
         subprocess.run([sys.executable,'-B','-c',code],check=True,capture_output=True)
 
     def test_cli_version_and_invalid_init(self):

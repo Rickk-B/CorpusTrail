@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import sys
 import tempfile
 import uuid
 
@@ -20,7 +21,7 @@ def credential_location():
     home = Path.home()
     if os.name == 'nt':
         base = Path(os.environ.get('LOCALAPPDATA', home / 'AppData/Local'))
-    elif __import__('sys').platform == 'darwin':
+    elif sys.platform == 'darwin':
         base = home / 'Library/Application Support'
     else:
         base = Path(os.environ.get('XDG_CONFIG_HOME', home / '.config'))

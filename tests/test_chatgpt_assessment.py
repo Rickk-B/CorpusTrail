@@ -224,6 +224,15 @@ class ChatGPTAssessmentTests(unittest.TestCase):
             self.assertEqual(len(self.client.transport.sent),1)
         finally:release.set()
 
+    def test_credentials_cannot_be_stored_inside_or_around_a_research_project(self):
+        original=self.client.store
+        try:
+            for root in (self.project.root/'private-chatgpt', self.project.root.parent):
+                self.client.store=CredentialStore(root)
+                with self.assertRaises(ProjectCommandError) as error:self.app.configuration(self.project)
+                self.assertEqual(error.exception.code,'chatgpt_storage_boundary')
+        finally:self.client.store=original
+
     def test_configuration_does_not_mutate_or_transfer_and_no_credentials_in_preview(self):
         before=scientific_state(self.project);self.app.configuration(self.project)
         self.assertEqual(self.client.transport.calls,[]);self.assertEqual(before,scientific_state(self.project))

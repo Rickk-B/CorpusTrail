@@ -85,7 +85,7 @@ class ChatGPTEngine:
     def assess(self, plan, chunk):
         results = []
         for unit in chunk:
-            pid = unit.input()['target']['paper_id']; details = {}; wire = None; output = None; credential = None
+            pid = unit.input()['target']['paper_id']; details = {}; wire = None; output = None; credential = None; request_state = 'not_submitted'
             try:
                 if self._halt.is_set() or self.cancelled(): raise ConnectionFailure('cancelled')
                 wire = self.wire(unit)
@@ -93,7 +93,9 @@ class ChatGPTEngine:
                 if expected != content_hash({'destination': DESTINATION, 'payload': wire}):
                     raise ConnectionFailure('consent_changed')
                 credential = self.connection.access(self.profile_id, inference=True)
+                request_state = 'transport_entered_outcome_unknown'
                 response, details = self.connection.transport.response(wire, bearer=credential, cancelled=self.cancelled)
+                request_state = 'terminal_completed'
                 details = {**details, 'provider_response_sha256': content_hash(response)}
                 safe_data(response, secrets=(credential,))
                 if len(canonical(response).encode()) > 20000: raise ConnectionFailure('resource_limit')
@@ -120,7 +122,8 @@ class ChatGPTEngine:
             except (ConnectionFailure, ContractError, ValueError, TypeError, KeyError, AttributeError) as exc:
                 category = exc.kind if isinstance(exc, ConnectionFailure) else 'invalid_output'
                 self._halt.set()  # Later units stay unassessed; no automatic resend.
-                diagnostic = {'category': category, 'wire': details or getattr(exc, 'diagnostics', {}),
+                diagnostic = {'category': category, 'http_status': exc.status if isinstance(exc, ConnectionFailure) else None,
+                              'request_state': request_state, 'wire': details or getattr(exc, 'diagnostics', {}),
                               'wire_request': wire, 'provider_response': output}
                 try: safe_data(diagnostic, secrets=(credential,))
                 except ContractError: diagnostic = {'category': category, 'unsafe_output_not_retained': True}

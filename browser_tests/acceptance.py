@@ -20,6 +20,7 @@ class BrowserAcceptance(unittest.TestCase):
 
     def chatgpt_preview(self, data):
         self.page.locator('#chatgpt-actor').fill('fixture_reviewer')
+        self.page.locator('#chatgpt-actor').press('Tab');expect(self.page.locator('#chatgpt-model')).to_be_focused()
         self.page.locator('#chatgpt-model').select_option('synthetic-model')
         self.page.locator('#chatgpt-population').select_option(data['population'])
         self.page.locator('#chatgpt-reference').select_option(data['reference'])

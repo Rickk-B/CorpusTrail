@@ -49,7 +49,15 @@ class ChatGPTController:
             self.curation.registry.register(engine); self._engines[key] = engine
         return self._engines[key]
 
+    def _private_boundary(self, project):
+        private = self.connection.store.root.resolve()
+        research = project.root.resolve()
+        if private.is_relative_to(research) or research.is_relative_to(private):
+            raise ProjectCommandError('Keep private ChatGPT credentials separate from research project directories.',
+                code='chatgpt_storage_boundary', status=409)
+
     def configuration(self, project):
+        self._private_boundary(project)
         with connection(project.database_path) as db:
             revision, config = latest_config(db)
         return {'schema': SCHEMA, 'connection': self.connection.status(), 'synthetic_fixture': self.synthetic,
@@ -60,6 +68,7 @@ class ChatGPTController:
             'notice': 'Optional cloud processing. Proposals are not human judgments or corpus membership. Missing abstracts never imply exclusion. No model request occurs on open.'}
 
     def preview(self, project, body):
+        self._private_boundary(project)
         fields(body, {'request_id', 'actor', 'population_version_id', 'reference_version_id', 'model'})
         command_id(body['request_id']); text(body['actor'], 'acting person', 200)
         path = self.root(project) / 'previews' / (body['request_id'] + '.json')
@@ -113,6 +122,7 @@ class ChatGPTController:
             'retention_notice': 'Local scientific history retains exact inputs/outputs. Cloud processing is subject to OpenAI terms; store:false does not guarantee zero retention.'}
 
     def inspect(self, project, key):
+        self._private_boundary(project)
         token(key); record = files.read(self.root(project) / 'previews' / (key + '.json'))
         return {**record, 'preview_id': key, 'preview_sha256': content_hash(record),
                 'connection': self.connection.status(), 'authority': 'non_authoritative',
@@ -158,6 +168,7 @@ class ChatGPTController:
                 'notice': 'Explicitly authorized execution. Inspect saved proposals in Curation and audits; corpus membership is unchanged.'}
 
     def command(self, project, action, body):
+        self._private_boundary(project)
         try:
             if action == 'preview': return self.preview(project, body)
             if action == 'confirm': return self.confirm(project, body)
