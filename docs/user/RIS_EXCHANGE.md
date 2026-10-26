@@ -144,6 +144,8 @@ Independently prepared ID-less sources can remain separate works; title similari
 is not enough to merge them. Other software may discard the C1 origin extension:
 no ID-less deduplication guarantee applies after that transformation. RIS dialects
 vary; this profile does not promise universal Zotero/database interoperability.
+For a paper originally collected through a non-RIS route without a supported exact identifier or an existing RIS origin token, export/reimport may propose a separate source-origin candidate. The preview reports it as new rather than guessing a title match; cancel if that is not intended. Round-trip identity guarantees require a supported identifier or retained existing token.
+
 A file export is not a project or reference-library backup or ongoing sync.
 
 ## Persistence, limits and safety

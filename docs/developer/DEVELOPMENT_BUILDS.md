@@ -2,103 +2,91 @@
 
 ## Current handover
 
-Read this section when starting work and update it at completion/interruption.
-This is the single repository coordination record, not a second specification.
+Read this section at task start; update it at completion/interruption. This is the
+single repository coordination record, not another implementation specification.
 
-- Researcher-accepted: **CP1–10** and the warm presentation refresh. The researcher
-  formally accepted CP10 on 23 October 2026. The approved alpha baseline is
-  complete; this is not a beta or public release.
-- Validated software: `f077bb7722ac2b6f3c911a434cb8a541dc8a5745`, tree
-  `affc087d36c57b1157f40f656c55f0657b3fe567`,
-  [run 39935463128/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128):
-  all 12 jobs passed.
-  The pre-acceptance handover was documentation-only commit
-  `79996f64b8c09fa525b692e3e980a743af05db0d`. Subsequent documentation-only
-  commits likewise do not change the accepted software/run/wheel identity.
-- [Development bundle 12495277511](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12495277511):
-  `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 379,534 bytes,
-  SHA-256 `34b1315558ceee6a993d69660e230d1034ca4f921022ea60d2b93ef8a8467487`.
-  Source-to-wheel Git bytes, every wheel RECORD member,
-  native receipt and original downloaded artifact checksums were independently
-  verified. GitHub sign-in/read access is required for artifact downloads.
-- Linux Chromium, macOS Chromium and macOS WebKit each completed **78/78 functional
-  executions and 271/271 strict comparisons**. No path-only exception was used.
-  All Python 3.11–3.13 scientific/package/optional-ML jobs and all six macOS/Windows
-  lifecycle jobs passed. Native macOS steps are intentionally absent on Windows;
-  the 2,000-reference scale check runs on Python 3.13 rather than all three
-  versions. Exact conditional skips remain recorded, not disguised as performed
-  tests. [Linux browser evidence](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12494613577)
-  and [macOS browser evidence](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128/artifacts/12493989570)
-  include original reports, screenshots, traces and sanitized diagnostics.
-- Delivered work: Research tools expose existing review ordering, Knowledge
-  observation/evidence/history and explicit validation, optional model setup and
-  exact tasks, and unlabelled ASReview export/returned-result mapping. Explore,
-  Home/navigation, launcher and practical install/update/removal guidance are
-  complete. Ordinary flows use forms/pickers and explicit preview/confirmation.
-  No new scientific migration, runtime dependency, authority model or UI framework.
-- Manual use requires no model. Ranking scores, model proposals and Knowledge
-  assertions remain separate from explicit human corpus-membership authority.
-  Frozen plans, exact identities, evidence trust and method-blind Review remain
-  protected. Synthetic fixtures demonstrate contracts, not scientific performance
-  or real-server interoperability. Hosted WebKit is not native Safari validation.
-- Development bundle created `2026-10-23T10:31:02Z`, expires
-  `2027-01-21T09:56:09Z`: 90 days from **run creation**, not upload.
-  Browser artifacts retain their separate seven-day policy; save evidence before
-  expiry. The existing narrowly approved macOS fixture-path exception remains
-  technical debt and must be reported separately whenever actually used.
-- Evidence: [capture run 39929496555/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39929496555)
-  passed all 11 validation jobs and correctly skipped capture-mode wheel delivery;
-  final strict run above validates delivery. The earlier incomplete capture
-  [39838670454/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39838670454)
-  is preserved as failed diagnostic evidence. Its audit helper now waits for the
-  actual operation-complete boundary; the exact historical WebKit text-loss
-  mechanism remains unproven. Linux whole-job budget is 35 minutes; interaction
-  timeouts, privacy masks, comparison thresholds and unique capture guards remain
-  unchanged. The durable CP10 set is `cp10-20261022-XNiRpoOu`, with original ZIPs,
-  member manifests, exact logs, visual-review rationale and independent Git recovery.
-- Outstanding investigations: native MacBook Europe PMC transport causation and
-  the historical macOS navigation-timeout cause remain unresolved. Hosted success
-  does not establish resolution. Production importers, automatic query generation,
-  RIS export, real assessment engines, institutional integrations, native installers
-  and phone support remain separately gated beyond explicit subsequent approval.
-  Current authorized work: ready-to-review offline demo plus production RIS
-  import/export (including available abstracts), using native exact identity,
-  populations and explicit human confirmation. Work is in progress; no new
-  validated wheel has been delivered. Starting source is documentation-only
-  `fe00ba0cc23e32f5d4d7ce3751d8848ef1b63ab2`; accepted software remains CP10
-  above. Preserve evidence in the durable `ris-demo-20261023-wiy2hkhl` set.
-  The native 24-test RIS suite and existing 52-test identity foundation pass;
-  focused actual-wheel Chromium completed 6/6 workflows and 24 captures; the full
-  local capture completed 84/84 executions and 295 unique images with no browser
-  errors or external requests. The first 705-test run found one obsolete Home
-  capability assertion, corrected and reverified in all 38 project-app tests.
-  Offline wheel/sdist verification passes in core and optional-ML environments
-  (705 tests in each of four isolated installs). The first hosted capture
-  [39961763108/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39961763108)
-  exposed noncanonical macOS unit-test temporary paths; a controlled alias
-  regression verifies the test-only correction (25 RIS tests pass). Six before/after
-  probes also demonstrated and removed tied synthetic source timestamps without
-  changing native metadata policy or global time; 35 infrastructure tests and
-  six focused RIS browser executions pass. Fresh deterministic capture run
-  [40309771616/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40309771616)
-  passed all 11 validation jobs and correctly skipped its wheel. Each renderer
-  has 84 functional executions and 295 unique captures. Explicit review retains
-  226 earlier PNGs per renderer and approves 24 new RIS states plus 45 existing
-  Home/Population/Export capability-text images. Strict comparison is restored;
-  final strict acceptance and the validated wheel remain pending. The direct
-  native-source/RIS linkage regression also passes (26 RIS tests total).
-  No other format, real model, direct database adapter or release is authorized.
-  The evaluation guide at the accepted baseline is available here:
-  [macOS alpha evaluation guide](../user/ALPHA_EVALUATION.md), collect usability
-  feedback. The earlier proposals below are historical: RIS and the new scoped
-  demo are now explicitly authorized; assessment integration still requires a
-  separate decision. No model download/call, dependency installation or release
-  is authorized by this record. The older offline tutorial lacks an explicit Guided
-  Review scope and cannot be retrofitted after its scripted authority events;
-  the guide explicitly separates that limitation from the implemented workflow.
-- Delivery used standard public runners under the existing zero-additional-charge
-  approval. No release/PyPI/main/tag change, artifact deletion, billing/security
-  change or paid service was introduced. Mac coordination documents remain separate.
+- Researcher-accepted: **CP1–10** and the warm presentation refresh. CP10 acceptance
+  is recorded below for software `f077bb7722ac2b6f3c911a434cb8a541dc8a5745`,
+  [run 39935463128/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/39935463128).
+  The approved alpha baseline is complete. The subsequent RIS/demo module is
+  **technically delivered, awaiting researcher review**; no beta/release claimed.
+- Current validated software: `d2269d6cca95cff9f15c57f51c234c39593b1f7c`, tree
+  `629c569c7f4e4f892ce3795f89a1a3c5bcc6e08a`. [Run 40315372585/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40315372585): all 12 jobs passed.
+  Any later documentation-only commit does not change this delivered source/run.
+- [Development bundle 12649205145](https://github.com/Rickk-B/CorpusTrail/actions/runs/40315372585/artifacts/12649205145):
+  `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`, 400,006 bytes; SHA-256
+  `c15092500f11b518ebdc1844f97df2d8a1f937bf44e543fbaf4799745ae8ba04`. Exact Git-to-wheel bytes, every wheel RECORD entry,
+  original archive digest and native source/build receipt independently verified.
+  The shared `0.1.0a3.dev0` version alone cannot identify this build. GitHub sign-in
+  is required for artifact downloads.
+- Linux Chromium, macOS Chromium and macOS WebKit each completed **84/84 functional
+  executions and 295/295 strict comparisons**. No path-only exception was used.
+  Existing narrowly approved macOS path-only policy remains available technical
+  debt; an actual exceptional comparison must always be disclosed separately.
+  [Linux evidence](https://github.com/Rickk-B/CorpusTrail/actions/runs/40315372585/artifacts/12647676093); [macOS Chromium/WebKit evidence](https://github.com/Rickk-B/CorpusTrail/actions/runs/40315372585/artifacts/12648481499).
+- Python 3.11–3.13 scientific/core/package/optional-ML gates and all six
+  macOS/Windows lifecycle jobs passed. Native Trash executes only on macOS;
+  the 2,000-reference scale check executes on Python 3.13. The POSIX alias
+  regression is intentionally skipped on Windows. Core environments omit optional
+  ML checks; exact conditional skips remain in the preserved job evidence.
+- Delivered: `corpustrail demo PATH` creates a fresh, clearly synthetic scoped
+  project with explicit `demo_reviewer` authority, three unreviewed candidates,
+  varied evidence, zero human judgments and zero membership decisions. Research
+  tools → **RIS exchange** supplies a four-record sample (one exact link, two new
+  candidates, one failed DOI record), preview/explicit partial confirmation,
+  paginated results/history and verified original-source download. Normal Guided
+  Review, skipping, summary, Finish and separate corpus confirmation remain native.
+- Production exchange profile **corpustrail-ris/v1**: documented UTF-8 TY/ER records,
+  supported field/tag variants and multiline abstracts; exact canonical identity,
+  unresolved conflicts and original bytes retained. No fuzzy merging, attachment
+  following, retrieval or authority transfer. Export explicitly selects confirmed
+  members, all candidates or a frozen population, with immutable actual bytes and
+  selection/field provenance. C1 source-origin tokens support direct RIS-origin ID-less round
+  trips; other software may discard them. A non-RIS ID-less export without such
+  an existing token may preview as a new source-origin candidate on reimport;
+  no title match is guessed. No universal RIS interoperability or
+  full-project-backup claim. Other formats and real model integrations are absent.
+- No new scientific migration or runtime dependency. Native identity transaction
+  body was factored under exact AST/equality guards for chunked import composition;
+  other scientific services and all frozen migrations remain unchanged. Existing
+  explicit backed-up population upgrades apply to legacy projects. Source files,
+  observations, evidence, reviews, populations and exports remain researcher-owned.
+- Local evidence: 26 RIS tests, 35 browser infrastructure tests and 52 foundation
+  regressions passed. Independent wheel/sdist core and optional-ML runs each
+  completed 705 tests before two added regressions; the final hosted suites
+  each complete 707 tests in core and optional-ML environments. The complete local Chromium capture passed
+  84 executions/295 unique captures. Earlier failed probes/tests are retained.
+- Visual references were deliberately reviewed from clean deterministic hosted
+  captures, with complete inventories, individual decisions and old/new/full-size
+  diffs. Only new RIS states and truthful Home/Population/Export capability text
+  changed. Unchanged prior PNG bytes were retained. Appearance, scientific/status
+  warnings, masks, thresholds and interaction timeouts are unchanged.
+- Bundle created `2026-10-26T12:07:17Z`, expires
+  `2027-01-24T11:28:50Z`: actual metadata verifies 90 days from **run creation**,
+  not upload. Browser evidence retains its separate seven-day policy. Save before
+  expiry; retention configuration alone is not proof of delivered expiry.
+- Durable evidence/recovery: `ris-demo-20261023-wiy2hkhl` under the established WSL
+  backup root: original artifacts/logs, complete member manifests, failed/passing
+  probes, source bundles, exact hashes and independent offline Git recovery.
+  First capture run 39961763108 failed macOS unit fixtures because its patched
+  lock path was noncanonical. A controlled alias regression verifies the test-only
+  fix. Tied synthetic source timestamps also produced two metadata/export variants;
+  chronological fixture clocks now preserve native metadata policy deterministically.
+  Fresh capture run 40309771616 is evidence collection, not strict acceptance or
+  wheel delivery. Final strict run above is the delivery gate.
+- Next permitted action: researcher evaluation using the
+  [macOS install/reopen instructions and five-to-ten-minute demo](../user/RIS_EXCHANGE.md).
+  No other import format, model adapter, direct database connection or further
+  implementation is authorized by this delivery record. Historical beta proposals
+  below remain proposals except this explicitly authorized RIS/demo module.
+- Native MacBook Europe PMC transport causation and the historical macOS
+  navigation-timeout cause remain unresolved. Offline/browser success does not
+  resolve them. Hosted WebKit is not native Safari validation; synthetic examples
+  demonstrate software contracts, not scientific assessment performance.
+- Standard public runners used under the established zero-additional-charge
+  conditions. No paid activation, artifact deletion, billing/security/retention
+  setting change, main/tag/release/PyPI change or Mac-document edit. Existing
+  development bundle requests remain 90 days and browser evidence seven days.
 
 ## CP10 researcher acceptance — 23 October 2026
 
