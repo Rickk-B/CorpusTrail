@@ -214,20 +214,20 @@ CHATGPT_PATHS = {
     'src/corpustrail/local_app/server.py',
 }
 CHATGPT_HASHES = {
-    'src/corpustrail/application/chatgpt.py': '5e861c358818237e0c74c60f812aef3afe5193f74e0b75c3aedfee2568f5342b',
+    'src/corpustrail/application/chatgpt.py': '3c93e4b34e5a9db86c9c7e3185a4129e3fb78940ed0587220c6b13f29d98c25f',
     'src/corpustrail/application/curation.py': '97e71eb8fe5e9cc61b1bb1ef7bcf8f554e984d75c56552b97ba1a534e62784c6',
     'src/corpustrail/chatgpt/__init__.py': '1c0d389d6e7df4e3a93d9870b5ddf690f1759fdb7f4e7710e91e679515df4591',
     'src/corpustrail/chatgpt/connection.py': 'e6021b86baf6cfe2a98f26ec89e9d3d68a79f1229dd96ce1782be89d21ea18c5',
-    'src/corpustrail/chatgpt/credentials.py': '1fce99a2fd99f6ac363ac48406997ab954be64aad7ff7b05dba3d0103447856e',
-    'src/corpustrail/chatgpt/engine.py': '20c4384d3e8462827e64771090d34c5ce4dfb2c0b06f2e1093d2f3b9a8c1e4a5',
+    'src/corpustrail/chatgpt/credentials.py': 'd8e61a8ddacd6173a4b8daf337b087b761d204510782914a74808a03e26c39c1',
+    'src/corpustrail/chatgpt/engine.py': '47d247cbfd9fe06371ef86f493cc169a5449a83bddfb6dbf1f3c97a31b08e213',
     'src/corpustrail/chatgpt/transport.py': 'b7b3a3abaa3a323616e5c8f98f4319b28e8c5dcec6c4cbf405c46c8889aa2836',
     'src/corpustrail/classification/contracts.py': '9ef04c2c1f27911606d0885f6bf648664ac02e3d8f3a4acd5effc21002bb54d4',
     'src/corpustrail/classification/inputs.py': '6cb3d8f76478467436b634f3cff6ca79449293cca85b58a44eba04a222fd993b',
     'src/corpustrail/classification/service.py': '6e33792cc72b410ad31ff98c875c459fc56e900a86a15330f00919310aee9cc9',
     'src/corpustrail/local_app/assets/chatgpt.html': '03a6234888258965ef7a482451480c4744ee87346fa18dad92cf205a85b2330a',
-    'src/corpustrail/local_app/assets/chatgpt.js': 'fd6625c26691c8f37e62ee887023a74eaf0e6682e85c21e50655d3f42649950a',
+    'src/corpustrail/local_app/assets/chatgpt.js': 'c5b94cda3c84d15c6910d60a8d38f65b5d3934ca1f813c41e57c7f5d839a4f11',
     'src/corpustrail/local_app/assets/curation.js': 'e98d1ad5625f09e7ed4f5336634b72040bb9f529e27cba5fd908f23f037c5e5e',
-    'src/corpustrail/local_app/assets/handoff.js': '3a6dd2fb53df736d6145a976237e3d9045d3709fcd6a16432da789fbb3958cd8',
+    'src/corpustrail/local_app/assets/handoff.js': '34012823568f6d20bc4899b50f2eb4810b6d9b1f41c46670f22a7524298be0e5',
     'src/corpustrail/local_app/server.py': 'e77972eeb3f86e0c48d0b767e8e8f34e784e6e99ffe8e15ff6d475bc9c686b27',
 }
 
