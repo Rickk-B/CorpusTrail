@@ -45,10 +45,24 @@ single repository coordination record, not another implementation specification.
   change: 33 provenance, 45 infrastructure/path-policy checks and six browser cases/
   18 captures passed, including real-service long-name keyboard coverage. Ruff,
   JavaScript syntax and diff checks passed. Local Chromium does not prove WebKit.
-- Next: collect a complete passing hosted capture for the applied block layout;
-  inspect and selectively approve new/changed references while preserving unrelated
-  PNG bytes; restore strict comparison and deliver only after all real gates pass.
-  No adapter reference has yet been approved; no local/intermediate wheel is delivery.
+- Complete capture [40544322709/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40544322709), source
+  `684aa74c847883ec7b5f6b52422fee122b5bf7e8`, tree
+  `b8fad4b4d92019f5fdeabbc26b2f2b6c579716e8`: all 11 validation jobs passed;
+  each renderer completed 90/90 functional executions and 313 unique captures.
+  Wheel delivery correctly skipped in capture mode. WebKit causal negative/positive
+  checks demonstrated 19px old overflow versus zero with shipped block flow.
+- Explicit visual review approved 18 new adapter states and 16 existing-image changes
+  per renderer; 279 other references per renderer retain their exact bytes. All 54
+  new images were directly inspected across three viewports. The 48 old-image changes
+  are SHA-identical to prior individually inspected old/new/full-size differences:
+  optional Models entry/reflow and synthetic comparison-run identifiers only.
+  Individual decisions and complete original artifacts are preserved in durable evidence.
+- An unrelated Linux narrow-wizard capture was 24px shorter because of temporary-path
+  reflow. Its original reference is deliberately unchanged; no Linux exception was
+  approved. Final strict comparison remains blocking. Existing macOS path policy unchanged.
+- Workflow restored byte-for-byte to strict comparison configuration. Next: final
+  strict hosted acceptance and actual workflow-produced wheel/provenance verification.
+  Passing capture and intermediate/local wheels are not delivery.
 - Earlier failed captures and their limits remain preserved: 40360596141,
   40476696312, 40482375533, 40488830358, 40528145962. Width/grid guesses were disproved,
   not reported as fixes. Node Discovery test cleanup now preserves original errors

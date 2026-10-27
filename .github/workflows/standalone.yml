@@ -9,7 +9,7 @@ concurrency:
 # CP7 capture evidence reviewed explicitly; every delivery requires strict comparison.
 # A future capture phase still cannot deliver a development wheel.
 env:
-  BROWSER_VISUAL_MODE: capture
+  BROWSER_VISUAL_MODE: compare
 jobs:
   acceptance:
     runs-on: ubuntu-latest
