@@ -46,12 +46,19 @@ single repository coordination record, not another implementation specification.
   disproved `select { width: 100% }`: WebKit overflow remained 19 pixels in both
   automatic and explicit-width states. All scientific/package/native jobs and
   both Chromiums passed; WebKit remained 88/90, wheel correctly skipped.
-- Current candidate bounds only new form label grid tracks with `minmax(0, 1fr)`.
-  The hosted A/B records computed tracks, control/parent extents and root overflow;
-  the shipped rule is restored before all ordinary interaction/capture. No clipping,
-  mask, tolerance, timeout or scientific change. Local Chromium is not macOS proof.
-  Local WebKit installation was rejected by automatic approval review; no installation
-  or alternate download occurred. Existing hosted WebKit remains the validation path.
+- Grid-track capture [40488830358/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40488830358)
+  also disproved a grid-sizing cause: both implicit/explicit tracks measured 358px,
+  root overflow remained 19px and native select labels retained 375/393px scroll
+  extents. Scientific/package, all six native and both Chromium jobs passed;
+  WebKit remained 88/90, wheel correctly skipped. Original ZIPs/digests preserved.
+- Next controlled diagnostic measures a bounded native-select property matrix on
+  the actual form, preserving/restoring all original inline styles before ordinary
+  layout assertions/captures. Existing overflow/restoration assertions remain.
+  No masks, clipping, thresholds or scientific changes. No ineffective style is
+  claimed as a fix. Local WebKit installation was rejected by automatic approval
+  review; no install or alternate download occurred. A first matrix edit was also
+  rejected for removing the reproduction assertion; no edit ran, and the safer
+  version retains equivalent reproduction, failure and exact restoration checks.
 - Latest local actual-wheel checks: 27 adapter tests, 45 browser infrastructure/
   path-policy checks, 33 exact-source/artifact checks and 6 new browser executions/
   18 captures pass. Full Ruff and diff checks pass. An initial infrastructure run

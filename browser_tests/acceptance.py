@@ -31,16 +31,31 @@ class BrowserAcceptance(unittest.TestCase):
             # A controlled A/B of the actual new form, not a capture workaround.
             # Restore the shipped rule before any normal interaction/screenshot.
             result=self.page.evaluate('''() => {
-              const rule=[...document.styleSheets].flatMap(s=>[...s.cssRules]).find(r=>r.selectorText==='#chatgpt-form label');
-              if(!rule||!rule.style.gridTemplateColumns.includes('minmax'))throw Error('Expected the shipped bounded native-control grid rule');
+              const labels=[...document.querySelectorAll('#chatgpt-form label')];
+              const selects=[...document.querySelectorAll('#chatgpt-form select')];
+              const nodes=[...labels,...selects];
+              const saved=nodes.map(e=>e.getAttribute('style'));
+              const restore=()=>nodes.forEach((e,i)=>saved[i]===null?e.removeAttribute('style'):e.setAttribute('style',saved[i]));
               const measure=()=>({overflow:document.documentElement.scrollWidth-innerWidth,
-                controls:[...document.querySelectorAll('#chatgpt-form select')].map(e=>({id:e.id,
-                  width:e.getBoundingClientRect().width,parentWidth:e.parentElement.clientWidth,
-                  parentScroll:e.parentElement.scrollWidth,tracks:getComputedStyle(e.parentElement).gridTemplateColumns}))});
-              const shipped=rule.style.gridTemplateColumns;let automatic;
-              try {rule.style.gridTemplateColumns='auto';automatic=measure();}
-              finally {rule.style.gridTemplateColumns=shipped;}
-              return {automatic,explicit:measure(),shipped,restored:rule.style.gridTemplateColumns};
+                controls:selects.map(e=>{const c=getComputedStyle(e);return {id:e.id,
+                  width:e.getBoundingClientRect().width,client:e.clientWidth,scroll:e.scrollWidth,
+                  parentWidth:e.parentElement.clientWidth,parentScroll:e.parentElement.scrollWidth,
+                  tracks:getComputedStyle(e.parentElement).gridTemplateColumns,
+                  appearance:c.appearance,overflowX:c.overflowX,textOverflow:c.textOverflow,
+                  font:c.font,padding:c.padding,boxSizing:c.boxSizing,
+                  selectedLength:e.selectedOptions[0]?.textContent.length,
+                  optionLengths:[...e.options].map(o=>o.textContent.length)};})});
+              const variants={};const automatic=measure();
+              const probe=(name,apply)=>{try{apply();variants[name]=measure();}finally{restore();}};
+              probe('label_block',()=>labels.forEach(e=>e.style.display='block'));
+              probe('text_ellipsis',()=>selects.forEach(e=>e.style.textOverflow='ellipsis'));
+              probe('native_appearance_none',()=>selects.forEach(e=>e.style.appearance='none'));
+              probe('select_block',()=>selects.forEach(e=>e.style.display='block'));
+              probe('font_arial',()=>selects.forEach(e=>e.style.fontFamily='Arial'));
+              probe('right_padding_2rem',()=>selects.forEach(e=>e.style.paddingRight='2rem'));
+              probe('no_padding',()=>selects.forEach(e=>e.style.padding='0'));
+              probe('inline_size_containment',()=>selects.forEach(e=>e.style.contain='inline-size'));
+              return {automatic,variants,explicit:measure(),shipped:saved,restored:nodes.map(e=>e.getAttribute('style'))};
             }''')
             count=getattr(self,'native_select_probes',0)+1;self.native_select_probes=count
             path=self.runtime.output/'diagnostics'/(self.runtime.viewport_name+'-'+self._testMethodName+'-native-select-'+str(count)+'.json')
