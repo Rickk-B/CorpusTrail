@@ -313,6 +313,15 @@ class DevelopmentArtifactTests(unittest.TestCase):
         with patch.dict(globals_,{'RIS_HASHES':{**TOOL['RIS_HASHES'],native:'0'*64}}):
             with self.assertRaisesRegex(ValueError,'cannot override'):TOOL['check_ris'](self.root,self.sha)
 
+    def test_chatgpt_style_boundary_cannot_hide_or_change_other_content(self):
+        before=b'/* previously approved theme */\n'
+        extension=TOOL['CHATGPT_STYLE_EXTENSION']
+        TOOL['check_chatgpt_style'](before,before+extension)
+        for after in (before,before+extension+b'#preview-content { overflow: hidden; }',
+                      before.replace(b'theme',b'changed')+extension):
+            with self.assertRaisesRegex(ValueError,'only add'):
+                TOOL['check_chatgpt_style'](before,after)
+
     def test_chatgpt_scope_override_remains_blocking(self):
         native='src/corpustrail/operational/schema/041_curation_audits.sql'
         globals_=TOOL['check_chatgpt'].__globals__

@@ -5,79 +5,76 @@
 Read this section at task start; update it at completion/interruption. This is the
 single repository coordination record, not another implementation specification.
 
-### ChatGPT assessment adapter — offline delivery in progress, 26 October 2026
+### ChatGPT assessment adapter — offline delivery in progress, 27 October 2026
 
-- Researcher-accepted: CP1–10 and the presentation refresh. RIS/demo researcher
-  acceptance remains pending. The ChatGPT adapter is separately authorized for
-  implementation and offline delivery, not researcher-accepted or live-validated.
-- Starting source: documentation-only `14443e5f790a317e22b62ecc09ecd862e5097684`,
-  tree `bc624ea0a5e02a0874ae160d6536d19aa179404e`. OAuth foundation, approved optional
-  PyJWT cryptographic extra and uncommitted handover were preserved before work.
-  Current pending source is available with `git status`; no work was reset/discarded.
-- Implemented: Models → optional ChatGPT assessment; private connection, signed
-  PKCE identity verification, explicit model catalog/disconnect; immutable combined
-  title/abstract inputs; readable exact-wire preview and separate consent; typed
-  stored proposals/failures through CP8/CP9; readable Curation model provenance;
-  per-paper durable units, partial output, cancellation and no automatic resend.
-  Existing assertion extraction, labels, sufficiency, references/held-out policy,
-  method-blind isolation, authority and scientific migrations remain unchanged.
-- The researcher explicitly approved `broad-corpus-assessment/v2` remote execution,
-  immutable `corpustrail-title-abstract-input/v1`, exact transmitted-payload consent
-  and bounded `corpustrail-assessment-diagnostics/v1`. Offline v1 records retain
-  their original shape. No SQL migration, real-model performance claim or new
-  membership/publication authority. Core remains runtime-dependency-free; the
-  approved optional extra is documented in the [walkthrough](../user/CHATGPT_ASSESSMENT.md).
-- Current exact adapter implementation: `2c2a4f87b9fc93aecc1025420acbd1a4b5faaf3e`
-  (the `CHATGPT_COMMIT` pinned in the source/build receipt). All current adapter bytes are
-  pinned independently; original CP1–10/RIS hashes and frozen migrations remain
-  unchanged. The source gate also proves outcome/sufficiency validation and
-  reference/held-out logic unchanged. This is not a validated delivered wheel yet.
-- Local verification: 26 new connection/assessment/security tests, 30 existing
-  classification tests, 12 import/isolation checks and 45 browser infrastructure/
-  path-policy tests pass. The complete installed optional-ML/crypto suite passed
-  735 tests before one source-history test was split for explicit Git-less-package
-  handling. Independent wheel/sdist/core/optional-ML acceptance now passes all
-  four 736-test executions with documented optional/history/native skips.
-  First package attempt failed because a new source-history check incorrectly
-  required Git objects inside an intentionally isolated copy; its full evidence
-  is retained, and source jobs still run the complete frozen-history checks.
-- Full local Chromium capture: 90/90 functional executions, 313 unique captures.
-  A final focused installed-wheel run passes 6/6 new executions/18 captures,
-  including keyboard focus, source preservation, Curation inspection and restart.
-  These are captures, not strict visual acceptance. The new Models card and fresh
-  source-version-dependent synthetic comparison IDs need explicit reference review;
-  every unrelated previously approved PNG will retain its bytes. Existing visual
-  thresholds, masks, navigation waits, unique paths and failure diagnostics stay.
-- Hosted capture [40360596141/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40360596141)
-  at `ddaf9360c8a9e34a787b167a44a845e0c1b5597b`: scientific/package Python
-  3.11–3.13, Linux Chromium and macOS Chromium passed; each Chromium captured
-  90 executions/313 images. WebKit completed 88/90: both new narrow previews
-  failed the unchanged layout invariant with 19-pixel overflow. Windows 3.12's
-  existing Node Discovery harness timed out; its assertion/poll/request lifecycle
-  lacked reliable failure cleanup. Other five native jobs passed, including the
-  optional signed-token tests. No wheel was produced; capture delivery is gated.
-- Next evidence run adds text-free overflow geometry and releases test-owned Node
-  polling/requests on failure. A deliberate assertion-during-poll regression and
-  the original controller/Node tests pass locally. This does not establish the
-  historical Windows cause. Preserve all failed evidence; inspect WebKit's actual
-  overflowing element before a layout correction. Then complete explicit image
-  review, restore comparison and deliver only after genuine strict/platform gates.
-- Live sign-in and model execution remain blocked pending owner participation,
-  explicit payload authorization, actual account eligibility and verified prevention
-  of extra charges. Sign-in/models/weekly allowances do not prove credit fallback is
-  disabled. No HTTP form grants verification; no API-key fallback, credit purchase,
-  billing change or live provider/model call is authorized or performed. The official
+- Researcher-accepted: CP1–10 and the presentation refresh. RIS/demo acceptance
+  remains pending. This separately authorized adapter is not researcher-accepted
+  or live-validated. Starting source: `14443e5f790a317e22b62ecc09ecd862e5097684`,
+  tree `bc624ea0a5e02a0874ae160d6536d19aa179404e`; no work was reset/discarded.
+- Implemented: optional Models → ChatGPT assessment, private PKCE/signed-identity
+  connection, explicit catalog/disconnect, immutable title/abstract inputs, exact
+  transmitted-payload preview/consent and CP8/CP9 proposals/failures. Existing
+  labels, sufficiency, references/held-out protections, method blindness, human
+  authority and assertion extraction remain unchanged. No scientific migration.
+  Core remains dependency-free; the explicitly approved optional PyJWT cryptographic
+  extra and the [walkthrough](../user/CHATGPT_ASSESSMENT.md) remain separate.
+- Versioned extensions: `broad-corpus-assessment/v2`,
+  `corpustrail-title-abstract-input/v1` and bounded
+  `corpustrail-assessment-diagnostics/v1`. Historical offline v1 records retain
+  their shape. The exact source receipt now pins
+  `a5ea7d0e3269bb0548745f30c569e311ad8d597e`; historical CP1–10/RIS receipts and
+  frozen migrations are unchanged. The added theme rule is restricted to native
+  selects in the new form; an exact-prefix guard forbids other theme changes.
+- First hosted capture [40360596141/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40360596141)
+  at `ddaf9360c8a9e34a787b167a44a845e0c1b5597b`: Windows 3.12's existing Node
+  Discovery harness timed out; WebKit had two narrow-preview overflow failures.
+  Other scientific/package/native/Chromium gates passed; wheel correctly skipped.
+- Diagnostic capture [40476696312/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40476696312)
+  at `21c57fb0268a53a41f757b9a620b7600067b4a8d`: Python 3.11–3.13 scientific/package
+  and all six native jobs passed, including optional cryptographic verification.
+  Both Chromiums passed 90/90 executions and captured 313 images. WebKit passed
+  88/90, with 308 captures: populated native-select labels scrolled to 375/393
+  pixels inside a 358-pixel form, causing the unchanged 19-pixel overflow failure.
+  No browser/runtime/external-network errors; wheel correctly skipped.
+- Demonstrated corrections: Node test failure cleanup now releases its own poll
+  and requests while retaining the original error; a controlled failure regression
+  passes. This does not prove the original Windows timeout's cause. A competing
+  confirmation also demonstrably replaced active cancellation before refusal;
+  the adapter now guards before receipt/run/consent mutation under the worker lock.
+  Identical retries preserve their original run. Failed reproductions are retained.
+- Current native-select width candidate: only `#chatgpt-form select` gets explicit
+  `width: 100%`. Hosted WebKit must still prove the controlled auto/explicit-width
+  A/B and complete normal workflows. The test restores the shipped rule before
+  all ordinary captures; no clipping, mask, tolerance, timeout or scientific change.
+  Local Chromium also passes at a controlled 350-pixel width; this is not macOS proof.
+- Latest local actual-wheel checks: 27 adapter tests, 45 browser infrastructure/
+  path-policy checks, 33 exact-source/artifact checks and 6 new browser executions/
+  18 captures pass. Full Ruff and diff checks pass. An initial infrastructure run
+  correctly refused stale installed package bytes before wheel reinstall. Earlier
+  independent wheel/sdist/core/optional-ML acceptance passed four 736-test runs;
+  complete hosted gates will verify the final additions. No local build is delivery.
+- Next: obtain complete hosted capture with the measured width correction; inspect
+  every proposed new/changed reference and preserve unrelated PNG bytes, restore
+  strict comparison, then deliver only after all genuine platform/package/browser
+  gates. No baseline has yet been approved for this adapter. Original image review
+  observations identify the new Models entry card and four synthetic comparison-ID
+  changes per renderer; scientific/status content remains distinct.
+- Live sign-in/model use remains blocked pending owner participation, exact payload
+  authorization, actual eligibility and verified prevention of extra charges.
+  Neither identity/scope/catalog nor a checkbox proves credit fallback disabled.
+  No HTTP form grants that verification; no API-key fallback, purchase, billing
+  change or live provider/model call is authorized/performed. The official
   [OSS route](https://developers.openai.com/siwc/token-sharing-open-source) is used;
-  interoperability and scientific assessment validation remain separate future steps.
+  offline protocol checks establish neither interoperability nor scientific performance.
 - Durable evidence: `chatgpt-delivery-20261026-sq6_bgzo` under the established WSL
-  backup root, with prior work, failed/passing tests, intermediate wheels/captures
-  and an individually reviewed provenance patch. Earlier `chatgpt-adapter-20261026-67ojkilg`,
-  `chatgpt-assessment-20261026-djahy0li` and sealed RIS/demo recovery sets are unchanged.
-  Maintain this same agent-neutral record at interruption/completion for Codex,
-  Claude Code or humans; do not create another handover.
-- Native Europe PMC transport causation and historical navigation-timeout causation
-  remain unresolved. No Mac coordination-document edit, paid activation, artifact
-  deletion, main/tag/release/PyPI change or further checkpoint work is authorized.
+  backup root: complete original artifacts/member hashes, logs, failed/passing
+  tests, source bundle, patches, candidate wheels and individual visual observations.
+  Earlier sealed adapter, RIS/demo and recovery sets remain untouched. Maintain
+  this same agent-neutral record for Codex, Claude Code or humans on interruption.
+- Native Europe PMC transport and historical navigation-timeout causation remain
+  unresolved. No Mac-document edit, paid activation, deletion, release/main/tag/PyPI
+  change or further checkpoint is authorized. Development-bundle retention remains
+  90 days; browser evidence remains seven days; actual delivered expiry still pending.
 
 ### Previously delivered RIS/demo state — unchanged
 

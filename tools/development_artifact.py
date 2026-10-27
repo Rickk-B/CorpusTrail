@@ -195,7 +195,7 @@ def check_identity_composition(old, new):
 
 # Independently reviewed adapter extension; historical receipts stay immutable.
 CHATGPT_BASELINE = '14443e5f790a317e22b62ecc09ecd862e5097684'
-CHATGPT_COMMIT = '2c2a4f87b9fc93aecc1025420acbd1a4b5faaf3e'
+CHATGPT_COMMIT = 'a5ea7d0e3269bb0548745f30c569e311ad8d597e'
 CHATGPT_PATHS = {
     'src/corpustrail/application/chatgpt.py',
     'src/corpustrail/application/curation.py',
@@ -207,6 +207,7 @@ CHATGPT_PATHS = {
     'src/corpustrail/classification/contracts.py',
     'src/corpustrail/classification/inputs.py',
     'src/corpustrail/classification/service.py',
+    'src/corpustrail/local_app/assets/app.css',
     'src/corpustrail/local_app/assets/chatgpt.html',
     'src/corpustrail/local_app/assets/chatgpt.js',
     'src/corpustrail/local_app/assets/curation.js',
@@ -214,7 +215,8 @@ CHATGPT_PATHS = {
     'src/corpustrail/local_app/server.py',
 }
 CHATGPT_HASHES = {
-    'src/corpustrail/application/chatgpt.py': '3c93e4b34e5a9db86c9c7e3185a4129e3fb78940ed0587220c6b13f29d98c25f',
+    'src/corpustrail/local_app/assets/app.css': 'd8e0eb09343a50b937399b71e0783dc40494e0d405e0cdbee37d2485728fbae6',
+    'src/corpustrail/application/chatgpt.py': 'c2f9610391a7fbc90f5901298df9bb018ab3605756c688c3ac333c304d59493d',
     'src/corpustrail/application/curation.py': '97e71eb8fe5e9cc61b1bb1ef7bcf8f554e984d75c56552b97ba1a534e62784c6',
     'src/corpustrail/chatgpt/__init__.py': '1c0d389d6e7df4e3a93d9870b5ddf690f1759fdb7f4e7710e91e679515df4591',
     'src/corpustrail/chatgpt/connection.py': 'e6021b86baf6cfe2a98f26ec89e9d3d68a79f1229dd96ce1782be89d21ea18c5',
@@ -230,6 +232,15 @@ CHATGPT_HASHES = {
     'src/corpustrail/local_app/assets/handoff.js': '34012823568f6d20bc4899b50f2eb4810b6d9b1f41c46670f22a7524298be0e5',
     'src/corpustrail/local_app/server.py': 'e77972eeb3f86e0c48d0b767e8e8f34e784e6e99ffe8e15ff6d475bc9c686b27',
 }
+
+
+CHATGPT_STYLE_EXTENSION = b'\n/* Keep native select text within this bounded assessment form on WebKit. */\n#chatgpt-form select { width: 100%; }\n'
+
+
+def check_chatgpt_style(before, after):
+    if after != before + CHATGPT_STYLE_EXTENSION:
+        raise ValueError('ChatGPT presentation may only add the reviewed native-select width rule')
+
 
 def current_source_hash(name, historical, *, root=ROOT):
     # Called only after check_chatgpt in the artifact gate. Exact new hashes are
@@ -249,6 +260,7 @@ def check_chatgpt(root, expected):
         'src/corpustrail/classification/contracts.py',
         'src/corpustrail/classification/inputs.py',
         'src/corpustrail/classification/service.py',
+        'src/corpustrail/local_app/assets/app.css',
         'src/corpustrail/local_app/assets/chatgpt.html',
         'src/corpustrail/local_app/assets/chatgpt.js',
         'src/corpustrail/local_app/assets/curation.js',
@@ -265,6 +277,9 @@ def check_chatgpt(root, expected):
         path=root/name;frozen=subprocess.check_output(['git','-C',str(root),'show',CHATGPT_COMMIT+':'+name])
         if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=wanted or hashlib.sha256(frozen).hexdigest()!=wanted:
             raise ValueError('ChatGPT source differs from its exact implementation')
+    name='src/corpustrail/local_app/assets/app.css'
+    original=subprocess.check_output(['git','-C',str(root),'show',CHATGPT_BASELINE+':'+name])
+    check_chatgpt_style(original,(root/name).read_bytes())
     name='src/corpustrail/classification/service.py'
     before=ast.parse(git(root,'show',CHATGPT_BASELINE+':'+name));after=ast.parse((root/name).read_text(encoding='utf-8'))
     def validator(tree):

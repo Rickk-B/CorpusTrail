@@ -18,7 +18,7 @@ Using the researcher's existing environment:
 source ~/CorpusTrailDemo/.venv/bin/activate
 cd ~/Downloads/CorpusTrail-ChatGPT
 shasum -a 256 corpus_trail-0.1.0a3.dev0-py3-none-any.whl
-python -m pip install --no-deps --force-reinstall ./corpus_trail-0.1.0a3.dev0-py3-none-any.whl
+python -m pip install --no-index --no-deps --force-reinstall ./corpus_trail-0.1.0a3.dev0-py3-none-any.whl
 python -m pip install './corpus_trail-0.1.0a3.dev0-py3-none-any.whl[chatgpt]' 'PyJWT==2.15.1' 'cryptography==50.0.2' 'cffi==2.1.1' 'pycparser==3.12'
 corpustrail --version
 corpustrail app --open-browser
@@ -55,7 +55,9 @@ Owner participation and the no-extra-charge decision below are still pending.
    separately available. Existing legacy endpoint configuration is for structured
    Knowledge extraction, not a billing fallback for this relevance adapter.
 4. When owner sign-in is authorized, select **Continue with ChatGPT**. OpenAI handles
-   account/workspace choice and permissions. No password or token belongs in chat.
+   the first account/workspace choice and permissions. Reconnection reuses that
+   registration and verifies the same bound identity; this initial interface does
+   not provide multi-account switching. No password or token belongs in chat.
    The separate loopback callback offers **Back to CorpusTrail**. Acknowledge the
    one-time plan-use notice. The app validates signed identity, nonce, registration
    and granted plan scope; a successful identity login alone is insufficient.
