@@ -195,7 +195,7 @@ def check_identity_composition(old, new):
 
 # Independently reviewed adapter extension; historical receipts stay immutable.
 CHATGPT_BASELINE = '14443e5f790a317e22b62ecc09ecd862e5097684'
-CHATGPT_COMMIT = '7312ba297b8a4053b44c6125ba62a64cc9a5cec6'
+CHATGPT_COMMIT = 'db3b4cff53c420762eaeb6ae30adb3f7fd28d345'
 CHATGPT_PATHS = {
     'src/corpustrail/application/chatgpt.py',
     'src/corpustrail/application/curation.py',
@@ -216,7 +216,7 @@ CHATGPT_PATHS = {
 }
 CHATGPT_HASHES = {
     'src/corpustrail/local_app/assets/app.css': 'eadf80d2355a122897832ce5e797dc50506512a51565f4e4123a092407407fb1',
-    'src/corpustrail/application/chatgpt.py': 'c2f9610391a7fbc90f5901298df9bb018ab3605756c688c3ac333c304d59493d',
+    'src/corpustrail/application/chatgpt.py': '59094c0b2f832f973b86ce6b32a9301765f319d7a832288f87e44df40056e81a',
     'src/corpustrail/application/curation.py': '97e71eb8fe5e9cc61b1bb1ef7bcf8f554e984d75c56552b97ba1a534e62784c6',
     'src/corpustrail/chatgpt/__init__.py': '1c0d389d6e7df4e3a93d9870b5ddf690f1759fdb7f4e7710e91e679515df4591',
     'src/corpustrail/chatgpt/connection.py': 'e6021b86baf6cfe2a98f26ec89e9d3d68a79f1229dd96ce1782be89d21ea18c5',

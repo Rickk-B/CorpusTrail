@@ -30,32 +30,34 @@ class BrowserAcceptance(unittest.TestCase):
         if self.runtime.environment['browser']=='webkit' and self.runtime.viewport_name=='narrow':
             # A controlled A/B of the actual new form, not a capture workaround.
             # Restore the shipped rule before any normal interaction/screenshot.
-            result=self.page.evaluate('''() => {
-              const labels=[...document.querySelectorAll('#chatgpt-form label')];
-              const selects=[...document.querySelectorAll('#chatgpt-form select')];
-              const nodes=[...labels,...selects];
-              const saved=nodes.map(e=>e.getAttribute('style'));
-              const restore=()=>nodes.forEach((e,i)=>saved[i]===null?e.removeAttribute('style'):e.setAttribute('style',saved[i]));
+            result=self.page.evaluate('''async () => {
+              const sheet=document.styleSheets[0],count=sheet.cssRules.length;
+              const controls=[...document.querySelectorAll('#chatgpt-form select')];
+              const nodes=[...document.querySelectorAll('#chatgpt-select,#chatgpt-form,#chatgpt-form label,#chatgpt-form select')];
+              const saved=[...sheet.cssRules].map(r=>r.cssText);
+              const attrs=nodes.map(e=>e.getAttribute('style'));
               const measure=()=>({overflow:document.documentElement.scrollWidth-innerWidth,
-                controls:selects.map(e=>{const c=getComputedStyle(e);return {id:e.id,
-                  width:e.getBoundingClientRect().width,client:e.clientWidth,scroll:e.scrollWidth,
-                  parentWidth:e.parentElement.clientWidth,parentScroll:e.parentElement.scrollWidth,
-                  tracks:getComputedStyle(e.parentElement).gridTemplateColumns,
-                  appearance:c.appearance,overflowX:c.overflowX,textOverflow:c.textOverflow,
-                  font:c.font,padding:c.padding,boxSizing:c.boxSizing,
-                  selectedLength:e.selectedOptions[0]?.textContent.length,
-                  optionLengths:[...e.options].map(o=>o.textContent.length)};})});
-              const variants={};const automatic=measure();
-              const probe=(name,apply)=>{try{apply();variants[name]=measure();}finally{restore();}};
-              probe('label_block',()=>labels.forEach(e=>e.style.display='block'));
-              probe('text_ellipsis',()=>selects.forEach(e=>e.style.textOverflow='ellipsis'));
-              probe('native_appearance_none',()=>selects.forEach(e=>e.style.appearance='none'));
-              probe('select_block',()=>selects.forEach(e=>e.style.display='block'));
-              probe('font_arial',()=>selects.forEach(e=>e.style.fontFamily='Arial'));
-              probe('right_padding_2rem',()=>selects.forEach(e=>e.style.paddingRight='2rem'));
-              probe('no_padding',()=>selects.forEach(e=>e.style.padding='0'));
-              probe('inline_size_containment',()=>selects.forEach(e=>e.style.contain='inline-size'));
-              return {automatic,variants,explicit:measure(),shipped:saved,restored:nodes.map(e=>e.getAttribute('style'))};
+                controls:controls.map(e=>({id:e.id,width:e.getBoundingClientRect().width,
+                  parentWidth:e.parentElement.clientWidth,parentScroll:e.parentElement.scrollWidth})),
+                nodes:nodes.map(e=>{const c=getComputedStyle(e);return {tag:e.tagName,id:e.id,
+                  width:e.getBoundingClientRect().width,scroll:e.scrollWidth,tracks:c.gridTemplateColumns,
+                  minWidth:c.minWidth,display:c.display,wrap:c.overflowWrap};})});
+              const automatic=measure(),frames=[];
+              for(let i=0;i<3;i++){await new Promise(requestAnimationFrame);frames.push(measure());}
+              const variants={};
+              const probe=async(name,rules)=>{try{
+                for(const rule of rules)sheet.insertRule(rule,sheet.cssRules.length);
+                await new Promise(requestAnimationFrame);variants[name]=measure();
+              }finally{while(sheet.cssRules.length>count)sheet.deleteRule(count);}};
+              await probe('outer_grid',["#chatgpt-form { grid-template-columns: minmax(0,1fr); }", "#chatgpt-form label { min-width:0; }"]);
+              await probe('workspace_wrap',["#chatgpt-select { overflow-wrap:anywhere; }", "#chatgpt-form select { width:100%; }"]);
+              await probe('combined_grid',["#chatgpt-select { overflow-wrap:anywhere; }", "#chatgpt-form { grid-template-columns:minmax(0,1fr); }", "#chatgpt-form label { min-width:0; }", "#chatgpt-form select { width:100%; }"]);
+              await probe('flex_labels',["#chatgpt-form label { display:flex; flex-direction:column; min-width:0; }", "#chatgpt-form select { width:100%; }"]);
+              await probe('flex_form_and_labels',["#chatgpt-form,#chatgpt-form label { display:flex; flex-direction:column; min-width:0; }", "#chatgpt-form select { width:100%; }"]);
+              await probe('block_flow',["#chatgpt-form,#chatgpt-form label { display:block; min-width:0; }", "#chatgpt-form select { display:block; width:100%; }"]);
+              await new Promise(requestAnimationFrame);
+              return {automatic,frames,variants,explicit:measure(),shipped:{rules:saved,attrs},
+                restored:{rules:[...sheet.cssRules].map(r=>r.cssText),attrs:nodes.map(e=>e.getAttribute('style'))}};
             }''')
             count=getattr(self,'native_select_probes',0)+1;self.native_select_probes=count
             path=self.runtime.output/'diagnostics'/(self.runtime.viewport_name+'-'+self._testMethodName+'-native-select-'+str(count)+'.json')

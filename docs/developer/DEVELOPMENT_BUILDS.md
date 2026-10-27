@@ -51,14 +51,31 @@ single repository coordination record, not another implementation specification.
   root overflow remained 19px and native select labels retained 375/393px scroll
   extents. Scientific/package, all six native and both Chromium jobs passed;
   WebKit remained 88/90, wheel correctly skipped. Original ZIPs/digests preserved.
-- Next controlled diagnostic measures a bounded native-select property matrix on
-  the actual form, preserving/restoring all original inline styles before ordinary
-  layout assertions/captures. Existing overflow/restoration assertions remain.
-  No masks, clipping, thresholds or scientific changes. No ineffective style is
-  claimed as a fix. Local WebKit installation was rejected by automatic approval
-  review; no install or alternate download occurred. A first matrix edit was also
-  rejected for removing the reproduction assertion; no edit ran, and the safer
-  version retains equivalent reproduction, failure and exact restoration checks.
+- Native-property diagnostic [40528145962/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40528145962)
+  at `78ec97f06eeac99292fdbdad7ec862c87b24b60a` passed all scientific/package,
+  native and Chromium jobs. WebKit stayed 88/90: no isolated select property fixed
+  overflow. Original ZIPs, complete manifests and every numeric variant are retained.
+  Raw style restoration also exposed WebKit's absent-versus-empty attribute detail;
+  the next diagnostic uses only external stylesheet CSSOM and exact full restoration.
+- Current test-only diagnostic compares rendered-frame readiness and bounded outer
+  form/grid/flex variants. It leaves all reproduction, overflow, control containment
+  and restoration assertions intact; no production fix is inferred from Linux.
+  A genuine long-name population made through real services passed two narrow
+  Chromium probes; that does not establish WebKit behavior. All failed probes remain.
+- Automatic review previously rejected local WebKit installation (none occurred)
+  and a matrix draft removing a reproduction assertion (no edit ran). The safer
+  diagnostic retained that assertion. No workaround, installation, mask, clipping,
+  timeout/tolerance change or baseline approval has occurred.
+- A further controlled regression demonstrated that disconnect signaled an unrelated
+  offline assessment. The adapter now tracks only its runtime worker ownership and
+  signals only those workers under existing locks; no scientific history/state is
+  rewritten. Both unrelated-offline completion and interrupted-remote preservation
+  are tested; all 29 adapter checks pass. This local correction is committed but
+  not pushed while the matrix run executes. Its exact source receipt needs refresh
+  together with the eventual evidence-supported layout correction.
+  The installed-wheel full suite now passes 741 tests (one explicit native macOS
+  Trash skip on Linux), plus all 29 adapter tests. A pin refresh is uncommitted
+  in `tools/development_artifact.py`; the matrix run still uses its exact older source.
 - Latest local actual-wheel checks: 27 adapter tests, 45 browser infrastructure/
   path-policy checks, 33 exact-source/artifact checks and 6 new browser executions/
   18 captures pass. Full Ruff and diff checks pass. An initial infrastructure run
