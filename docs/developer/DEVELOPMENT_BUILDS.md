@@ -48,14 +48,20 @@ single repository coordination record, not another implementation specification.
   source-version-dependent synthetic comparison IDs need explicit reference review;
   every unrelated previously approved PNG will retain its bytes. Existing visual
   thresholds, masks, navigation waits, unique paths and failure diagnostics stay.
-- Next: commit capture-only workflow mode, push once for complete offline hosted
-  platform/capture evidence (wheel gate remains closed), inspect each proposed
-  image change, restore comparison and run final strict acceptance. Actual native
-  optional-extra verification and final artifact/retention remain pending.
-  The existing supported jobs now install the approved extra explicitly; all
-  nine Python/platform dependency-wheel targets resolve. No runtime dependency
-  is added to core. Initial setup/test failures and all intermediate artifacts
-  are preserved rather than treated as delivery.
+- Hosted capture [40360596141/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40360596141)
+  at `ddaf9360c8a9e34a787b167a44a845e0c1b5597b`: scientific/package Python
+  3.11–3.13, Linux Chromium and macOS Chromium passed; each Chromium captured
+  90 executions/313 images. WebKit completed 88/90: both new narrow previews
+  failed the unchanged layout invariant with 19-pixel overflow. Windows 3.12's
+  existing Node Discovery harness timed out; its assertion/poll/request lifecycle
+  lacked reliable failure cleanup. Other five native jobs passed, including the
+  optional signed-token tests. No wheel was produced; capture delivery is gated.
+- Next evidence run adds text-free overflow geometry and releases test-owned Node
+  polling/requests on failure. A deliberate assertion-during-poll regression and
+  the original controller/Node tests pass locally. This does not establish the
+  historical Windows cause. Preserve all failed evidence; inspect WebKit's actual
+  overflowing element before a layout correction. Then complete explicit image
+  review, restore comparison and deliver only after genuine strict/platform gates.
 - Live sign-in and model execution remain blocked pending owner participation,
   explicit payload authorization, actual account eligibility and verified prevention
   of extra charges. Sign-in/models/weekly allowances do not prove credit fallback is

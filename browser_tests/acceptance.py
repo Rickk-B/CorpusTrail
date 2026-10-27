@@ -646,7 +646,12 @@ class BrowserAcceptance(unittest.TestCase):
           const buttons=[...document.querySelectorAll('button,a,summary')].filter(visible);
           const anonymous=buttons.filter(e=>!e.textContent.trim()&&!e.getAttribute('aria-label')).length;
           const escaped=buttons.filter(e=>{const r=e.getBoundingClientRect();return r.left< -1||r.right>innerWidth+1;}).length;
-          return {overflow:document.documentElement.scrollWidth-innerWidth,unnamed,anonymous,escaped};
+          // Geometry only: no source text, values, URLs or private paths.
+          const overflowing=[...document.querySelectorAll('main *')].filter(visible).map(e=>{
+            const r=e.getBoundingClientRect();return {tag:e.tagName,id:e.id,left:r.left,right:r.right,
+              width:r.width,client:e.clientWidth,scroll:e.scrollWidth,display:getComputedStyle(e).display};
+          }).filter(e=>e.right>innerWidth+1||e.left< -1||e.scroll>e.client+1).slice(0,40);
+          return {overflow:document.documentElement.scrollWidth-innerWidth,unnamed,anonymous,escaped,overflowing};
         }''')
         self.assertLessEqual(result['overflow'],1,result)
         self.assertEqual((result['unnamed'],result['anonymous'],result['escaped']),(0,0,0),result)

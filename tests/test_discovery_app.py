@@ -458,7 +458,7 @@ console.log('Four adapter previews preserve exact values, safe query text and pe
         assets=resources.files('corpustrail.local_app').joinpath('assets')
         harness=r'''
 const assert=require('node:assert/strict'),vm=require('node:vm');
-const input=JSON.parse(require('node:fs').readFileSync(0,'utf8')),nodes=[],elements={},requests=[];
+const input=JSON.parse(require('node:fs').readFileSync(0,'utf8')),nodes=[],elements={},requests=[],pending=new Map();
 class Element{
  constructor(tag){this.tag=tag;this.textContent='';this.value='';this.checked=false;this.disabled=false;this.hidden=false;this.open=false;this.dataset={};this.children=[];nodes.push(this);}
  append(...args){this.children.push(...args);}prepend(...args){this.children.unshift(...args);}replaceChildren(...args){this.children=[...args];}focus(){}
@@ -467,7 +467,16 @@ for(const m of input.html.matchAll(/id="([^"]+)"/g))elements[m[1]]=new Element('
 const document={getElementById:id=>elements[id]||nodes.find(e=>e.id===id),createElement:tag=>new Element(tag),
  querySelector:()=>({content:input.token}),querySelectorAll:s=>{assert.equal(s,'[data-provider]');return nodes.filter(e=>e.dataset.provider);}};
 const context={document,crypto:require('node:crypto').webcrypto,setTimeout,clearTimeout,console,
- fetch:async(path,options)=>{requests.push({path,options});return fetch(input.origin+path,{...options,headers:{...options.headers,Origin:input.origin}});}};
+ fetch:async(path,options)=>{
+  requests.push({path,options});const abort=new AbortController(),started=performance.now();
+  const identity=path.split('?')[0].replace(/plans\/[^/]+/g,'plans/<handle>');pending.set(abort,{identity,started});
+  try{
+   const response=await fetch(input.origin+path,{...options,signal:abort.signal,headers:{...options.headers,Origin:input.origin}});
+   // Track completion of the consumed body, not merely arrival of headers.
+   const json=response.json.bind(response);response.json=async()=>{try{return await json();}finally{pending.delete(abort);}};
+   return response;
+  }catch(e){pending.delete(abort);throw e;}
+ }};
 vm.createContext(context);vm.runInContext(input.script,context);
 async function until(condition){for(let i=0;i<500;i++){if(condition())return;await new Promise(r=>setTimeout(r,10));}throw Error('UI did not reach expected state: '+elements.message.textContent);}
 async function preview(){elements['search-form'].onsubmit({preventDefault(){}});await until(()=>vm.runInContext('view !== null && !busy',context));}
@@ -494,14 +503,39 @@ async function preview(){elements['search-form'].onsubmit({preventDefault(){}});
  assert(!elements['search-setup'].hidden);assert.equal(requests.filter(r=>r.path.endsWith('/start')).length,starts);
  await preview();assert.equal(elements['plan-advanced'].open,false);await elements.approve.onclick();await elements.run.onclick();
  await until(()=>vm.runInContext('view.status === "completed" && view.summary.previously_known_publications === 5',context));
- vm.runInContext('stopPolling()',context);console.log('Packaged Discovery UI exact-preview, consent, explicit run, provenance and repeat passed.');
-})().catch(e=>{console.error(e);process.exitCode=1;});
+ vm.runInContext('stopPolling()',context);await until(()=>pending.size===0);console.log('Packaged Discovery UI exact-preview, consent, explicit run, provenance and repeat passed.');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{
+ // A failed assertion must not leave the application's recurring poll alive.
+ // Keep the original failure and bounded, sanitized lifecycle evidence.
+ vm.runInContext('stopPolling()',context);
+ console.log('Pending test-owned requests: '+JSON.stringify([...pending.values()].map(p=>({path:p.identity,age_ms:Math.round(performance.now()-p.started)}))));
+ for(const abort of pending.keys())abort.abort();
+});
 '''
         result=subprocess.run(['node','-e',harness],input=json.dumps({'html':assets.joinpath('discovery.html').read_text(encoding='utf-8'),
             'script':assets.joinpath('discovery.js').read_text(encoding='utf-8'),'token':self.token,'origin':self.origin}),
             text=True,capture_output=True,timeout=30)
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         self.assertEqual(len(self.project.identities.papers()),5)
+    @unittest.skipUnless(shutil.which('node'),'Optional developer Node harness, not a runtime dependency')
+    def test_javascript_assertion_failure_releases_poll_and_keeps_original_error(self):
+        native_run=subprocess.run
+        observed=[]
+        def fail_during_poll(args,**kwargs):
+            args=list(args)
+            marker="await elements.run.onclick();await until("
+            self.assertIn(marker,args[2])
+            args[2]=args[2].replace(marker,"await elements.run.onclick();throw Error('Controlled assertion while polling');await until(",1)
+            result=native_run(args,**kwargs);observed.append(result)
+            return result
+        with patch.object(subprocess,'run',side_effect=fail_during_poll):
+            with self.assertRaises(AssertionError):
+                self.test_packaged_javascript_researcher_workflow_against_actual_local_api()
+        self.assertEqual(len(observed),1)
+        self.assertNotEqual(observed[0].returncode,0)
+        self.assertIn('Controlled assertion while polling',observed[0].stderr)
+        self.assertIn('Pending test-owned requests:',observed[0].stdout)
+
     def setUp(self):
         super().setUp();self.server=make_server(controller=self.controller,discovery=self.manager,port=0)
         thread=threading.Thread(target=self.server.serve_forever);thread.start()
