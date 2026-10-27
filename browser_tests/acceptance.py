@@ -31,23 +31,25 @@ class BrowserAcceptance(unittest.TestCase):
             # A controlled A/B of the actual new form, not a capture workaround.
             # Restore the shipped rule before any normal interaction/screenshot.
             result=self.page.evaluate('''() => {
-              const rule=[...document.styleSheets].flatMap(s=>[...s.cssRules]).find(r=>r.selectorText==='#chatgpt-form select');
-              if(!rule||rule.style.width!=='100%')throw Error('Expected the shipped bounded native-select rule');
+              const rule=[...document.styleSheets].flatMap(s=>[...s.cssRules]).find(r=>r.selectorText==='#chatgpt-form label');
+              if(!rule||!rule.style.gridTemplateColumns.includes('minmax'))throw Error('Expected the shipped bounded native-control grid rule');
               const measure=()=>({overflow:document.documentElement.scrollWidth-innerWidth,
                 controls:[...document.querySelectorAll('#chatgpt-form select')].map(e=>({id:e.id,
                   width:e.getBoundingClientRect().width,parentWidth:e.parentElement.clientWidth,
-                  parentScroll:e.parentElement.scrollWidth}))});
-              const shipped=rule.style.width;let automatic;
-              try {rule.style.width='auto';automatic=measure();}
-              finally {rule.style.width=shipped;}
-              return {automatic,explicit:measure(),restored:rule.style.width};
+                  parentScroll:e.parentElement.scrollWidth,tracks:getComputedStyle(e.parentElement).gridTemplateColumns}))});
+              const shipped=rule.style.gridTemplateColumns;let automatic;
+              try {rule.style.gridTemplateColumns='auto';automatic=measure();}
+              finally {rule.style.gridTemplateColumns=shipped;}
+              return {automatic,explicit:measure(),shipped,restored:rule.style.gridTemplateColumns};
             }''')
             count=getattr(self,'native_select_probes',0)+1;self.native_select_probes=count
             path=self.runtime.output/'diagnostics'/(self.runtime.viewport_name+'-'+self._testMethodName+'-native-select-'+str(count)+'.json')
             with path.open('x',encoding='utf-8') as out:json.dump(result,out,indent=2)
             self.assertGreater(result['automatic']['overflow'],1,result)
             self.assertLessEqual(result['explicit']['overflow'],1,result)
-            self.assertEqual(result['restored'],'100%')
+            self.assertEqual(result['restored'],result['shipped'])
+            for control in result['explicit']['controls']:
+                self.assertLessEqual(control['parentScroll'],control['parentWidth']+1,result)
 
     def test_chatgpt_exact_preview_proposals_disconnect_and_restart(self):
         from .curation_fixtures import seed

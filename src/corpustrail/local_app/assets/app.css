@@ -207,5 +207,5 @@ legend { font-weight: 650; padding: 0 .4rem; }
   .settings-form .save-area { position: static; }
 }
 
-/* Keep native select text within this bounded assessment form on WebKit. */
-#chatgpt-form select { width: 100%; }
+/* Bound native control grid tracks without clipping their content or menus. */
+#chatgpt-form label { grid-template-columns: minmax(0, 1fr); }
