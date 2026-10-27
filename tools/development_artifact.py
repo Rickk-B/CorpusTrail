@@ -195,7 +195,7 @@ def check_identity_composition(old, new):
 
 # Independently reviewed adapter extension; historical receipts stay immutable.
 CHATGPT_BASELINE = '14443e5f790a317e22b62ecc09ecd862e5097684'
-CHATGPT_COMMIT = 'a5ea7d0e3269bb0548745f30c569e311ad8d597e'
+CHATGPT_COMMIT = '7312ba297b8a4053b44c6125ba62a64cc9a5cec6'
 CHATGPT_PATHS = {
     'src/corpustrail/application/chatgpt.py',
     'src/corpustrail/application/curation.py',
@@ -215,7 +215,7 @@ CHATGPT_PATHS = {
     'src/corpustrail/local_app/server.py',
 }
 CHATGPT_HASHES = {
-    'src/corpustrail/local_app/assets/app.css': 'd8e0eb09343a50b937399b71e0783dc40494e0d405e0cdbee37d2485728fbae6',
+    'src/corpustrail/local_app/assets/app.css': 'eadf80d2355a122897832ce5e797dc50506512a51565f4e4123a092407407fb1',
     'src/corpustrail/application/chatgpt.py': 'c2f9610391a7fbc90f5901298df9bb018ab3605756c688c3ac333c304d59493d',
     'src/corpustrail/application/curation.py': '97e71eb8fe5e9cc61b1bb1ef7bcf8f554e984d75c56552b97ba1a534e62784c6',
     'src/corpustrail/chatgpt/__init__.py': '1c0d389d6e7df4e3a93d9870b5ddf690f1759fdb7f4e7710e91e679515df4591',
@@ -234,12 +234,12 @@ CHATGPT_HASHES = {
 }
 
 
-CHATGPT_STYLE_EXTENSION = b'\n/* Keep native select text within this bounded assessment form on WebKit. */\n#chatgpt-form select { width: 100%; }\n'
+CHATGPT_STYLE_EXTENSION = b'\n/* Bound native control grid tracks without clipping their content or menus. */\n#chatgpt-form label { grid-template-columns: minmax(0, 1fr); }\n'
 
 
 def check_chatgpt_style(before, after):
     if after != before + CHATGPT_STYLE_EXTENSION:
-        raise ValueError('ChatGPT presentation may only add the reviewed native-select width rule')
+        raise ValueError('ChatGPT presentation may only add the reviewed bounded native-control grid rule')
 
 
 def current_source_hash(name, historical, *, root=ROOT):

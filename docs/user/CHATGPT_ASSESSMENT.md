@@ -34,6 +34,22 @@ Software replacement preserves independently located research projects. Do not
 replace a research project with a demo, remove originals, or interpret a software
 reinstall as undoing a scientific database upgrade.
 
+## Local inspection before sign-in
+
+These existing commands create a new synthetic, scoped project without networking.
+Use this destination only if it does not exist; retain any existing project and
+choose another unused name rather than overwriting it.
+
+```bash
+corpustrail demo ~/CorpusTrailDemo/ChatGPT-evaluation
+corpustrail app ~/CorpusTrailDemo/ChatGPT-evaluation --open-browser
+```
+
+Inspect Corpus, the available abstract and **Models → Open ChatGPT assessment**.
+Do not connect during an offline tour. To close, press Ctrl+C in the launching
+terminal and wait for its prompt. To reopen, run only the same `corpustrail app`
+command; do not rerun demo creation. Manual Guided Review remains available.
+
 ## Researcher walkthrough
 
 Live sign-in and assessment have **not** been executed by automated acceptance.

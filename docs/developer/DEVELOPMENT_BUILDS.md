@@ -22,9 +22,9 @@ single repository coordination record, not another implementation specification.
   `corpustrail-title-abstract-input/v1` and bounded
   `corpustrail-assessment-diagnostics/v1`. Historical offline v1 records retain
   their shape. The exact source receipt now pins
-  `a5ea7d0e3269bb0548745f30c569e311ad8d597e`; historical CP1–10/RIS receipts and
+  `7312ba297b8a4053b44c6125ba62a64cc9a5cec6`; historical CP1–10/RIS receipts and
   frozen migrations are unchanged. The added theme rule is restricted to native
-  selects in the new form; an exact-prefix guard forbids other theme changes.
+  control grid tracks in the new form; an exact-prefix guard forbids other theme changes.
 - First hosted capture [40360596141/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40360596141)
   at `ddaf9360c8a9e34a787b167a44a845e0c1b5597b`: Windows 3.12's existing Node
   Discovery harness timed out; WebKit had two narrow-preview overflow failures.
@@ -42,18 +42,28 @@ single repository coordination record, not another implementation specification.
   confirmation also demonstrably replaced active cancellation before refusal;
   the adapter now guards before receipt/run/consent mutation under the worker lock.
   Identical retries preserve their original run. Failed reproductions are retained.
-- Current native-select width candidate: only `#chatgpt-form select` gets explicit
-  `width: 100%`. Hosted WebKit must still prove the controlled auto/explicit-width
-  A/B and complete normal workflows. The test restores the shipped rule before
-  all ordinary captures; no clipping, mask, tolerance, timeout or scientific change.
-  Local Chromium also passes at a controlled 350-pixel width; this is not macOS proof.
+- Controlled width capture [40482375533/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40482375533)
+  disproved `select { width: 100% }`: WebKit overflow remained 19 pixels in both
+  automatic and explicit-width states. All scientific/package/native jobs and
+  both Chromiums passed; WebKit remained 88/90, wheel correctly skipped.
+- Current candidate bounds only new form label grid tracks with `minmax(0, 1fr)`.
+  The hosted A/B records computed tracks, control/parent extents and root overflow;
+  the shipped rule is restored before all ordinary interaction/capture. No clipping,
+  mask, tolerance, timeout or scientific change. Local Chromium is not macOS proof.
+  Local WebKit installation was rejected by automatic approval review; no installation
+  or alternate download occurred. Existing hosted WebKit remains the validation path.
 - Latest local actual-wheel checks: 27 adapter tests, 45 browser infrastructure/
   path-policy checks, 33 exact-source/artifact checks and 6 new browser executions/
   18 captures pass. Full Ruff and diff checks pass. An initial infrastructure run
   correctly refused stale installed package bytes before wheel reinstall. Earlier
   independent wheel/sdist/core/optional-ML acceptance passed four 736-test runs;
   complete hosted gates will verify the final additions. No local build is delivery.
-- Next: obtain complete hosted capture with the measured width correction; inspect
+- Latest complete installed-wheel suite: 739 tests pass (one explicit native
+  macOS Trash skip on Linux). All 18 focused Chromium images were pixel-identical
+  to the prior inspected rendering. The grid-track candidate passes 27 adapter, 45 infrastructure/path-policy and
+  33 receipt tests, Ruff and six local Chromium cases/18 captures without browser
+  or external-request errors. Complete hosted capture is required before reference approval.
+- Next: obtain complete hosted capture with the measured grid-track correction; inspect
   every proposed new/changed reference and preserve unrelated PNG bytes, restore
   strict comparison, then deliver only after all genuine platform/package/browser
   gates. No baseline has yet been approved for this adapter. Original image review
@@ -187,9 +197,10 @@ remain historical evidence in the unchanged durable CP10 preservation set.
 
 ## Proposed first beta assignments — awaiting researcher decisions
 
-Historical proposal: the researcher subsequently authorized RIS import/export
-and the ready-to-review offline demo. The current handover tracks that work.
-The optional assessment pilot and other integrations remain unapproved.
+Historical proposal: the researcher subsequently authorized RIS import/export,
+the scoped offline demo and the optional ChatGPT-plan assessment adapter. The
+current handover records their separate delivery/acceptance and live-use boundaries.
+Other real assessment adapters and integrations remain separately gated.
 
 This is a concise proposal in the existing coordination record, not an amendment
 to the authoritative implementation plan or authorization to code/install/call.
