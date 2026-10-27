@@ -32,6 +32,7 @@ class ChatGPTController:
     def __init__(self, curation, *, connection_client=None, clock=now, synthetic=False):
         self.curation = curation; self.connection = connection_client if connection_client is not None else ChatGPTConnection()
         self.clock = clock; self.synthetic = synthetic; self._engines = {}; self._lock = threading.RLock(); self.return_url = None
+        self._remote_workers = set()  # Runtime ownership only; never scientific truth.
 
     @staticmethod
     def root(project): return files.location(project, family='handoff') / 'chatgpt' / 'v1'
@@ -172,6 +173,8 @@ class ChatGPTController:
                     return bool(worker and worker[1].is_set())
                 engine.authorize(receipt['plan_id'], receipt['manifest'], cancelled=cancelled)
                 self.curation.execute(project, rid, service.inspect_run(rid)['revision'], remote_authorized=True)
+                self._remote_workers.intersection_update(self.curation._workers)
+                if key in self.curation._workers: self._remote_workers.add(key)
             return {'schema': SCHEMA, 'run_id': rid, 'replayed': started['replayed'],
                 'notice': 'Explicitly authorized execution. Inspect saved proposals in Curation and audits; corpus membership is unchanged.'}
 
@@ -190,8 +193,13 @@ class ChatGPTController:
                         profile['plan_notice_acknowledged'] = True
                     return {'schema': SCHEMA, 'acknowledged': True}
                 if action == 'disconnect':
-                    for _, event in self.curation._workers.values(): event.set()
-                    return {'schema': SCHEMA, **self.connection.disconnect()}
+                    with self._lock:
+                        with self.curation._lock:
+                            self._remote_workers.intersection_update(self.curation._workers)
+                            for key in self._remote_workers: self.curation._workers[key][1].set()
+                        # Serialize with confirmation, without blocking unrelated
+                        # worker finalization during bounded provider revocation.
+                        return {'schema': SCHEMA, **self.connection.disconnect()}
                 if any(t.is_alive() for t, _ in self.curation._workers.values()):
                     raise ContractError('Stop the active assessment before changing the connection.')
                 if action == 'connect': return {'schema': SCHEMA, **self.connection.begin(return_url=self.return_url)}

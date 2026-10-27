@@ -224,6 +224,50 @@ class ChatGPTAssessmentTests(unittest.TestCase):
             self.assertEqual(len(self.client.transport.sent),1)
         finally:release.set()
 
+    def test_disconnect_does_not_cancel_an_unrelated_offline_assessment(self):
+        before=scientific_state(self.project);plan=self.h.plan();rid=self.h.start(plan['plan_id'])
+        entered=threading.Event();release=threading.Event();base=self.h.engine.assess
+        def delayed(*args):
+            entered.set()
+            if not release.wait(10):raise AssertionError('Controlled offline worker did not release')
+            return base(*args)
+        self.h.engine.assess=delayed
+        try:
+            self.curation.execute(self.project,rid,self.h.service.inspect_run(rid)['revision'])
+            self.assertTrue(entered.wait(10))
+            event=self.curation._workers[(str(self.project.root),rid)][1]
+            result=self.app.command(self.project,'disconnect',{'confirmed':True})
+            self.assertTrue(result['local_tokens_removed']);self.assertFalse(event.is_set())
+            release.set();state=self.wait(rid)
+            self.assertEqual(state['status'],'completed');self.assertEqual(state['processed'],3)
+            self.assertEqual(before,scientific_state(self.project))
+        finally:
+            release.set();self.wait(rid)
+
+    def test_disconnect_cancels_only_its_remote_worker_and_preserves_completed_work(self):
+        before=scientific_state(self.project);preview=self.preview()
+        entered=threading.Event();release=threading.Event();base=self.client.transport.response;count=0;rid=None
+        def delayed(payload,**kwargs):
+            nonlocal count
+            count+=1
+            if count==2:
+                entered.set()
+                if not release.wait(10):raise AssertionError('Controlled disconnect fixture did not release')
+            return base(payload,**kwargs)
+        self.client.transport.response=delayed
+        try:
+            result,_=self.confirm(preview);rid=result['run_id'];self.assertTrue(entered.wait(10))
+            event=self.curation._workers[(str(self.project.root),rid)][1]
+            disconnected=self.app.command(self.project,'disconnect',{'confirmed':True})
+            self.assertTrue(disconnected['local_tokens_removed']);self.assertTrue(event.is_set())
+            release.set();state=self.wait(rid)
+            self.assertEqual(state['status'],'interrupted');self.assertEqual(state['primary_counts']['uncertain'],1)
+            self.assertEqual(state['primary_counts']['failed'],1);self.assertEqual(state['primary_counts']['not_assessed'],1)
+            self.assertEqual(len(self.client.transport.sent),1);self.assertEqual(before,scientific_state(self.project))
+        finally:
+            release.set()
+            if rid:self.wait(rid)
+
     def test_competing_confirmation_cannot_replace_active_consent_or_cancellation(self):
         first=self.preview();second=self.preview()
         entered=threading.Event();release=threading.Event();base=self.client.transport.response
