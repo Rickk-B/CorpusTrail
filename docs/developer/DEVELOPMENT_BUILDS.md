@@ -5,7 +5,7 @@
 Read this section at task start; update it at completion/interruption. This is the
 single repository coordination record, not another implementation specification.
 
-### ChatGPT assessment adapter — offline delivery in progress, 27 October 2026
+### ChatGPT assessment adapter — offline technical delivery complete, 27 October 2026
 
 - Researcher-accepted: CP1–10 and the presentation refresh. RIS/demo acceptance
   remains pending. This separately authorized adapter is not researcher-accepted
@@ -23,10 +23,31 @@ single repository coordination record, not another implementation specification.
   assertion extraction remain unchanged. Exact source pin:
   `7dae4b33d5da5a6f0a32b263b6687014a0ca9443`; historical receipts/migrations untouched.
   Only scoped new-form layout rules may extend the byte-identical approved theme.
-- Latest completed diagnostic [40536521492/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40536521492),
-  source `55dea55be5301e6082408d0377badfae2603f4b2`: all Python 3.11–3.13 scientific,
-  package, optional-ML and six native gates passed. Both Chromiums completed 90/90
-  cases and 313 captures. WebKit remained 88/90, 308 captures; wheel correctly skipped.
+- Validated software: `8539f869cafe7d9d99704c38d69fc68511caead5`, tree
+  `4a53149d054ddf16d46b46f55220fcca9850cf98`, development branch
+  `development/v0.1.0a3-read-only-local-ui`. [Strict run 40553186812/1](https://github.com/Rickk-B/CorpusTrail/actions/runs/40553186812):
+  **all 12 jobs passed**. Python 3.11–3.13 scientific/package/optional-ML acceptance,
+  all six macOS/Windows lifecycle jobs, and every required browser gate passed.
+  Each renderer completed **90/90 functional executions and 313/313 strict comparisons**,
+  with zero visual exceptions, browser errors or unexpected external requests.
+- [Download wheel/provenance bundle 12759086559](https://github.com/Rickk-B/CorpusTrail/actions/runs/40553186812/artifacts/12759086559)
+  (GitHub sign-in required): `corpus_trail-0.1.0a3.dev0-py3-none-any.whl`,
+  **427,031 bytes**; SHA-256
+  `d53eed200c2e32e4db3f730c60fdc95880291a1ac60ead7863804df2fe5d1634`.
+  Original archive/API digest, all members, receipt checksums, 163 Git-to-wheel
+  resources and 169 wheel RECORD entries independently verified. The core has no
+  runtime dependencies; the optional cryptographic extra is explicitly separate.
+- Actual bundle creation `2026-10-27T18:27:44Z`, expiry `2027-01-25T17:42:59Z`:
+  **90 days from run creation** (`2026-10-27T17:42:59Z`), not 90 full days after upload.
+  Browser artifacts retain their separate seven-day policy: [macOS reports/screenshots](https://github.com/Rickk-B/CorpusTrail/actions/runs/40553186812/artifacts/12758566826),
+  expiry `2026-11-03T18:24:03Z`; [Linux reports/screenshots](https://github.com/Rickk-B/CorpusTrail/actions/runs/40553186812/artifacts/12757681123),
+  expiry `2026-11-03T18:01:31Z`. No existing artifact retention was changed.
+- Full-extra installed suite: 741 tests, one explicit native macOS Trash skip on Linux.
+  Dependency-free core: 741 tests, 52 intentional optional-extra/platform skips;
+  independent wheel/sdist environments report their explicit optional/Git/platform
+  skips in archived logs. Signed-token/assessment checks ran with the extra on all
+  six native combinations (29 tests; Windows skips only POSIX permissions).
+  No skip or failed result was relabelled as a pass to obtain delivery.
 - Demonstrated WebKit formatting boundary: populated selectors overflowed by 19px
   across three rendered frames, width, inner/outer grid and flex interventions.
   Normal block flow reduced root overflow to zero and every control-parent scroll
@@ -58,11 +79,21 @@ single repository coordination record, not another implementation specification.
   optional Models entry/reflow and synthetic comparison-run identifiers only.
   Individual decisions and complete original artifacts are preserved in durable evidence.
 - An unrelated Linux narrow-wizard capture was 24px shorter because of temporary-path
-  reflow. Its original reference is deliberately unchanged; no Linux exception was
-  approved. Final strict comparison remains blocking. Existing macOS path policy unchanged.
-- Workflow restored byte-for-byte to strict comparison configuration. Next: final
-  strict hosted acceptance and actual workflow-produced wheel/provenance verification.
-  Passing capture and intermediate/local wheels are not delivery.
+  reflow. Its original reference remained unchanged; final strict comparison passed
+  normally. This does not prove the historical variability fixed. The existing macOS
+  path-only policy remains unchanged and was not used in final acceptance.
+- Final workflow mode is `compare`, byte-identical to the pre-capture strict workflow.
+  The delivered source is clean; this later status-only documentation follow-up does
+  not change that software/tree/wheel identity or require another acceptance run.
+- Independent full-history bundle recovery of the exact delivered source/tree/plan
+  passed `git fsck --full`, without alternates/shared objects or source-checkout links.
+  Durable evidence includes original final archives, all member hashes, exact runtime
+  reports, individual visual decisions and `final-independent-recovery.json`.
+- Next permitted step: researcher review using the installation/disconnection guide.
+  Live interoperability requires a separate owner decision: eligible account/workspace,
+  evidence of credit fallback disabled and explicit authorization for an exact bounded
+  synthetic payload. Do not infer permission from this offline delivery, request
+  credentials in chat, enable paid fallback, or make an unapproved live call.
 - Earlier failed captures and their limits remain preserved: 40360596141,
   40476696312, 40482375533, 40488830358, 40528145962. Width/grid guesses were disproved,
   not reported as fixes. Node Discovery test cleanup now preserves original errors
@@ -84,7 +115,7 @@ single repository coordination record, not another implementation specification.
 - Native Europe PMC transport and historical navigation-timeout causation remain
   unresolved. No Mac-document edit, paid activation, deletion, release/main/tag/PyPI
   change or further checkpoint. Development-bundle retention remains 90 days;
-  browser evidence seven days. Actual final delivery/expiry remain pending.
+  browser evidence seven days. Actual final delivery/expiry are verified above.
 
 ### Previously delivered RIS/demo state — unchanged
 
