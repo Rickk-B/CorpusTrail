@@ -195,7 +195,7 @@ def check_identity_composition(old, new):
 
 # Independently reviewed adapter extension; historical receipts stay immutable.
 CHATGPT_BASELINE = '14443e5f790a317e22b62ecc09ecd862e5097684'
-CHATGPT_COMMIT = 'db3b4cff53c420762eaeb6ae30adb3f7fd28d345'
+CHATGPT_COMMIT = '7dae4b33d5da5a6f0a32b263b6687014a0ca9443'
 CHATGPT_PATHS = {
     'src/corpustrail/application/chatgpt.py',
     'src/corpustrail/application/curation.py',
@@ -215,7 +215,7 @@ CHATGPT_PATHS = {
     'src/corpustrail/local_app/server.py',
 }
 CHATGPT_HASHES = {
-    'src/corpustrail/local_app/assets/app.css': 'eadf80d2355a122897832ce5e797dc50506512a51565f4e4123a092407407fb1',
+    'src/corpustrail/local_app/assets/app.css': 'abe5bb8adb82072c76f4a454d5b28d0df0a8bb003788f50026f9830a958aa894',
     'src/corpustrail/application/chatgpt.py': '59094c0b2f832f973b86ce6b32a9301765f319d7a832288f87e44df40056e81a',
     'src/corpustrail/application/curation.py': '97e71eb8fe5e9cc61b1bb1ef7bcf8f554e984d75c56552b97ba1a534e62784c6',
     'src/corpustrail/chatgpt/__init__.py': '1c0d389d6e7df4e3a93d9870b5ddf690f1759fdb7f4e7710e91e679515df4591',
@@ -234,12 +234,12 @@ CHATGPT_HASHES = {
 }
 
 
-CHATGPT_STYLE_EXTENSION = b'\n/* Bound native control grid tracks without clipping their content or menus. */\n#chatgpt-form label { grid-template-columns: minmax(0, 1fr); }\n'
+CHATGPT_STYLE_EXTENSION = b'\n/* Keep native assessment selectors within normal block formatting. */\n#chatgpt-form, #chatgpt-form label { display: block; min-width: 0; }\n#chatgpt-form > * { margin: 0 0 .8rem; }\n#chatgpt-form > :last-child { margin-bottom: 0; }\n#chatgpt-form input, #chatgpt-form select { display: block; width: 100%; margin-top: .2rem; }\n#chatgpt-form button { display: block; width: 100%; }\n'
 
 
 def check_chatgpt_style(before, after):
     if after != before + CHATGPT_STYLE_EXTENSION:
-        raise ValueError('ChatGPT presentation may only add the reviewed bounded native-control grid rule')
+        raise ValueError('ChatGPT presentation may only add the reviewed scoped assessment-form layout rules')
 
 
 def current_source_hash(name, historical, *, root=ROOT):

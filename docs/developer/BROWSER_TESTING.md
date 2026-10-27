@@ -323,3 +323,29 @@ Preserving an old reference is not a claim that the current capture matches it.
 The final strict run compares **all** captures and rejects unexplained differences;
 only the separately documented pre-existing path-only exception remains eligible.
 This avoids regenerating unrelated PNGs merely because their encoded bytes differ.
+
+## Optional ChatGPT assessment coverage
+
+The `chatgpt` suite uses the actual installed assets, loopback controller, frozen
+CP8 inputs and CP9 results. Only the external transport is synthetic; no scientific
+API response, real account, model call or billing eligibility is mocked into a
+production result. It covers connection presentation, exact cloud preview, consent,
+proposal/history inspection, limits, cancellation and disconnect. Separate unit/native
+checks verify signed identity and private storage using the approved optional extra.
+
+On pinned hosted WebKit, populated native selectors propagated overflow through
+this new form's grid/flex layouts. Controlled normal block formatting removed it
+without clipping content. The narrow regression temporarily disables only the new
+scoped rules, asserts the original overflow, restores them exactly, then asserts
+containment before ordinary captures. No mask, timeout, tolerance or CSP changes.
+A real long-name immutable population tests keyboard selection and preserved run
+history after captures, without a new model submission or artificial display text.
+
+New visual references require a complete successful three-viewport capture and
+actual image review. To preserve unrelated approved PNG bytes, the explicit
+`--reviewed-change-list` option takes a JSON object mapping only reviewed image
+filenames to their actual SHA-256 digests alongside `--approve-baselines` and
+`--reviewed`. Every new image must be selected; unselected old images must match
+their preceding approval manifest. No CI job approves references. Final strict
+comparison still covers every image, including all preserved old ones. A capture
+run cannot deliver a validated development wheel.
