@@ -207,5 +207,9 @@ legend { font-weight: 650; padding: 0 .4rem; }
   .settings-form .save-area { position: static; }
 }
 
-/* Bound native control grid tracks without clipping their content or menus. */
-#chatgpt-form label { grid-template-columns: minmax(0, 1fr); }
+/* Keep native assessment selectors within normal block formatting. */
+#chatgpt-form, #chatgpt-form label { display: block; min-width: 0; }
+#chatgpt-form > * { margin: 0 0 .8rem; }
+#chatgpt-form > :last-child { margin-bottom: 0; }
+#chatgpt-form input, #chatgpt-form select { display: block; width: 100%; margin-top: .2rem; }
+#chatgpt-form button { display: block; width: 100%; }

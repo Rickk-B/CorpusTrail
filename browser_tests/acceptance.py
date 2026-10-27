@@ -31,33 +31,23 @@ class BrowserAcceptance(unittest.TestCase):
             # A controlled A/B of the actual new form, not a capture workaround.
             # Restore the shipped rule before any normal interaction/screenshot.
             result=self.page.evaluate('''async () => {
-              const sheet=document.styleSheets[0],count=sheet.cssRules.length;
-              const controls=[...document.querySelectorAll('#chatgpt-form select')];
-              const nodes=[...document.querySelectorAll('#chatgpt-select,#chatgpt-form,#chatgpt-form label,#chatgpt-form select')];
-              const saved=[...sheet.cssRules].map(r=>r.cssText);
+              const rules=[...document.styleSheets[0].cssRules].filter(r=>r.selectorText?.startsWith('#chatgpt-form'));
+              if(rules.length!==5)throw Error('Expected exactly the scoped assessment form layout rules');
+              const saved=rules.map(r=>r.style.cssText);
+              const nodes=[...document.querySelectorAll('#chatgpt-form,#chatgpt-form label,#chatgpt-form input,#chatgpt-form select')];
               const attrs=nodes.map(e=>e.getAttribute('style'));
               const measure=()=>({overflow:document.documentElement.scrollWidth-innerWidth,
-                controls:controls.map(e=>({id:e.id,width:e.getBoundingClientRect().width,
-                  parentWidth:e.parentElement.clientWidth,parentScroll:e.parentElement.scrollWidth})),
-                nodes:nodes.map(e=>{const c=getComputedStyle(e);return {tag:e.tagName,id:e.id,
-                  width:e.getBoundingClientRect().width,scroll:e.scrollWidth,tracks:c.gridTemplateColumns,
-                  minWidth:c.minWidth,display:c.display,wrap:c.overflowWrap};})});
-              const automatic=measure(),frames=[];
-              for(let i=0;i<3;i++){await new Promise(requestAnimationFrame);frames.push(measure());}
-              const variants={};
-              const probe=async(name,rules)=>{try{
-                for(const rule of rules)sheet.insertRule(rule,sheet.cssRules.length);
-                await new Promise(requestAnimationFrame);variants[name]=measure();
-              }finally{while(sheet.cssRules.length>count)sheet.deleteRule(count);}};
-              await probe('outer_grid',["#chatgpt-form { grid-template-columns: minmax(0,1fr); }", "#chatgpt-form label { min-width:0; }"]);
-              await probe('workspace_wrap',["#chatgpt-select { overflow-wrap:anywhere; }", "#chatgpt-form select { width:100%; }"]);
-              await probe('combined_grid',["#chatgpt-select { overflow-wrap:anywhere; }", "#chatgpt-form { grid-template-columns:minmax(0,1fr); }", "#chatgpt-form label { min-width:0; }", "#chatgpt-form select { width:100%; }"]);
-              await probe('flex_labels',["#chatgpt-form label { display:flex; flex-direction:column; min-width:0; }", "#chatgpt-form select { width:100%; }"]);
-              await probe('flex_form_and_labels',["#chatgpt-form,#chatgpt-form label { display:flex; flex-direction:column; min-width:0; }", "#chatgpt-form select { width:100%; }"]);
-              await probe('block_flow',["#chatgpt-form,#chatgpt-form label { display:block; min-width:0; }", "#chatgpt-form select { display:block; width:100%; }"]);
+                controls:[...document.querySelectorAll('#chatgpt-form select')].map(e=>({id:e.id,
+                  width:e.getBoundingClientRect().width,parentWidth:e.parentElement.clientWidth,
+                  parentScroll:e.parentElement.scrollWidth}))});
+              let automatic;
+              try {
+                for(const rule of rules)rule.style.cssText='';
+                await new Promise(requestAnimationFrame);automatic=measure();
+              }finally{rules.forEach((r,i)=>r.style.cssText=saved[i]);}
               await new Promise(requestAnimationFrame);
-              return {automatic,frames,variants,explicit:measure(),shipped:{rules:saved,attrs},
-                restored:{rules:[...sheet.cssRules].map(r=>r.cssText),attrs:nodes.map(e=>e.getAttribute('style'))}};
+              return {automatic,explicit:measure(),shipped:{rules:saved,attrs},
+                restored:{rules:rules.map(r=>r.style.cssText),attrs:nodes.map(e=>e.getAttribute('style'))}};
             }''')
             count=getattr(self,'native_select_probes',0)+1;self.native_select_probes=count
             path=self.runtime.output/'diagnostics'/(self.runtime.viewport_name+'-'+self._testMethodName+'-native-select-'+str(count)+'.json')
@@ -100,6 +90,20 @@ class BrowserAcceptance(unittest.TestCase):
         expect(self.page.locator('#connection-state')).to_contain_text('Not connected')
         self.assertEqual(len(self.fixture.chatgpt_wire.sent),5)
         self.assertTrue(any(r['engine']['adapter_id']=='chatgpt-plan' for r in self.fixture.curation.runs(self.fixture.project)['items']))
+        # Real immutable source version with a legitimate long Unicode name.
+        # No fabricated display label, hidden text, model submission or new capture.
+        fields=dict(request_id='e'*32,name='Synthetic '+('界WideName'*20)[:170],actor='fixture_reviewer',
+            sources=[{'kind':'all'}],parent=data['population'])
+        candidate=self.fixture.project.populations.preview(**fields)
+        long_version=self.fixture.project.populations.create(**fields,
+            expected_preview_sha256=candidate['preview_sha256'],created_at=AT)['version_id']
+        connect(self.fixture);self.chatgpt_page()
+        self.page.locator('#chatgpt-population').select_option(long_version)
+        expect(self.page.locator('#chatgpt-population option:checked')).to_contain_text(fields['name'])
+        self.page.locator('#chatgpt-population').focus();self.page.locator('#chatgpt-population').press('Tab')
+        expect(self.page.locator('#chatgpt-reference')).to_be_focused();self.layout()
+        self.assertEqual(len(self.fixture.chatgpt_wire.sent),5)
+        self.assertTrue(self.fixture.curation.classifier(self.fixture.project).verify_run(remote['run_id'])['verified'])
 
     def test_chatgpt_no_charge_gate_and_usage_limit_preserve_work(self):
         from .curation_fixtures import seed
