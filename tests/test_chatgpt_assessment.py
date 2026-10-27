@@ -224,6 +224,35 @@ class ChatGPTAssessmentTests(unittest.TestCase):
             self.assertEqual(len(self.client.transport.sent),1)
         finally:release.set()
 
+    def test_competing_confirmation_cannot_replace_active_consent_or_cancellation(self):
+        first=self.preview();second=self.preview()
+        entered=threading.Event();release=threading.Event();base=self.client.transport.response
+        def delayed(payload,**kwargs):
+            entered.set()
+            if not release.wait(10):raise AssertionError('Controlled competing confirmation did not release')
+            return base(payload,**kwargs)
+        self.client.transport.response=delayed
+        result=None
+        try:
+            result,command=self.confirm(first);self.assertTrue(entered.wait(10))
+            engine=self.app._engine(first['manifest']['model'],first['manifest']['profile_id'])
+            cancel=engine.cancelled
+            # An identical retry still returns the same durable run, without resending.
+            replay=self.app.command(self.project,'confirm',command)
+            self.assertEqual(replay['run_id'],result['run_id']);self.assertTrue(replay['replayed'])
+            with self.assertRaises(ContractError):self.confirm(second)
+            self.assertIs(engine.cancelled,cancel)
+            self.assertEqual(self.curation.classifier(self.project).runs()['total'],1)
+            self.curation.command(self.project,'cancel',{'run_id':result['run_id']})
+            release.set();state=self.wait(result['run_id'])
+            self.assertEqual(state['primary_counts']['failed'],1)
+            self.assertEqual(state['primary_counts']['not_assessed'],2)
+            self.assertEqual(self.client.transport.sent,[])
+            self.assertTrue(all(self.project.reviews.membership(pid)['state']=='not_reviewed' for pid in self.h.ids))
+        finally:
+            release.set()
+            if result:self.wait(result['run_id'])
+
     def test_credentials_cannot_be_stored_inside_or_around_a_research_project(self):
         original=self.client.store
         try:

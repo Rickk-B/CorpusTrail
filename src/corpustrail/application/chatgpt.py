@@ -133,7 +133,7 @@ class ChatGPTController:
         command_id(body['request_id']); token(body['preview_id'])
         if body['confirmed'] is not True or body['confirm_external'] is not True:
             raise ContractError('Explicitly authorize the exact displayed cloud transfer.')
-        with self._lock, closing(files.operation_lease(project, 'chatgpt-confirm:' + body['request_id'])):
+        with self._lock, self.curation._lock, closing(files.operation_lease(project, 'chatgpt-confirm:' + body['request_id'])):
             view = self.inspect(project, body['preview_id'])
             if view['preview_sha256'] != body['preview_sha256']: raise ContractError('The exact preview changed; consent is invalid.')
             state = self.connection.status()
@@ -141,6 +141,15 @@ class ChatGPTController:
             if not state['no_extra_charge_verified']: raise ConnectionFailure('no_cost_not_verified')
             if self._manifest(project, view['plan_id'], engine) != view['manifest']:
                 raise ContractError('The transmitted payload changed; prepare and authorize a new preview.')
+            service = self.curation.classifier(project)
+            active = [(key, thread) for key, (thread, _) in self.curation._workers.items() if thread.is_alive()]
+            if active and not any(key[0] == str(project.root) and
+                    service.inspect_run(key[1])['request_id'] == body['request_id'] for key, _ in active):
+                # Refuse before changing receipts, run history or the engine's
+                # active consent/cancellation callback. The shared worker lock
+                # also prevents a different execution starting between this guard
+                # and execute(). An identical active retry remains replayable.
+                raise ContractError('Another bounded assessment is active; inspect it before authorizing another.')
             path = self.root(project) / 'authorizations' / (body['request_id'] + '.json')
             replayed = path.exists()
             if replayed:
@@ -152,7 +161,6 @@ class ChatGPTController:
                     'transmission_sha256': view['transmission_sha256'], 'manifest': view['manifest'],
                     'transfer_sha256': view['plan_transfer_sha256']}
                 files.publish(path, receipt)
-            service = self.curation.classifier(project)
             started = service.start_run(receipt['plan_id'], request_id=body['request_id'], actor=receipt['actor'],
                 created_at=receipt['created_at'], transfer_sha256=receipt['transfer_sha256'],
                 transmission_sha256=receipt['transmission_sha256'])
