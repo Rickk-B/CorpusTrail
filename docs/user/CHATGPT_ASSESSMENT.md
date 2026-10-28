@@ -50,6 +50,103 @@ Do not connect during an offline tour. To close, press Ctrl+C in the launching
 terminal and wait for its prompt. To reopen, run only the same `corpustrail app`
 command; do not rerun demo creation. Manual Guided Review remains available.
 
+## Authorized one-paper live pilot (owner participation)
+
+The delivered wheel remains software commit `8539f869cafe7d9d99704c38d69fc68511caead5`.
+The [owner-run helper](../../tools/chatgpt_live_pilot.py) is separate from that wheel.
+Download it with the browser's **Download raw file** action as `chatgpt_live_pilot.py`
+into the same extracted build folder. Do not overwrite existing files. Its SHA-256 is:
+
+```text
+8b4e4c17a547346843629d094c933dab29bd8c75282cf36002c4d269786e35af
+```
+
+After the installation/optional-extra commands above, verify the helper and create
+an unused, disposable project (preserve any existing destination):
+
+```bash
+cd ~/Downloads/CorpusTrail-ChatGPT
+shasum -a 256 chatgpt_live_pilot.py
+python chatgpt_live_pilot.py prepare ~/CorpusTrailDemo/ChatGPT-one-paper-20261028
+corpustrail app ~/CorpusTrailDemo/ChatGPT-one-paper-20261028 --open-browser
+```
+
+Preparation uses the existing local services and contacts no provider. It creates
+one fictional publication with an abstract, a frozen one-paper candidate set and
+a reference version with an **unattested synthetic placeholder**, not human truth.
+That placeholder is ineligible and contributes **zero reference-example text**.
+No review, membership decision, model output, full-text evidence or invented DOI
+is seeded. The target is **Synthetic sensor measurement — one-paper interoperability
+pilot**; its abstract explicitly identifies the material as invented software-test
+text. The corpus criteria are explicitly synthetic materials-sensor relevance.
+
+1. Open **Research tools → Models → Open ChatGPT assessment**. Choose **Continue
+   with ChatGPT** and complete sign-in on this same computer. Do not transfer tokens
+   between machines or paste an authorization URL into chat. Return to CorpusTrail,
+   acknowledge the plan-use notice, then **Refresh available models**. Report only
+   connection success/failure, plan-scope availability and model names. No model
+   request has been authorized by signing in or listing models.
+2. In [ChatGPT usage settings](https://chatgpt.com/settings/usage), inspect this
+   **CorpusTrail registration in the selected account/workspace**. Establish that
+   plan use is enabled and use of credits after plan limits is **disabled**. A
+   percentage cap, zero current credit balance, paid subscription or successful
+   login alone is insufficient. Do not purchase credits, enable auto-recharge,
+   change billing, or enable fallback. If the relevant control is on, absent or
+   ambiguous, stop and report that observation; do not infer a no-charge condition.
+3. Only after actually observing both required states, record that observation
+   locally with the following command. Type its exact displayed confirmation only
+   if true. This performs no network request and changes no provider setting. It
+   records a 30-minute, account/client-bound condition in the existing protected
+   store; it prints no credential and grants **no payload/inference consent**.
+
+   ```bash
+   python chatgpt_live_pilot.py record-no-charge
+   ```
+
+4. Refresh the CorpusTrail page, choose an actually available model, enter
+   `pilot_owner`, and select **ONE synthetic assessment target** and **Synthetic
+   placeholder — NO eligible examples**. Choose **Freeze inputs and preview cloud
+   request**. Check that it shows exactly **one request**, the expected invented
+   title/abstract, corpus criteria, no reference examples and destination
+   `https://api.openai.com/v1/responses`. Expand **Assessment criteria, instructions,
+   reference text and exact request**. It must have `store:false`, `stream:true`,
+   no tools and no API-key fallback.
+5. Before selecting **Authorize and assess**, return the selected model slug,
+   exact wire SHA-256 and the displayed **payload JSON only**, together with an
+   explicit approval of that one exact request. The synthetic payload is not a
+   credential; do not include authorization URLs, headers, tokens, cookies,
+   browser session/CSRF values or private-store contents. The agent will reconcile
+   the actual payload with the approved one-paper scope. A changed payload/model
+   requires new approval. Neither this guide nor the general pilot instruction
+   is advance authorization of an unseen request.
+6. After that approval, explicitly check the in-app exact-transfer consent and
+   click **Authorize and assess once**. Wait for the terminal result. Inspect the
+   proposal and exact input/model/provenance in **Curation and audits**. Record the
+   run ID and whether membership still says **Not reviewed**. Do not publish any
+   corpus decision in this pilot. A failure is not a relevance judgment.
+7. Close with Ctrl+C and wait for the shell prompt. Reopen the same project (do not
+   run preparation again) and inspect the saved Curation run/proposal. After closing
+   the app again, the read-only helper can produce a small non-secret state record:
+
+   ```bash
+   python chatgpt_live_pilot.py inspect ~/CorpusTrailDemo/ChatGPT-one-paper-20261028
+   corpustrail app ~/CorpusTrailDemo/ChatGPT-one-paper-20261028 --open-browser
+   ```
+
+8. Choose **Disconnect** and note whether remote session revocation was confirmed.
+   Local token removal, renewable-session revocation and removal of the registered
+   OpenAI app authorization are distinct. Inspect CorpusTrail under ChatGPT's
+   **Settings → Security and login → Sign in with ChatGPT**; disconnect the app
+   there if remote revocation is unconfirmed or you want to remove its authorization.
+   Keep the scientific project and saved proposal; disconnection does not delete them.
+
+If a request times out, the stream is incomplete, or its submission outcome is
+uncertain, **do not resend**, recreate the preview, restart a run or repeat a
+confirmation. Preserve the project and report the bounded failure category and
+run state, without raw tokens/log dumps. Usage limits are a stop, not permission
+for credits. Owner-reported observations, direct agent observations and offline
+fixtures must be recorded separately; no scientific performance claim follows.
+
 ## Researcher walkthrough
 
 Live sign-in and assessment have **not** been executed by automated acceptance.

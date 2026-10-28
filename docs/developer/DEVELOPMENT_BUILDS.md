@@ -5,6 +5,50 @@
 Read this section at task start; update it at completion/interruption. This is the
 single repository coordination record, not another implementation specification.
 
+### One-paper ChatGPT live pilot — preparation complete, awaiting owner, 28 October 2026
+
+- Owner authorized one bounded live interoperability check, not spending or advance
+  consent for an unseen payload. Validated software/run/wheel below are unchanged;
+  starting documentation tip was `7a8d0de90ceeef95eb6e5eb0b3e250d6f85ef75d` (clean).
+- Current official OSS/account/model guidance re-read: plan scope/catalog alone is
+  not zero-cost evidence. Owner must observe this registration's credit fallback
+  disabled in the intended workspace; a percentage cap is insufficient. Do not
+  change billing, enable paid fallback or request/transfer credentials.
+- Added only nonpackaged `tools/chatgpt_live_pilot.py`, its focused tests and the
+  [one-paper walkthrough](../user/CHATGPT_ASSESSMENT.md#authorized-one-paper-live-pilot-owner-participation).
+  The helper never signs in, lists models or executes requests. It prepares a fresh
+  one-paper project via existing services; an unattested synthetic placeholder
+  supplies the required reference-version identity with zero eligible example text.
+  No human truth, review or membership is fabricated. Existing destinations/aliases
+  are refused. Read-only inspection reports result kind, membership and persistence.
+- Delivered no-charge gate deliberately has no HTTP grant. Helper `record-no-charge`
+  records an explicit owner-observed control state via the existing protected local
+  transaction; client/subject bound, 30-minute expiry, no tokens printed/transferred,
+  no provider setting changed and no inference consent granted. Do not run it on the
+  agent's account or before the owner actually establishes the condition.
+- Focused checks: all 37 adapter/pilot tests passed; eight helper checks used
+  denied network sockets and isolated synthetic stores, including
+  one actual CP8/CP9 synthetic proposal and reopening without membership mutation.
+  First probe exposed a helper-only `state` versus actual `kind` DTO mistake; fixed,
+  failed output retained. All 163 installed resources match the validated wheel;
+  the preserved offline one-paper project reopens with zero runs/human observations
+  and membership Not reviewed. Ruff/diff checks passed. Production package source
+  and delivered wheel unchanged; no full-suite, build or hosted execution needed.
+- Live observations so far: **none**. Owner participation requested: intended
+  installation (expected MacBook `~/CorpusTrailDemo/.venv`), plan/workspace type and
+  visibility/state of the app-specific credit-fallback control. No live sign-in,
+  catalog, assessment, persistence or revocation success has been observed/claimed.
+- Next: owner install/prepare/sign in/list models; establish no-charge controls;
+  inspect one exact payload/model and obtain explicit approval before one submit.
+  Then inspect Curation, reopen, verify unchanged membership and distinguish local
+  disconnect/session revocation from OpenAI authorization removal. On an ambiguous
+  request outcome, preserve state and diagnose; **never automatically resend**.
+- This is a pilot-support/documentation follow-up, not a new wheel, full acceptance
+  rerun, researcher acceptance, billing change, cleanup or Mac-document update.
+  RIS/demo acceptance and native Europe PMC causation remain pending/unresolved.
+  New durable preparation evidence: `chatgpt-live-preparation-20261028-9w10azbq`
+  under the established backup root. Earlier sealed delivery/recovery sets untouched.
+
 ### ChatGPT assessment adapter — offline technical delivery complete, 27 October 2026
 
 - Researcher-accepted: CP1–10 and the presentation refresh. RIS/demo acceptance
